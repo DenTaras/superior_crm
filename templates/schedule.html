@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-title">
+    <h1>Расписание (неделя)</h1>
+</div>
+
+<div class="calendar">
+    <table class="calendar-table">
+        <thead>
+            <tr>
+                <th></th>
+                {% set ru_days = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'] %}
+                {% for day in days %}
+                <th>{{ ru_days[loop.index0] }} {{ day.strftime('%d.%m') }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for hour in hours %}
+            <tr>
+                <td class="calendar-time">{{ '%02d:00' % hour }}</td>
+                {% for d_idx in range(0,7) %}
+                <td class="calendar-cell">
+                    {% set cell = grid.get((d_idx, hour)) %}
+                    {% if cell %}
+                    <!-- ячейка -->
+                    <a class="card" href="/slot/{{ cell.slot.id }}">
+                        <!-- время -->
+                        <div class="card-time">{{ cell.slot.start_time.strftime('%H:%M') }}</div>
+                        <!-- вместимость -->
+                        <div class="card-capacity">{{ cell.booked }}/{{ cell.slot.capacity }}</div>
+                        <!-- список клиентов -->
+                        {% if cell.clients %}
+                        <ul class="cell-clients">
+                            {% for c in cell.clients %}
+                            <li>{{ c.fio() }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </a>
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

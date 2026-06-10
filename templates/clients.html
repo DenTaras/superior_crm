@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-title">
+    <h1>Клиенты</h1>
+</div>
+
+<div class="clients-list">
+    <table class="clients-table">
+        <thead>
+            <tr><th>ФИО</th><th>Телефон</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for client in clients %}
+            <tr>
+                <td>{{ client.fio() }}</td>
+                <td>{{ client.phone|format_phone }}</td>
+                <td>
+                    <a class="small-btn" href="/clients/edit/{{ client.id }}">Редактировать</a>
+                    <!-- <form method="post" action="/clients/delete/{{ client.id }}" style="display:inline" onsubmit="return confirm('Удалить клиента?');">
+                        <button class="small-btn">Удалить</button>
+                    </form> -->
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<br>
+<h3>Добавить клиента</h3>
+
+<form method="post" action="/clients/add">
+    <input type="text" name="first_name" placeholder="Имя" required />
+    <input type="text" name="last_name" placeholder="Фамилия" />
+    <input type="text" name="patronymic" placeholder="Отчество" />
+    <input type="number" name="birth_year" placeholder="Год рождения" />
+    <input type="text" name="birth_place" placeholder="Место рождения" />
+    <input type="text" name="phone" placeholder="Телефон" />
+    <button>Добавить</button>
+</form>
+
+{% endblock %}

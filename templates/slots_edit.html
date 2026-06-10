@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Редактировать слот</h1>
+
+<form method="post" action="/slots/edit/{{ slot.id }}">
+    <label>Время (YYYY-MM-DDTHH:MM)</label>
+    <input type="text" name="start_time" value="{{ slot.start_time.strftime('%Y-%m-%dT%H:%M') }}" required />
+    <label>Вместимость</label>
+    <select name="capacity">
+        <option value="1" {% if slot.capacity == 1 %}selected{% endif %}>1</option>
+        <option value="2" {% if slot.capacity == 2 %}selected{% endif %}>2</option>
+        <option value="3" {% if slot.capacity == 3 %}selected{% endif %}>3</option>
+        <option value="4" {% if slot.capacity == 4 %}selected{% endif %}>4</option>
+    </select>
+    <button>Сохранить</button>
+</form>
+
+<form method="post" action="/slots/delete/{{ slot.id }}" onsubmit="return confirm('Удалить слот?');">
+    <button class="small-btn">Удалить слот</button>
+</form>
+
+{% endblock %}

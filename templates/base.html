@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+    <title>
+        SUPERIOR CRM
+    </title>
+
+    <link rel="stylesheet"
+          href="/static/style.css">
+</head>
+<body>
+<header class="header">
+    <div class="left-controls">
+        <button class="back-btn" onclick="history.back()">← Назад</button>
+    </div>
+    <div class="logo">
+        <span class="logo-red"></span>
+        <div>
+            <div class="brand">
+                SUPERIOR
+            </div>
+            <div class="subtitle">
+                PRIVATE GYM
+            </div>
+        </div>
+    </div>
+    <nav>
+        <a href="/">
+            Расписание
+        </a>
+        <a href="/clients">
+            Клиенты
+        </a>
+        <a href="/slots">
+            Слоты
+        </a>
+    </nav>
+</header>
+
+<main class="container">
+
+    {% block content %}
+    {% endblock %}
+
+</main>
+</body>
+</html>

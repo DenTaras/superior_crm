@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="slot-header">
+	<h2>{{ slot.start_time.strftime('%d.%m %H:%M') }}</h2>
+	<div class="muted">Вместимость: {{ slot.capacity }} — Записано: {{ clients|length }}</div>
+</div>
+
+<h3>Записаны</h3>
+
+<ul>
+
+{% for client in clients %}
+
+<li>
+{{ client.fio() }}
+	<form method="post" action="/slot/{{ slot.id }}/remove" style="display:inline">
+		<input type="hidden" name="client_id" value="{{ client.id }}" />
+		<button>Удалить из слота</button>
+	</form>
+</li>
+
+{% endfor %}
+
+</ul>
+
+<form
+method="post"
+action="/slot/{{ slot.id }}/add"
+>
+
+<select name="client_id">
+
+{% for client in all_clients %}
+
+<option value="{{ client.id }}">
+{{ client.name }}
+</option>
+
+{% endfor %}
+
+</select>
+
+<button>
+Добавить
+</button>
+
+</form>
+
+{% endblock %}
