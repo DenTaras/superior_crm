@@ -6,7 +6,22 @@
     <h1>Клиенты</h1>
 </div>
 
+<div style="margin-top:16px;">
+    <a class="btn" href="/clients/create">Добавить</a>
+</div>
+<br>
+
+<div class="page-controls">
+    <form method="get" action="/clients" class="form-row" style="flex-direction:row;gap:8px;align-items:center;">
+        <input class="field" type="search" name="q_name" placeholder="Поиск по ФИО" value="{{ q_name or '' }}" />
+        <input class="field" type="search" name="q_phone" placeholder="Поиск по телефону" value="{{ q_phone or '' }}" />
+        <button class="btn btn--small" type="submit">Фильтр</button>
+        <a class="btn btn--ghost btn--small" href="/clients">Сброс</a>
+    </form>
+</div>
+
 <div class="clients-list">
+    <div class="clients-table-wrapper">
     <table class="clients-table">
         <thead>
             <tr><th>ФИО</th><th>Телефон</th><th></th></tr>
@@ -17,28 +32,15 @@
                 <td>{{ client.fio() }}</td>
                 <td>{{ client.phone|format_phone }}</td>
                 <td>
-                    <a class="small-btn" href="/clients/edit/{{ client.id }}">Редактировать</a>
-                    <!-- <form method="post" action="/clients/delete/{{ client.id }}" style="display:inline" onsubmit="return confirm('Удалить клиента?');">
-                        <button class="small-btn">Удалить</button>
-                    </form> -->
+                    <a class="btn btn--small" href="/clients/edit/{{ client.id }}">Редактировать</a>
                 </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
+    </div>
 </div>
 
-<br>
-<h3>Добавить клиента</h3>
 
-<form method="post" action="/clients/add">
-    <input type="text" name="first_name" placeholder="Имя" required />
-    <input type="text" name="last_name" placeholder="Фамилия" />
-    <input type="text" name="patronymic" placeholder="Отчество" />
-    <input type="number" name="birth_year" placeholder="Год рождения" />
-    <input type="text" name="birth_place" placeholder="Место рождения" />
-    <input type="text" name="phone" placeholder="Телефон" />
-    <button>Добавить</button>
-</form>
 
 {% endblock %}

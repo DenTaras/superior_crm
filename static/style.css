@@ -1,21 +1,42 @@
 :root {
-
-    --bg: #111111;
-
+    /* фон страницы */
+    --bg: #151618;
+    /* фон выпадающего списка */
     --surface: #1a1a1a;
-
+    /* фон элемента при наведении */
     --surface-hover: #252525;
-
+    /* цвет текста */
     --text: #f2f2f2;
-
-    --muted: #999999;
-
-    --accent: #d32f2f;
-
-    --border: #2d2d2d;
+    /* цвет вторичного текста */
+    --muted: #aaaaaa;
+    /* цвет акцента */
+    --accent: #9A070D;
+    /* цвет границы */
+    --border: #5B5B5B;
+    /* радиусы и отступы */
+    --radius: 8px;
+    --radius-lg: 12px;
+    --pad: 10px;
+    --pad-lg: 20px;
+    --btn-pad: 6px 12px;
+    /* высота строки в таблице клиентов — используется для фиксированного окна */
+    --row-height: 41px;
+    --wrapper-rows: 10; /* количество видимых строк в окне таблицы клиентов */
 }
 
+/* Utility components (best-practices) */
+.panel { background: var(--surface); border-radius: var(--radius-lg); padding: var(--pad-lg); color: var(--text); }
+.panel--accent { border-left: 4px solid var(--accent); }
+.btn { display: inline-block; padding: var(--btn-pad); border-radius: var(--radius); background: var(--accent); color: white; border: none; cursor: pointer; text-decoration: none; text-align: center; }
+.btn--ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn--small { padding: 4px 8px; font-size: 0.95rem; background: var(--surface-hover); color: var(--text); border-radius: var(--radius); text-decoration: none; }
+.form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.label { color: var(--muted); margin-bottom: 6px; font-size: 0.95rem; }
+.field { padding: var(--pad); border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+
+
 * {
+    /* сброс стилей */
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -131,29 +152,11 @@ nav a:hover {
     gap: 16px;
 }
 
-.card {
+.card, .stat-card, .panel { background: var(--surface); border-radius: var(--radius-lg); padding: var(--pad-lg); color: var(--text); }
+.card { transition: .2s; }
+.card.panel--accent, .card.panel--accent + * { border-left: 4px solid var(--accent); }
 
-    background: var(--surface);
-
-    border-left: 4px solid var(--accent);
-
-    border-radius: 12px;
-
-    padding: 20px;
-
-    text-decoration: none;
-
-    color: var(--text);
-
-    transition: .2s;
-}
-
-.card:hover {
-
-    background: var(--surface-hover);
-
-    transform: translateY(-2px);
-}
+.card:hover { background: var(--surface-hover); transform: translateY(-2px); }
 
 .card-time {
 
@@ -186,15 +189,11 @@ nav a:hover {
     margin-bottom: 24px;
 }
 
-.client-list li {
+.client-list li { background: var(--surface); padding: 12px 16px; margin-bottom: 8px; border-radius: var(--radius); }
 
-    background: var(--surface);
-
-    padding: 12px 16px;
-
-    margin-bottom: 8px;
-
-    border-radius: 8px;
+/* Более читаемый межстрочный интервал для списков клиентов (страница слота) */
+.slot-client-list li {
+    line-height: 1.8;
 }
 
 form {
@@ -206,40 +205,26 @@ form {
     align-items: center;
 }
 
-select {
-
+/* Унифицированные стили для полей формы */
+select, input, textarea {
     background: var(--surface);
-
     color: var(--text);
-
     border: 1px solid var(--border);
-
-    padding: 10px;
-
-    border-radius: 8px;
-
-    min-width: 250px;
+    padding: var(--pad);
+    border-radius: var(--radius);
 }
 
+/* Кнопки: базовый стиль и варианты */
 button {
-
     background: var(--accent);
-
     color: white;
-
     border: none;
-
-    border-radius: 6px;
-
-    padding: 8px 12px;
-
+    border-radius: var(--radius);
+    padding: var(--btn-pad);
     cursor: pointer;
 }
 
-button:hover {
-
-    opacity: .9;
-}
+button:hover { opacity: .9; }
 
 .page-title {
 
@@ -261,16 +246,7 @@ button:hover {
     margin-bottom: 24px;
 }
 
-.stat-card {
-
-    background: var(--surface);
-
-    padding: 16px;
-
-    border-radius: 12px;
-
-    min-width: 180px;
-}
+.stat-card { padding: 16px; min-width: 180px; }
 
 .stat-title {
 
@@ -294,6 +270,10 @@ button:hover {
     gap: 12px;
 }
 
+/* clients table scroll window: fixed visible rows (~10) */
+.clients-table-wrapper { max-height: calc(var(--row-height) * var(--wrapper-rows)); overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.clients-table tbody tr { height: var(--row-height); }
+
 .client-card table {
     width: 100%;
     border-collapse: collapse;
@@ -314,14 +294,7 @@ button:hover {
     gap: 8px;
 }
 
-.small-btn {
-    background: var(--surface-hover);
-    color: var(--text);
-    padding: 6px 10px;
-    border-radius: 6px;
-    text-decoration: none;
-    display: inline-block;
-}
+.btn--small, .small-btn { padding: 4px 8px; font-size: 0.95rem; background: var(--surface-hover); color: var(--text); border-radius: var(--radius); text-decoration: none; display: inline-block; }
 
 /* Стили для компактного списка клиентов */
 .clients-table {
@@ -336,7 +309,7 @@ button:hover {
 
 .edit-form .form-row { display: flex; flex-direction: column; margin-bottom: 12px; }
 .edit-form label { color: var(--muted); margin-bottom: 6px; }
-.edit-form input { padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+.edit-form input { padding: 8px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--text); }
 
 .edit-actions { display: flex; gap: 8px; margin-top: 12px; }
 .edit-actions .small-btn { padding: 8px 12px; }
@@ -350,15 +323,7 @@ button:hover {
     margin-right: 12px;
 }
 
-.back-btn {
-    background: transparent;
-    color: var(--text);
-    border: 1px solid var(--border);
-    padding: 6px 10px;
-    border-radius: 6px;
-    margin-right: 12px;
-    cursor: pointer;
-}
+.back-btn { padding: 6px 10px; margin-right: 12px; }
 
 /* Стили календаря расписания */
 .calendar {
@@ -399,15 +364,19 @@ button:hover {
     background: rgba(255,255,255,0.01);
 }
 
-.calendar-cell .card {
+.calendar-cell .card,
+.calendar-cell .panel {
     display: block;
+    text-decoration: none;
     height: 100%;
-    padding: 8px;
+    padding: 8px; /* compact padding for calendar */
     border-left: 0;
-    border-radius: 8px;
-    background: linear-gradient(180deg, rgba(211,47,47,0.12), rgba(211,47,47,0.08));
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(211, 47, 47, 0.678), rgba(211,47,47,0.08));
     color: var(--text);
     box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .calendar-cell .card-time {

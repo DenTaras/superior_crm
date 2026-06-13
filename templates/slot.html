@@ -9,7 +9,7 @@
 
 <h3>Записаны</h3>
 
-<ul>
+<ul class="client-list slot-client-list">
 
 {% for client in clients %}
 
@@ -17,7 +17,7 @@
 {{ client.fio() }}
 	<form method="post" action="/slot/{{ slot.id }}/remove" style="display:inline">
 		<input type="hidden" name="client_id" value="{{ client.id }}" />
-		<button>Удалить из слота</button>
+		<button class="btn btn--small">Удалить из слота</button>
 	</form>
 </li>
 
@@ -30,7 +30,7 @@ method="post"
 action="/slot/{{ slot.id }}/add"
 >
 
-<select name="client_id">
+<select name="client_id" class="field">
 
 {% for client in all_clients %}
 
@@ -42,9 +42,7 @@ action="/slot/{{ slot.id }}/add"
 
 </select>
 
-<button>
-Добавить
-</button>
+<button class="btn">Добавить</button>
 
 </form>
 

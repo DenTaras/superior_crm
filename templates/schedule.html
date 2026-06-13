@@ -26,7 +26,7 @@
                     {% set cell = grid.get((d_idx, hour)) %}
                     {% if cell %}
                     <!-- ячейка -->
-                    <a class="card" href="/slot/{{ cell.slot.id }}">
+                    <a class="panel panel--accent" href="/slot/{{ cell.slot.id }}">
                         <!-- время -->
                         <div class="card-time">{{ cell.slot.start_time.strftime('%H:%M') }}</div>
                         <!-- вместимость -->

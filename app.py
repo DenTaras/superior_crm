@@ -264,19 +264,54 @@ def slot_page(
 
 
 @app.get("/clients")
-def clients_page(request: Request, db: Session = Depends(get_db)):
-    clients = db.query(Client).order_by(Client.name).all()
+def clients_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    q_name: str = "",
+    q_phone: str = "",
+):
+    """Clients list with optional server-side filtering by name and phone.
+
+    Query params:
+    - q_name: partial match against `name`, `first_name` or `last_name` (case-insensitive)
+    - q_phone: partial match against `phone` (digits or formatted)
+
+    The resulting table in the template is constrained to a fixed-height scroll window.
+    """
+    query = db.query(Client)
+    # фильтр по имени (частичный, case-insensitive)
+    if q_name:
+        pat = f"%{q_name}%"
+        query = query.filter(
+            or_(
+                Client.name.ilike(pat),
+                Client.first_name.ilike(pat),
+                Client.last_name.ilike(pat),
+            )
+        )
+
+    # фильтр по телефону — ищем по цифрам или по введённой подстроке
+    if q_phone:
+        digits = ''.join(ch for ch in q_phone if ch.isdigit())
+        if digits:
+            query = query.filter(Client.phone.ilike(f"%{digits}%") | Client.phone.ilike(f"%{q_phone}%"))
+        else:
+            query = query.filter(Client.phone.ilike(f"%{q_phone}%"))
+
+    clients = query.order_by(Client.last_name, Client.first_name).limit(1000).all()
 
     return templates.TemplateResponse(
         request=request,
         name="clients.html",
         context={
             "clients": clients,
+            "q_name": q_name,
+            "q_phone": q_phone,
         },
     )
 
 
-@app.post("/clients/add")
+@app.post("/clients/create")
 def add_client_post(
     first_name: str = Form(...),
     last_name: str = Form(""),
@@ -315,6 +350,16 @@ def clients_edit(request: Request, client_id: int, db: Session = Depends(get_db)
         request=request,
         name="clients_edit.html",
         context={"client": client},
+    )
+
+
+@app.get("/clients/create")
+def clients_create(request: Request):
+    """Пустая форма для создания нового клиента."""
+    return templates.TemplateResponse(
+        request=request,
+        name="clients_create.html",
+        context={},
     )
 
 
@@ -462,10 +507,7 @@ def add_client(
         db.add(booking)
         db.commit()
 
-    return RedirectResponse(
-        f"/slot/{slot_id}",
-        status_code=303,
-    )
+    return RedirectResponse(f"/slot/{slot_id}", status_code=303)
 
 
 # При первом запуске приложения мы проверяем, есть ли в базе данных клиенты и слоты. 
@@ -503,7 +545,18 @@ try:
                 name="Сидоров Алексей",
             ),
         ])
-
+        for i in range(9):
+            db.add_all([
+                Client(
+                    first_name=f"{i}",
+                    last_name=f"{i}",
+                    patronymic="",
+                    birth_year=1985,
+                    birth_place=f"{i}",
+                    phone="+79990000001",
+                    name=f"{i}",
+                )
+            ])
         db.commit()
 
     if db.query(Slot).count() == 0:
