@@ -2,11 +2,16 @@ from datetime import datetime, timedelta
 
 
 def compute_week_start(base: datetime, week_offset: int = 0) -> datetime:
+    """Вычисляет начало недели (понедельник) для заданной даты и смещения недель.
+
+    Возвращает datetime с установленными часами/минута/секунда в 00:00.
+    """
     base_week_start = (base - timedelta(days=base.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
     return base_week_start + timedelta(days=7 * week_offset)
 
 
 def test_schedule_shows_requested_week_days(client):
+    """Проверяет, что календарь отображает заголовки дат для запрошенной недели (week_offset)."""
     # request schedule for offset +1 week and assert day headers contain those dates
     offset = 1
     now = datetime.now()
@@ -21,6 +26,7 @@ def test_schedule_shows_requested_week_days(client):
 
 
 def test_add_slot_redirects_back_to_given_week(client):
+    """Проверяет, что при добавлении слота параметр `week_offset` сохраняется в редиректе."""
     offset = 2
     start = (datetime.now() + timedelta(days=14)).replace(second=0, microsecond=0)
     payload = {"start_time": start.strftime("%Y-%m-%dT%H:%M"), "capacity": 2, "week_offset": str(offset)}
@@ -30,6 +36,10 @@ def test_add_slot_redirects_back_to_given_week(client):
 
 
 def test_slot_link_in_schedule_includes_week_offset(client, db_session):
+    """Убедиться, что ссылки на слот в представлении календаря содержат `week_offset`.
+
+    Создаёт слот для предыдущей недели и проверяет наличие ссылки с параметром.
+    """
     # create a slot that belongs to week_offset = -1 (previous week)
     offset = -1
     from app import Slot

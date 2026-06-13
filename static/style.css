@@ -24,6 +24,12 @@
     --wrapper-rows: 10; /* количество видимых строк в окне таблицы клиентов */
 }
 
+/*
+    style.css — глобальные стили приложения.
+    Комментарии ниже поясняют назначение крупных блоков стилей
+    (утилиты, формы, карточки, календарь, модальные окна и т.п.).
+*/
+
 /* Utility components (best-practices) */
 .panel { background: var(--surface); border-radius: var(--radius-lg); padding: var(--pad-lg); color: var(--text); }
 .panel--accent { border-left: 4px solid var(--accent); }
@@ -234,6 +240,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     opacity: 0.95;
 }
 
+/*
+    Стили кнопок и общие правила для интерактивных элементов.
+    Обратите внимание: использование переменных CSS облегчает адаптацию темы.
+*/
+
 /* Кнопки: базовый стиль и варианты */
 button {
     background: var(--accent);
@@ -321,6 +332,9 @@ button:hover { opacity: .9; }
     width: 100%;
     border-collapse: collapse;
 }
+
+/* Стили календаря: таблица, ячейки, карточки слотов и цветовая маркировка */
+/* Каждый блок ниже отвечает за визуализацию расписания и состояния слота. */
 .clients-table th, .clients-table td {
     padding: 8px 10px;
     border-bottom: 1px solid var(--border);

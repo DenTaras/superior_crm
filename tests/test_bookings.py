@@ -2,6 +2,10 @@ from datetime import datetime, timedelta
 
 
 def test_add_and_remove_booking(client, db_session):
+    """Тест добавления и удаления бронирования через HTTP-интерфейс.
+
+    Создаёт клиента и слот напрямую в БД, затем добавляет бронь и удаляет её.
+    """
     from app import Client, Slot, Booking
 
     # create client and slot directly in DB
@@ -26,6 +30,7 @@ def test_add_and_remove_booking(client, db_session):
 
 
 def test_capacity_enforced(client, db_session):
+    """Тест, проверяющий что вместимость слота (`capacity`) соблюдается при добавлении броней."""
     from app import Client, Slot, Booking
 
     now = datetime.now().replace(second=0, microsecond=0)

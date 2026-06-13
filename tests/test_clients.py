@@ -2,6 +2,10 @@ from datetime import datetime
 
 
 def test_create_edit_delete_client(client, db_session):
+    """Тест создания, редактирования и удаления клиента через HTTP-интерфейс.
+
+    Проверяет, что клиент создаётся, затем его можно отредактировать и удалить.
+    """
     # create via POST
     payload = {
         "first_name": "Тест",

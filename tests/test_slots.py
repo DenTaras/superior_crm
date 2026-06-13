@@ -2,10 +2,15 @@ from datetime import datetime, timedelta
 
 
 def iso_no_seconds(dt):
+    """Вспомогательная функция: возвращает ISO-строку без секунд и микросекунд."""
     return dt.replace(second=0, microsecond=0).isoformat()
 
 
 def test_add_slot_and_conflict(client):
+    """Тест добавления слота и обработки конфликта добавления дубликата.
+
+    Проверяет успешный редирект при создании и флаг конфликта при повторной попытке.
+    """
     # choose a time in the near future
     start = (datetime.now() + timedelta(hours=2)).replace(second=0, microsecond=0)
     payload = {"start_time": start.strftime("%Y-%m-%dT%H:%M"), "capacity": 2}
@@ -20,6 +25,7 @@ def test_add_slot_and_conflict(client):
 
 
 def test_edit_slot_conflict(client, db_session):
+    """Тест редактирования слота, при котором новое время конфликтует с другим слотом."""
     # create two slots directly in DB
     from app import Slot
 

@@ -37,6 +37,11 @@ SessionLocal = sessionmaker(bind=engine)
 
 
 def get_db() -> Generator[Session, None, None]:
+    """Фабрика зависимостей для получения сессии базы данных.
+
+    Возвращает генератор, который предоставляет инстанс `Session` и гарантированно
+    закрывает сессию при завершении запроса.
+    """
     db = SessionLocal()
     try:
         yield db
@@ -93,6 +98,12 @@ Base.metadata.create_all(engine)
 # Для существующей SQLite БД: добавляем недостающие колонки в таблицу clients,
 # чтобы обновление модели не ломало приложение при локальной разработке.
 def ensure_client_columns():
+    """Проверяет и добавляет отсутствующие колонки в таблицу `clients`.
+
+    Утилита полезна при локальной разработке: если модель `Client` была
+    расширена, но в существующей SQLite базе нет колонок, функция выполнит
+    `ALTER TABLE` для добавления недостающих полей (мягко, без критических ошибок).
+    """
     with engine.connect() as conn:
         res = conn.execute(text("PRAGMA table_info(clients)"))
         existing = [row[1] for row in res.fetchall()]
@@ -248,6 +259,12 @@ def slot_page(
     db: Session = Depends(get_db),
     week_offset: int = 0,
 ):
+    """Страница отдельного слота: показывает список записанных клиентов
+
+    Параметры:
+    - `slot_id`: идентификатор слота
+    - `week_offset`: смещение недели для возврата к календарю
+    """
     slot = db.get(Slot, slot_id)
     bookings = (
         db.query(Booking)
@@ -339,6 +356,11 @@ def add_client_post(
     phone: str = Form(""),
     db: Session = Depends(get_db),
 ):
+    """Обрабатывает POST-запрос создания нового клиента.
+
+    Валидирует минимально нужные поля и сохраняет нового клиента в БД,
+    затем перенаправляет на список клиентов.
+    """
     first_name = (first_name or "").strip()
     if not first_name:
         return RedirectResponse("/clients", status_code=303)
@@ -360,6 +382,10 @@ def add_client_post(
 
 @app.get("/clients/edit/{client_id}")
 def clients_edit(request: Request, client_id: int, db: Session = Depends(get_db)):
+    """Отображает форму редактирования существующего клиента.
+
+    Если клиент не найден — перенаправляет на список клиентов.
+    """
     client = db.get(Client, client_id)
     if client is None:
         return RedirectResponse("/clients", status_code=303)
@@ -392,6 +418,10 @@ def clients_edit_post(
     phone: str = Form(""),
     db: Session = Depends(get_db),
 ):
+    """Обновляет данные клиента по POST-запросу и сохраняет изменения.
+
+    При успешном обновлении перенаправляет обратно на список клиентов.
+    """
     client = db.get(Client, client_id)
     if client:
         client.first_name = (first_name or "").strip()
@@ -409,6 +439,11 @@ def clients_edit_post(
 
 @app.post("/clients/delete/{client_id}")
 def clients_delete(client_id: int, db: Session = Depends(get_db)):
+    """Удаляет клиента и его связанные бронирования из базы данных.
+
+    Операция идёт в две стадии: удаление записей из `bookings`, затем удаление
+    самого клиента.
+    """
     # удаляем связанные бронирования, затем клиента
     db.query(Booking).filter(Booking.client_id == client_id).delete()
     db.query(Client).filter(Client.id == client_id).delete()
@@ -426,6 +461,12 @@ def slots_add(
     week_offset: int = Form(0),
     db: Session = Depends(get_db),
 ):
+    """Создаёт новый часовой слот.
+
+    Проверяет формат времени, нормализует `capacity` и запрещает создание
+    перекрывающегося слота (слот длится 1 час). При конфликте возвращает
+    редирект с флаш-сообщением.
+    """
     # ожидается ISO формат: YYYY-MM-DDTHH:MM или YYYY-MM-DD HH:MM
     ts = start_time.replace(" ", "T")
     start = datetime.fromisoformat(ts)
@@ -463,6 +504,11 @@ def slots_edit_post(
     week_offset: int = Form(0),
     db: Session = Depends(get_db),
 ):
+    """Обрабатывает редактирование слота: меняет время и вместимость.
+
+    Выполняет проверку на пересечение с другими слотами (1-часовая длительность).
+    При конфликте делает редирект с флаш-уведомлением.
+    """
     slot = db.get(Slot, slot_id)
     if slot:
         ts = start_time.replace(" ", "T")
@@ -490,6 +536,9 @@ def slots_edit_post(
 
 @app.post("/slots/delete/{slot_id}")
 def slots_delete(slot_id: int, week_offset: int = Form(0), db: Session = Depends(get_db)):
+    """Удаляет слот и все связанные с ним бронирования, затем перенаправляет
+    обратно в календарь с сохранением `week_offset`.
+    """
     # удалить бронирования в слоте, затем слот
     db.query(Booking).filter(Booking.slot_id == slot_id).delete()
     db.query(Slot).filter(Slot.id == slot_id).delete()
@@ -499,6 +548,10 @@ def slots_delete(slot_id: int, week_offset: int = Form(0), db: Session = Depends
 
 @app.post("/slot/{slot_id}/remove")
 def remove_booking(slot_id: int, client_id: int = Form(...), week_offset: int = Form(0), db: Session = Depends(get_db)):
+    """Удаляет конкретную запись клиента из слота.
+
+    Параметры: `slot_id`, `client_id`. После удаления перенаправляет на страницу слота.
+    """
     db.query(Booking).filter(Booking.slot_id == slot_id, Booking.client_id == client_id).delete()
     db.commit()
     return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}", status_code=303)
@@ -511,6 +564,10 @@ def add_client(
     week_offset: int = Form(0),
     db: Session = Depends(get_db),
 ):
+    """Добавляет клиента в слот через POST-запрос.
+
+    Проверяет вместимость слота и не добавляет запись, если слот заполнен.
+    """
     slot = db.get(Slot, slot_id)
 
     count = (
