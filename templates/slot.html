@@ -2,48 +2,57 @@
 
 {% block content %}
 
+<hr />
 <div class="slot-header">
-	<h2>{{ slot.start_time.strftime('%d.%m %H:%M') }}</h2>
+	<h2>Запись на {{ slot.start_time.strftime('%d.%m %H:%M') }}</h2>
 	<div class="muted">Вместимость: {{ slot.capacity }} — Записано: {{ clients|length }}</div>
 </div>
 
-<h3>Записаны</h3>
-
+<h3>Записаны:</h3>
 <ul class="client-list slot-client-list">
-
-{% for client in clients %}
-
-<li>
-{{ client.fio() }}
-	<form method="post" action="/slot/{{ slot.id }}/remove" style="display:inline">
-		<input type="hidden" name="client_id" value="{{ client.id }}" />
-		<button class="btn btn--small">Удалить из слота</button>
-	</form>
-</li>
-
-{% endfor %}
-
+	{% for client in clients %}
+	<li>
+	{{ client.fio() }}
+		<form method="post" action="/slot/{{ slot.id }}/remove" style="display:inline">
+			<input type="hidden" name="client_id" value="{{ client.id }}" />
+			<button class="btn"> Удалить из слота </button>
+		</form>
+	</li>
+	{% endfor %}
 </ul>
 
-<form
-method="post"
-action="/slot/{{ slot.id }}/add"
->
+<form method="post" action="/slot/{{ slot.id }}/add">
+	<select name="client_id" class="field">
+		{% for client in all_clients %}
+		<option value="{{ client.id }}">
+		{{ client.name }}
+		</option>
+		{% endfor %}
+	</select>
+	<button class="btn">Добавить</button>
+</form>
 
-<select name="client_id" class="field">
+<br />
+<hr />
+<h3>Настройки слота</h3>
 
-{% for client in all_clients %}
+<form method="post" action="/slots/edit/{{ slot.id }}" class="field">
+	<label class="label">Время</label>
+	<input class="field" type="text" name="start_time" value="{{ slot.start_time.strftime('%Y-%m-%d %H:%M') }}" required />
+	<label class="label">Вместимость</label>
+	<select name="capacity" class="field">
+		<option value="1" {% if slot.capacity == 1 %}selected{% endif %}>1</option>
+		<option value="2" {% if slot.capacity == 2 %}selected{% endif %}>2</option>
+		<option value="3" {% if slot.capacity == 3 %}selected{% endif %}>3</option>
+		<option value="4" {% if slot.capacity == 4 %}selected{% endif %}>4</option>
+	</select>
+	<div class="edit-actions">
+		<button class="btn" type="submit">Сохранить</button>
+	</div>
+</form>
 
-<option value="{{ client.id }}">
-{{ client.name }}
-</option>
-
-{% endfor %}
-
-</select>
-
-<button class="btn">Добавить</button>
-
+<form method="post" action="/slots/delete/{{ slot.id }}" onsubmit="return confirm('Удалить слот? Это удалит все бронирования.');" style="margin-top:8px;">
+	<button class="btn">Удалить слот</button>
 </form>
 
 {% endblock %}

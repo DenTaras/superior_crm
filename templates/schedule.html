@@ -6,6 +6,19 @@
     <h1>Расписание (неделя)</h1>
 </div>
 
+<div class="page-controls" style="margin-bottom:12px;">
+    <form method="post" action="/slots/add" class="form-row" style="flex-direction:row;gap:8px;align-items:center;">
+        <input class="field" type="datetime-local" name="start_time" value="{{ default_time }}" required />
+        <select name="capacity" class="field">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+        </select>
+        <button class="btn">Добавить слот</button>
+    </form>
+</div>
+
 <div class="calendar">
     <table class="calendar-table">
         <thead>

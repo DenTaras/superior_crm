@@ -171,10 +171,21 @@ else:
     SlotSchema.Config = _Cfg
     BookingSchema.Config = _Cfg
 
+# Главная страница (информационная)
+@app.get("/")
+def home(request: Request):
+    """Главная информационная страница проекта."""
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={"request": request},
+    )
+
+
 # Маршрут для отображения расписания. Здесь мы извлекаем все слоты из базы данных,
 # считаем количество бронирований для каждого слота и передаем эту информацию в 
 # шаблон "schedule.html" для отображения.
-@app.get("/")
+@app.get("/schedule")
 def schedule(request: Request, db: Session = Depends(get_db)):
     """Генерирует вид расписания в виде календаря на текущую неделю (понедельник-воскресенье)
 
@@ -189,6 +200,8 @@ def schedule(request: Request, db: Session = Depends(get_db)):
     days = [week_start + timedelta(days=i) for i in range(7)]
     # часы от 08:00 до 22:00 включительно
     hours = list(range(8, 23))
+
+    default_time = datetime.now().strftime("%Y-%m-%dT%H:%M")
 
     # карту ячеек: (day_index, hour) -> slot or None
     grid = {(d_idx, h): None for d_idx in range(7) for h in hours}
@@ -219,7 +232,8 @@ def schedule(request: Request, db: Session = Depends(get_db)):
         context={
             "days": days,
             "hours": hours,
-            "grid": grid,
+                "grid": grid,
+                "default_time": default_time,
         },
     )
 
@@ -398,15 +412,7 @@ def clients_delete(client_id: int, db: Session = Depends(get_db)):
     return RedirectResponse("/clients", status_code=303)
 
 
-@app.get("/slots")
-def slots_page(request: Request, db: Session = Depends(get_db)):
-    slots = db.query(Slot).order_by(Slot.start_time).all()
-    default_time = datetime.now().strftime("%Y-%m-%dT%H:%M")
-    return templates.TemplateResponse(
-        request=request,
-        name="slots.html",
-        context={"slots": slots, "default_time": default_time},
-    )
+
 
 
 @app.post("/slots/add")
@@ -427,19 +433,10 @@ def slots_add(
     slot = Slot(start_time=start, capacity=capacity)
     db.add(slot)
     db.commit()
-    return RedirectResponse("/slots", status_code=303)
+    return RedirectResponse("/schedule", status_code=303)
 
 
-@app.get("/slots/edit/{slot_id}")
-def slots_edit(request: Request, slot_id: int, db: Session = Depends(get_db)):
-    slot = db.get(Slot, slot_id)
-    if slot is None:
-        return RedirectResponse("/slots", status_code=303)
-    return templates.TemplateResponse(
-        request=request,
-        name="slots_edit.html",
-        context={"slot": slot},
-    )
+
 
 
 @app.post("/slots/edit/{slot_id}")
@@ -462,7 +459,7 @@ def slots_edit_post(
         slot.capacity = capacity
         db.add(slot)
         db.commit()
-    return RedirectResponse("/slots", status_code=303)
+    return RedirectResponse("/schedule", status_code=303)
 
 
 @app.post("/slots/delete/{slot_id}")
@@ -471,7 +468,7 @@ def slots_delete(slot_id: int, db: Session = Depends(get_db)):
     db.query(Booking).filter(Booking.slot_id == slot_id).delete()
     db.query(Slot).filter(Slot.id == slot_id).delete()
     db.commit()
-    return RedirectResponse("/slots", status_code=303)
+    return RedirectResponse("/schedule", status_code=303)
 
 
 @app.post("/slot/{slot_id}/remove")
