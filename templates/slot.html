@@ -15,6 +15,7 @@
 	{{ client.fio() }}
 		<form method="post" action="/slot/{{ slot.id }}/remove" style="display:inline">
 			<input type="hidden" name="client_id" value="{{ client.id }}" />
+			<input type="hidden" name="week_offset" value="{{ week_offset }}" />
 			<button class="btn"> Удалить из слота </button>
 		</form>
 	</li>
@@ -29,6 +30,7 @@
 		</option>
 		{% endfor %}
 	</select>
+	<input type="hidden" name="week_offset" value="{{ week_offset }}" />
 	<button class="btn">Добавить</button>
 </form>
 
@@ -37,6 +39,7 @@
 <h3>Настройки слота</h3>
 
 <form method="post" action="/slots/edit/{{ slot.id }}" class="field">
+	<input type="hidden" name="week_offset" value="{{ week_offset }}" />
 	<label class="label">Время</label>
 	<input class="field" type="text" name="start_time" value="{{ slot.start_time.strftime('%Y-%m-%d %H:%M') }}" required />
 	<label class="label">Вместимость</label>
@@ -52,6 +55,7 @@
 </form>
 
 <form method="post" action="/slots/delete/{{ slot.id }}" onsubmit="return confirm('Удалить слот? Это удалит все бронирования.');" style="margin-top:8px;">
+	<input type="hidden" name="week_offset" value="{{ week_offset }}" />
 	<button class="btn">Удалить слот</button>
 </form>
 

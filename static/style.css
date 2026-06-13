@@ -214,6 +214,26 @@ select, input, textarea {
     border-radius: var(--radius);
 }
 
+/* Make native datetime/date picker indicators visible on dark backgrounds */
+input[type="datetime-local"], input[type="date"] {
+    color: var(--text);
+    -webkit-text-fill-color: var(--text);
+}
+
+input[type="datetime-local"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit,
+input[type="datetime-local"]::-webkit-datetime-edit-field,
+input[type="date"]::-webkit-datetime-edit-field {
+    color: var(--text);
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator {
+    /* invert to make icon light on dark backgrounds */
+    filter: invert(1) brightness(1.2) contrast(1.1);
+    opacity: 0.95;
+}
+
 /* Кнопки: базовый стиль и варианты */
 button {
     background: var(--accent);
@@ -388,6 +408,36 @@ button:hover { opacity: .9; }
     font-size: 12px;
     color: var(--muted);
 }
+
+/* Цветовая маркировка слотов */
+.calendar-cell .panel.slot--red {
+    background: linear-gradient(180deg, rgba(154,7,13,0.95), rgba(154,7,13,0.12));
+}
+.calendar-cell .panel.slot--yellow {
+    background: linear-gradient(180deg, rgba(194,150,10,0.98), rgba(194,150,10,0.10));
+    color: #0b0b0b;}
+/* Ensure capacity text remains readable on colored backgrounds */
+.calendar-cell .panel.slot--yellow .card-capacity { color: #111; }
+
+.calendar-cell .panel.slot--green {
+    background: linear-gradient(180deg, rgba(34,197,94,0.95), rgba(34,197,94,0.08));
+}
+.calendar-cell .panel.slot--gray {
+    background: linear-gradient(180deg, rgba(120,120,120,0.9), rgba(120,120,120,0.06));
+}
+
+
+
+/* slot meta: time left, capacity right on one line */
+.calendar-cell .slot-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+/* override global margin for card-time when used inside calendar */
+.calendar-cell .card-time { margin-bottom: 0; }
 
 @media (max-width: 900px) {
     .calendar-time { display: none; }

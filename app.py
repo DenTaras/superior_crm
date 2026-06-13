@@ -186,7 +186,7 @@ def home(request: Request):
 # считаем количество бронирований для каждого слота и передаем эту информацию в 
 # шаблон "schedule.html" для отображения.
 @app.get("/schedule")
-def schedule(request: Request, db: Session = Depends(get_db)):
+def schedule(request: Request, db: Session = Depends(get_db), week_offset: int = 0):
     """Генерирует вид расписания в виде календаря на текущую неделю (понедельник-воскресенье)
 
     Возвращает структуру с сутками недели и часовыми интервалами. Слоты сопоставляются по дате и часу начала.
@@ -195,8 +195,9 @@ def schedule(request: Request, db: Session = Depends(get_db)):
     slots = db.query(Slot).order_by(Slot.start_time).all()
 
     now = datetime.now()
-    # начало недели (понедельник)
-    week_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    # начало недели (понедельник) с учётом смещения недель
+    base_week_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = base_week_start + timedelta(days=7 * week_offset)
     days = [week_start + timedelta(days=i) for i in range(7)]
     # часы от 08:00 до 22:00 включительно
     hours = list(range(8, 23))
@@ -232,8 +233,9 @@ def schedule(request: Request, db: Session = Depends(get_db)):
         context={
             "days": days,
             "hours": hours,
-                "grid": grid,
-                "default_time": default_time,
+            "grid": grid,
+            "default_time": default_time,
+            "week_offset": week_offset,
         },
     )
 
@@ -244,6 +246,7 @@ def slot_page(
     request: Request,
     slot_id: int,
     db: Session = Depends(get_db),
+    week_offset: int = 0,
 ):
     slot = db.get(Slot, slot_id)
     bookings = (
@@ -273,6 +276,7 @@ def slot_page(
             "slot": slot,
             "clients": clients,
             "all_clients": all_clients,
+            "week_offset": week_offset,
         },
     )
 
@@ -419,6 +423,7 @@ def clients_delete(client_id: int, db: Session = Depends(get_db)):
 def slots_add(
     start_time: str = Form(...),
     capacity: int = Form(1),
+    week_offset: int = Form(0),
     db: Session = Depends(get_db),
 ):
     # ожидается ISO формат: YYYY-MM-DDTHH:MM или YYYY-MM-DD HH:MM
@@ -433,7 +438,7 @@ def slots_add(
     slot = Slot(start_time=start, capacity=capacity)
     db.add(slot)
     db.commit()
-    return RedirectResponse("/schedule", status_code=303)
+    return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
 
 
 
@@ -444,6 +449,7 @@ def slots_edit_post(
     slot_id: int,
     start_time: str = Form(...),
     capacity: int = Form(1),
+    week_offset: int = Form(0),
     db: Session = Depends(get_db),
 ):
     slot = db.get(Slot, slot_id)
@@ -459,29 +465,30 @@ def slots_edit_post(
         slot.capacity = capacity
         db.add(slot)
         db.commit()
-    return RedirectResponse("/schedule", status_code=303)
+    return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
 
 
 @app.post("/slots/delete/{slot_id}")
-def slots_delete(slot_id: int, db: Session = Depends(get_db)):
+def slots_delete(slot_id: int, week_offset: int = Form(0), db: Session = Depends(get_db)):
     # удалить бронирования в слоте, затем слот
     db.query(Booking).filter(Booking.slot_id == slot_id).delete()
     db.query(Slot).filter(Slot.id == slot_id).delete()
     db.commit()
-    return RedirectResponse("/schedule", status_code=303)
+    return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
 
 
 @app.post("/slot/{slot_id}/remove")
-def remove_booking(slot_id: int, client_id: int = Form(...), db: Session = Depends(get_db)):
+def remove_booking(slot_id: int, client_id: int = Form(...), week_offset: int = Form(0), db: Session = Depends(get_db)):
     db.query(Booking).filter(Booking.slot_id == slot_id, Booking.client_id == client_id).delete()
     db.commit()
-    return RedirectResponse(f"/slot/{slot_id}", status_code=303)
+    return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}", status_code=303)
 
 
 @app.post("/slot/{slot_id}/add")
 def add_client(
     slot_id: int,
     client_id: int = Form(...),
+    week_offset: int = Form(0),
     db: Session = Depends(get_db),
 ):
     slot = db.get(Slot, slot_id)
@@ -504,7 +511,7 @@ def add_client(
         db.add(booking)
         db.commit()
 
-    return RedirectResponse(f"/slot/{slot_id}", status_code=303)
+    return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}", status_code=303)
 
 
 # При первом запуске приложения мы проверяем, есть ли в базе данных клиенты и слоты. 

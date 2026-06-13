@@ -3,11 +3,17 @@
 {% block content %}
 
 <div class="page-title">
-    <h1>Расписание (неделя)</h1>
+    <h1>Расписание</h1>
 </div>
 
-<div class="page-controls" style="margin-bottom:12px;">
-    <form method="post" action="/slots/add" class="form-row" style="flex-direction:row;gap:8px;align-items:center;">
+<div class="page-controls" style="margin-bottom:12px; display:flex; gap:12px; align-items:center;">
+    <div class="week-nav">
+        <a class="btn btn--ghost" href="/schedule?week_offset={{ week_offset - 1 }}">← Предыдущая неделя</a>
+        <a class="btn btn--ghost" href="/schedule?week_offset=0">Текущая</a>
+        <a class="btn btn--ghost" href="/schedule?week_offset={{ week_offset + 1 }}">Следующая неделя →</a>
+    </div>
+    <form method="post" action="/slots/add" class="form-row" style="flex-direction:row;gap:8px;align-items:center;margin-left:auto;">
+        <input type="hidden" name="week_offset" value="{{ week_offset }}" />
         <input class="field" type="datetime-local" name="start_time" value="{{ default_time }}" required />
         <select name="capacity" class="field">
             <option value="1">1</option>
@@ -38,13 +44,24 @@
                 <td class="calendar-cell">
                     {% set cell = grid.get((d_idx, hour)) %}
                     {% if cell %}
-                    <!-- ячейка -->
-                    <a class="panel panel--accent" href="/slot/{{ cell.slot.id }}">
-                        <!-- время -->
-                        <div class="card-time">{{ cell.slot.start_time.strftime('%H:%M') }}</div>
-                        <!-- вместимость -->
-                        <div class="card-capacity">{{ cell.booked }}/{{ cell.slot.capacity }}</div>
-                        <!-- список клиентов -->
+                    <!-- проверка вместимости и назначение цвета слота -->
+                    {%- set color_class = '' -%}
+                    {%- if cell.slot.capacity == 1 -%}
+                        {%- set color_class = 'slot--red' -%}
+                    {%- elif cell.slot.capacity == 2 -%}
+                        {%- set color_class = 'slot--yellow' -%}
+                    {%- else -%}
+                        {%- if cell.booked >= cell.slot.capacity -%}
+                            {%- set color_class = 'slot--green' -%}
+                        {%- else -%}
+                            {%- set color_class = 'slot--gray' -%}
+                        {%- endif -%}
+                    {%- endif -%}
+                    <a class="panel {{ color_class }}" href="/slot/{{ cell.slot.id }}?week_offset={{ week_offset }}">
+                        <div class="slot-meta">
+                            <div class="card-time">{{ cell.slot.start_time.strftime('%H:%M') }}</div>
+                            <div class="card-capacity">{{ cell.booked }}/{{ cell.slot.capacity }}</div>
+                        </div>
                         {% if cell.clients %}
                         <ul class="cell-clients">
                             {% for c in cell.clients %}
