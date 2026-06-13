@@ -435,6 +435,17 @@ def slots_add(
         capacity = 1
     if capacity not in (1, 2, 3, 4):
         capacity = 1
+    # проверка перекрытия: слот длится 1 час; запрещаем пересечение
+    new_start = start
+    new_end = new_start + timedelta(hours=1)
+    overlapping = (
+        db.query(Slot)
+        .filter(Slot.start_time > (new_start - timedelta(hours=1)), Slot.start_time < new_end)
+        .all()
+    )
+    if overlapping:
+        # не создаём слот, возвращаемся на страницу расписания с флаш-сообщением
+        return RedirectResponse(f"/schedule?week_offset={week_offset}&flash=slot_conflict", status_code=303)
     slot = Slot(start_time=start, capacity=capacity)
     db.add(slot)
     db.commit()
@@ -455,7 +466,16 @@ def slots_edit_post(
     slot = db.get(Slot, slot_id)
     if slot:
         ts = start_time.replace(" ", "T")
-        slot.start_time = datetime.fromisoformat(ts)
+        new_start = datetime.fromisoformat(ts)
+        new_end = new_start + timedelta(hours=1)
+        overlapping = (
+            db.query(Slot)
+            .filter(Slot.id != slot_id, Slot.start_time > (new_start - timedelta(hours=1)), Slot.start_time < new_end)
+            .all()
+        )
+        if overlapping:
+            return RedirectResponse(f"/schedule?week_offset={week_offset}&flash=slot_conflict", status_code=303)
+        slot.start_time = new_start
         try:
             capacity = int(capacity)
         except Exception:

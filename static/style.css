@@ -419,6 +419,19 @@ button:hover { opacity: .9; }
 /* Ensure capacity text remains readable on colored backgrounds */
 .calendar-cell .panel.slot--yellow .card-capacity { color: #111; }
 
+/* Flash / alert messages */
+.flash { padding: 10px 14px; border-radius: var(--radius); margin-bottom: 12px; }
+.flash--error { background: rgba(154,7,13,0.12); border-left: 4px solid var(--accent); color: var(--text); }
+
+/* Modal flash styles */
+.modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 1200; }
+.modal__backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
+.modal__content { position: relative; background: var(--surface); color: var(--text); border-radius: var(--radius); padding: 16px; width: min(560px, 92%); box-shadow: 0 8px 30px rgba(0,0,0,0.6); z-index: 1201; }
+.modal__header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px; }
+.modal__close { background: transparent; border: none; color: var(--text); font-size: 20px; cursor: pointer; }
+.modal__body { margin-bottom:12px; }
+.modal__footer { text-align: right; }
+
 .calendar-cell .panel.slot--green {
     background: linear-gradient(180deg, rgba(34,197,94,0.95), rgba(34,197,94,0.08));
 }

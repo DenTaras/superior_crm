@@ -6,6 +6,46 @@
     <h1>Расписание</h1>
 </div>
 
+{# flash messages as modal #}
+{% set flash = request.query_params.get('flash') %}
+{% if flash %}
+    {% if flash == 'slot_conflict' %}
+        {% set msg = 'Время пересекается с существующим слотом.' %}
+    {% else %}
+        {% set msg = flash %}
+    {% endif %}
+
+    <div id="flash-modal" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="flash-title">
+        <div class="modal__backdrop" id="flash-backdrop"></div>
+        <div class="modal__content">
+            <div class="modal__header">
+                <h3 id="flash-title">Внимание</h3>
+                <button class="modal__close" id="flash-close" aria-label="Закрыть">×</button>
+            </div>
+            <div class="modal__body">
+                <p>{{ msg }}</p>
+            </div>
+            <div class="modal__footer">
+                <a class="btn" href="/schedule?week_offset={{ week_offset }}">ОК</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function(){
+        var modal = document.getElementById('flash-modal');
+        if(!modal) return;
+        var close = document.getElementById('flash-close');
+        var backdrop = document.getElementById('flash-backdrop');
+        function hide(){ modal.parentNode && modal.parentNode.removeChild(modal); }
+        close && close.addEventListener('click', hide);
+        backdrop && backdrop.addEventListener('click', hide);
+        // allow ESC to close
+        document.addEventListener('keydown', function(e){ if(e.key === 'Escape') hide(); });
+    })();
+    </script>
+{% endif %}
+
 <div class="page-controls" style="margin-bottom:12px; display:flex; gap:12px; align-items:center;">
     <div class="week-nav">
         <a class="btn btn--ghost" href="/schedule?week_offset={{ week_offset - 1 }}">← Предыдущая неделя</a>
