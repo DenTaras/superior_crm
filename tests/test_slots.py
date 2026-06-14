@@ -40,3 +40,27 @@ def test_edit_slot_conflict(client, db_session):
     r = client.post(f"/slots/edit/{s2.id}", data=payload, follow_redirects=False)
     assert r.status_code == 303
     assert "flash=slot_conflict" in r.headers["location"]
+
+
+def test_cannot_create_slot_in_past(client):
+    """Нельзя создать слот в прошлом."""
+    start = (datetime.now() - timedelta(hours=2)).replace(second=0, microsecond=0)
+    payload = {"start_time": start.strftime("%Y-%m-%dT%H:%M"), "capacity": 2}
+    r = client.post("/slots/add", data=payload, follow_redirects=False)
+    assert r.status_code == 303
+    assert "flash=slot_past" in r.headers["location"]
+
+
+def test_cannot_edit_slot_to_past(client, db_session):
+    """Нельзя переместить существующий слот в прошлое."""
+    from app import Slot
+
+    now = datetime.now().replace(second=0, microsecond=0)
+    s = Slot(start_time=now + timedelta(hours=5), capacity=2)
+    db_session.add(s)
+    db_session.commit()
+
+    payload = {"start_time": (now - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"), "capacity": 2}
+    r = client.post(f"/slots/edit/{s.id}", data=payload, follow_redirects=False)
+    assert r.status_code == 303
+    assert "flash=slot_past" in r.headers["location"]

@@ -535,6 +535,9 @@ def slots_add(
     # ожидается ISO формат: YYYY-MM-DDTHH:MM или YYYY-MM-DD HH:MM
     ts = start_time.replace(" ", "T")
     start = datetime.fromisoformat(ts)
+    # запретить создание слота в прошлом
+    if start < datetime.now():
+        return RedirectResponse(f"/schedule?week_offset={week_offset}&flash=slot_past", status_code=303)
     try:
         capacity = int(capacity)
     except Exception:
@@ -578,6 +581,9 @@ def slots_edit_post(
     if slot:
         ts = start_time.replace(" ", "T")
         new_start = datetime.fromisoformat(ts)
+        # запретить перенос слота в прошлое
+        if new_start < datetime.now():
+            return RedirectResponse(f"/schedule?week_offset={week_offset}&flash=slot_past", status_code=303)
         new_end = new_start + timedelta(hours=1)
         overlapping = (
             db.query(Slot)
