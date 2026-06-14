@@ -13,6 +13,8 @@
 {% if flash %}
     {% if flash == 'slot_conflict' %}
         {% set msg = 'Время пересекается с существующим слотом.' %}
+    {% elif flash == 'limit_reached' %}
+        {% set msg = 'У клиента нет доступных занятий для бронирования.' %}
     {% else %}
         {% set msg = flash %}
     {% endif %}

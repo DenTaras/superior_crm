@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-title">
+    <h1>Журнал проведённых занятий</h1>
+</div>
+
+<div class="panel">
+    <table class="clients-table">
+        <thead><tr><th>Дата</th><th>Время слота</th><th>Клиенты</th></tr></thead>
+        <tbody>
+        {% for e in entries %}
+            <tr>
+                <td>{{ e.created_at.strftime('%d.%m.%Y %H:%M') if e.created_at else '' }}</td>
+                <td>{{ e.slot_time.strftime('%d.%m.%Y %H:%M') if e.slot_time else '' }}</td>
+                <td>{{ e.clients }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

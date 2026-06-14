@@ -24,15 +24,28 @@
     <div class="clients-table-wrapper">
     <table class="clients-table">
         <thead>
-            <tr><th>ФИО</th><th>Телефон</th><th></th></tr>
+            <tr><th>ФИО</th><th>Телефон</th><th>Осталось/Забронировано</th><th></th></tr>
         </thead>
         <tbody>
-        {% for client in clients %}
+        {% for row in client_rows %}
+            {% set client = row.client %}
             <tr>
                 <td>{{ client.fio() }}</td>
                 <td>{{ client.phone|format_phone }}</td>
                 <td>
+                    {{ client.remaining_sessions or 0 }} / {{ row.booked_future }}
+                </td>
+                <td>
                     <a class="btn btn--small" href="/clients/edit/{{ client.id }}">Редактировать</a>
+                    <form method="post" action="/clients/add_subscription" style="display:inline;margin-left:8px;">
+                        <input type="hidden" name="client_id" value="{{ client.id }}" />
+                        <select name="package" class="field" style="display:inline-block;width:auto;">
+                            <option value="12">12 занятий</option>
+                            <option value="8">8 занятий</option>
+                            <option value="4">4 занятия</option>
+                        </select>
+                        <button class="btn btn--small" type="submit">Добавить абонемент</button>
+                    </form>
                 </td>
             </tr>
         {% endfor %}

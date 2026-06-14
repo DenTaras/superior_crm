@@ -8,6 +8,47 @@
 	<div class="muted">Вместимость: {{ slot.capacity }} — Записано: {{ clients|length }}</div>
 </div>
 
+{# flash modal for slot page (e.g., limit_reached) #}
+{% set flash = request.query_params.get('flash') %}
+{% if flash %}
+	{% if flash == 'slot_conflict' %}
+		{% set msg = 'Время пересекается с существующим слотом.' %}
+	{% elif flash == 'limit_reached' %}
+		{% set msg = 'У клиента нет доступных занятий для бронирования.' %}
+	{% else %}
+		{% set msg = flash %}
+	{% endif %}
+
+	<div id="flash-modal" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="flash-title">
+		<div class="modal__backdrop" id="flash-backdrop"></div>
+		<div class="modal__content">
+			<div class="modal__header">
+				<h3 id="flash-title">Внимание</h3>
+				<button class="modal__close" id="flash-close" aria-label="Закрыть">×</button>
+			</div>
+			<div class="modal__body">
+				<p>{{ msg }}</p>
+			</div>
+			<div class="modal__footer">
+				<a class="btn" href="/slot/{{ slot.id }}?week_offset={{ week_offset }}">ОК</a>
+			</div>
+		</div>
+	</div>
+
+	<script>
+	(function(){
+		var modal = document.getElementById('flash-modal');
+		if(!modal) return;
+		var close = document.getElementById('flash-close');
+		var backdrop = document.getElementById('flash-backdrop');
+		function hide(){ modal.parentNode && modal.parentNode.removeChild(modal); }
+		close && close.addEventListener('click', hide);
+		backdrop && backdrop.addEventListener('click', hide);
+		document.addEventListener('keydown', function(e){ if(e.key === 'Escape') hide(); });
+	})();
+	</script>
+{% endif %}
+
 <!-- Список клиентов, уже записанных в слот. Для каждого доступна кнопка удаления. -->
 <h3>Записаны:</h3>
 <ul class="client-list slot-client-list">
@@ -39,6 +80,14 @@
 <br />
 <hr />
 <h3>Настройки слота</h3>
+
+<!-- Форма для подтверждения проведения занятия: снимет по 1 занятию у всех записанных и удалит слот -->
+{% if clients and clients|length > 0 %}
+<form method="post" action="/slot/{{ slot.id }}/complete" onsubmit="return confirm('Подтвердить проведение занятия и списать 1 занятие у всех записанных?');">
+	<input type="hidden" name="week_offset" value="{{ week_offset }}" />
+	<button class="btn" type="submit">Занятие проведено</button>
+</form>
+{% endif %}
 
 <form method="post" action="/slots/edit/{{ slot.id }}" class="field">
 	<input type="hidden" name="week_offset" value="{{ week_offset }}" />

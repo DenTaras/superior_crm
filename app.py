@@ -61,6 +61,8 @@ class Client(Base):
     phone = Column(String, nullable=True)
     # legacy поле `name` сохраняем для обратной совместимости
     name = Column(String, nullable=True)
+    # количество оставшихся занятий у клиента (сумма по купленным абонементам)
+    remaining_sessions = Column(Integer, default=1)
 
     def fio(self) -> str:
         """Возвращает краткое ФИО клиента: "Фамилия Имя Отчество" или fallback на `name`.
@@ -92,6 +94,14 @@ class Booking(Base):
     client_id = Column(Integer, ForeignKey("clients.id"))
     slot_id = Column(Integer, ForeignKey("slots.id"))
 
+
+class JournalEntry(Base):
+    __tablename__ = "journal"
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=datetime.now)
+    slot_time = Column(DateTime)
+    clients = Column(String)  # comma-separated list of client names
+
 # Создаем все таблицы в базе данных, если они еще не существуют.
 Base.metadata.create_all(engine)
 
@@ -115,6 +125,7 @@ def ensure_client_columns():
             ("birth_place", "TEXT"),
             ("phone", "TEXT"),
             ("name", "TEXT"),
+                ("remaining_sessions", "INTEGER DEFAULT 1"),
         ]
         for col, coltype in to_add:
             if col not in existing:
@@ -126,6 +137,15 @@ def ensure_client_columns():
 
 
 ensure_client_columns()
+# После добавления колонки приводим существующие записи к дефолту 1 (пробное занятие)
+with engine.connect() as conn:
+    try:
+        conn.execute(text("UPDATE clients SET remaining_sessions = 1 WHERE remaining_sessions IS NULL OR remaining_sessions = 0"))
+    except Exception:
+        pass
+
+# Создаём таблицу журнала, если ещё нет
+Base.metadata.create_all(engine)
 
 
 # Регистрируем Jinja2 фильтр для форматирования телефонов
@@ -335,11 +355,23 @@ def clients_page(
 
     clients = query.order_by(Client.last_name, Client.first_name).limit(1000).all()
 
+    # считаем для каждого клиента, сколько будущих броней у него уже есть
+    now_dt = datetime.now()
+    client_rows = []
+    for c in clients:
+        booked_future = (
+            db.query(Booking)
+            .join(Slot, Booking.slot_id == Slot.id)
+            .filter(Booking.client_id == c.id, Slot.start_time >= now_dt)
+            .count()
+        )
+        client_rows.append({"client": c, "booked_future": booked_future})
+
     return templates.TemplateResponse(
         request=request,
         name="clients.html",
         context={
-            "clients": clients,
+            "client_rows": client_rows,
             "q_name": q_name,
             "q_phone": q_phone,
         },
@@ -373,6 +405,7 @@ def add_client_post(
         birth_place=(birth_place or "").strip(),
         phone=(phone or "").strip(),
         name=f"{(last_name or '').strip()} {(first_name or '').strip()}".strip(),
+        remaining_sessions=1,
     )
     db.add(client)
     db.commit()
@@ -405,6 +438,38 @@ def clients_create(request: Request):
         name="clients_create.html",
         context={},
     )
+
+
+@app.post("/clients/add_subscription")
+def clients_add_subscription(
+    client_id: int = Form(...),
+    package: int = Form(...),
+    db: Session = Depends(get_db),
+):
+    """Добавляет абонемент выбранного пакета к клиенту, увеличивая `remaining_sessions`."""
+    client = db.get(Client, client_id)
+    try:
+        package = int(package)
+    except Exception:
+        package = 0
+    if client and package in (12, 8, 4):
+        client.remaining_sessions = (client.remaining_sessions or 0) + package
+        db.add(client)
+        db.commit()
+    return RedirectResponse("/clients", status_code=303)
+
+
+@app.get("/subscriptions")
+def subscriptions_page(request: Request):
+    """Статическая страница с перечнем доступных абонементов."""
+    return templates.TemplateResponse(request=request, name="subscriptions.html", context={})
+
+
+@app.get("/journal")
+def journal_page(request: Request, db: Session = Depends(get_db)):
+    """Страница журнала проведённых занятий."""
+    entries = db.query(JournalEntry).order_by(JournalEntry.created_at.desc()).all()
+    return templates.TemplateResponse(request=request, name="journal.html", context={"entries": entries})
 
 
 @app.post("/clients/edit/{client_id}")
@@ -569,7 +634,25 @@ def add_client(
     Проверяет вместимость слота и не добавляет запись, если слот заполнен.
     """
     slot = db.get(Slot, slot_id)
+    # проверяем, хватает ли у клиента доступных занятий
+    client = db.get(Client, client_id)
+    now_dt = datetime.now()
+    # количество будущих бронирований клиента
+    booked_future = (
+        db.query(Booking)
+        .join(Slot, Booking.slot_id == Slot.id)
+        .filter(Booking.client_id == client_id, Slot.start_time >= now_dt)
+        .count()
+    )
 
+    # Новая семантика: remaining_sessions == 0 означает, что у клиента нет занятий — блокируем.
+    if client is None:
+        return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}&flash=limit_reached", status_code=303)
+    remaining = int(client.remaining_sessions or 0)
+    if remaining == 0 or booked_future >= remaining:
+        return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}&flash=limit_reached", status_code=303)
+
+    # затем проверяем вместимость слота
     count = (
         db.query(Booking)
         .filter(
@@ -579,16 +662,46 @@ def add_client(
     )
 
     if count < slot.capacity:
-
-        booking = Booking(
-            client_id=client_id,
-            slot_id=slot.id,
-        )
-
+        booking = Booking(client_id=client_id, slot_id=slot.id)
         db.add(booking)
         db.commit()
 
     return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}", status_code=303)
+
+
+@app.post("/slot/{slot_id}/complete")
+def complete_slot(slot_id: int, week_offset: int = Form(0), db: Session = Depends(get_db)):
+    """Помечает слот как проведённый: списывает по одному занятию у всех записанных,
+    добавляет запись в журнал и удаляет слот вместе с бронированиями.
+    """
+    slot = db.get(Slot, slot_id)
+    if not slot:
+        return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+    # получаем всех бронировавших
+    bookings = db.query(Booking).filter(Booking.slot_id == slot_id).all()
+    client_names = []
+    for b in bookings:
+        c = db.get(Client, b.client_id)
+        if c:
+            client_names.append(c.fio())
+            # уменьшаем remaining_sessions не ниже 0
+            try:
+                c.remaining_sessions = max(0, int(c.remaining_sessions or 0) - 1)
+            except Exception:
+                c.remaining_sessions = 0
+            db.add(c)
+
+    # сохраняем запись в журнал
+    entry = JournalEntry(slot_time=slot.start_time, clients=", ".join(client_names))
+    db.add(entry)
+
+    # удаляем бронирования и слот
+    db.query(Booking).filter(Booking.slot_id == slot_id).delete()
+    db.query(Slot).filter(Slot.id == slot_id).delete()
+    db.commit()
+
+    return RedirectResponse(f"/journal", status_code=303)
 
 
 # При первом запуске приложения мы проверяем, есть ли в базе данных клиенты и слоты. 
@@ -606,6 +719,7 @@ try:
                 birth_place="Москва",
                 phone="+79990000001",
                 name="Петров Иван",
+                remaining_sessions=1,
             ),
             Client(
                 first_name="Мария",
@@ -615,6 +729,7 @@ try:
                 birth_place="Санкт-Петербург",
                 phone="+79990000002",
                 name="Иванова Мария",
+                remaining_sessions=1,
             ),
             Client(
                 first_name="Алексей",
@@ -624,9 +739,10 @@ try:
                 birth_place="Казань",
                 phone="+79990000003",
                 name="Сидоров Алексей",
+                remaining_sessions=1,
             ),
         ])
-        for i in range(9):
+        for i in range(1):
             db.add_all([
                 Client(
                     first_name=f"{i}",
@@ -636,6 +752,7 @@ try:
                     birth_place=f"{i}",
                     phone="+79990000001",
                     name=f"{i}",
+                    remaining_sessions=1,
                 )
             ])
         db.commit()
