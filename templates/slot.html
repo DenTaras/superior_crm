@@ -79,11 +79,18 @@
 	<button class="btn">Добавить</button>
 </form>
 
-<br />
+
+<!-- программа тренировки на этот слот -->
 <hr />
-<h3>Настройки слота</h3>
+<br />
+<a class="btn" href="/slot/{{ slot.id }}/program?week_offset={{ week_offset }}">Тренировка</a>
+<br />
+<br />
+
 
 <!-- Форма редактирования слота -->
+<hr />
+<h3>Настройки слота</h3>
 <form method="post" action="/slots/edit/{{ slot.id }}" class="field">
 	<input type="hidden" name="week_offset" value="{{ week_offset }}" />
 	<label class="label">Время</label>

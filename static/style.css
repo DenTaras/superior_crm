@@ -204,6 +204,11 @@ nav a:hover {
 
 .client-list li { background: var(--surface); padding: 12px 16px; margin-bottom: 8px; border-radius: var(--radius); }
 
+/* интерактивные элементы списка клиентов (hover / selected) */
+.client-item { transition: .15s; }
+.client-item:hover { color: var(--accent); cursor: pointer; }
+.client-item.selected { background: linear-gradient(90deg, rgba(154,7,13,0.06), transparent); border: 1px solid rgba(154,7,13,0.12); }
+
 /* Более читаемый межстрочный интервал для списков клиентов (страница слота) */
 .slot-client-list li {
     line-height: 1.8;

@@ -8,13 +8,24 @@
 
 <div class="panel">
     <table class="clients-table">
-        <thead><tr><th>Дата</th><th>Время слота</th><th>Клиенты</th></tr></thead>
+        <thead><tr><th>Дата</th><th>Время слота</th><th>Клиенты / Комментарии</th></tr></thead>
         <tbody>
-        {% for e in entries %}
+        {% for rec in entries %}
+            {% set e = rec.entry %}
             <tr>
                 <td>{{ e.created_at.strftime('%d.%m.%Y %H:%M') if e.created_at else '' }}</td>
                 <td>{{ e.slot_time.strftime('%d.%m.%Y %H:%M') if e.slot_time else '' }}</td>
-                <td>{{ e.clients }}</td>
+                <td>
+                    {% if rec.comments and rec.comments|length > 0 %}
+                        <ul>
+                        {% for name, comment in rec.comments %}
+                            <li><strong>{{ name }}:</strong> {{ comment }}</li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        {{ e.clients }}
+                    {% endif %}
+                </td>
             </tr>
         {% endfor %}
         </tbody>

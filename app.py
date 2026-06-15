@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from sqlalchemy import *
 from sqlalchemy.orm import *
 from sqlalchemy.orm import Session
+import json
 
 # Файл app.py - основной файл приложения, который содержит все маршруты и логику работы с базой данных. 
 # Здесь мы определяем модели данных, создаем базу данных и реализуем маршруты для отображения расписания, 
@@ -101,6 +102,17 @@ class JournalEntry(Base):
     created_at = Column(DateTime, default=datetime.now)
     slot_time = Column(DateTime)
     clients = Column(String)  # comma-separated list of client names
+    comments = Column(String, nullable=True)  # JSON: mapping client_id -> text
+
+
+# модель для хранения заметок по слоту+клиенту (рабочая таблица, уничтожается при завершении)
+class TrainingNote(Base):
+    __tablename__ = "training_notes"
+    id = Column(Integer, primary_key=True)
+    slot_id = Column(Integer, ForeignKey("slots.id"), index=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), index=True)
+    text = Column(Text, nullable=True)
+    updated_at = Column(DateTime, default=datetime.now)
 
 # Создаем все таблицы в базе данных, если они еще не существуют.
 Base.metadata.create_all(engine)
@@ -125,7 +137,7 @@ def ensure_client_columns():
             ("birth_place", "TEXT"),
             ("phone", "TEXT"),
             ("name", "TEXT"),
-                ("remaining_sessions", "INTEGER DEFAULT 1"),
+            ("remaining_sessions", "INTEGER DEFAULT 1"),
         ]
         for col, coltype in to_add:
             if col not in existing:
@@ -136,7 +148,23 @@ def ensure_client_columns():
                     pass
 
 
+def ensure_journal_columns():
+    """Добавляет колонку `comments` в таблицу `journal`, если её нет.
+
+    Используется для плавного обновления локальной SQLite БД в разработке.
+    """
+    with engine.connect() as conn:
+        try:
+            res = conn.execute(text("PRAGMA table_info(journal)"))
+            existing = [row[1] for row in res.fetchall()]
+            if 'comments' not in existing:
+                conn.execute(text("ALTER TABLE journal ADD COLUMN comments TEXT"))
+        except Exception:
+            pass
+
+
 ensure_client_columns()
+ensure_journal_columns()
 # После добавления колонки приводим существующие записи к дефолту 1 (пробное занятие)
 with engine.connect() as conn:
     try:
@@ -320,6 +348,89 @@ def slot_page(
     )
 
 
+
+@app.get("/slot/{slot_id}/program")
+def slot_program(request: Request, slot_id: int, db: Session = Depends(get_db), week_offset: int = 0):
+    """Страница программы тренировки для слота.
+
+    Показать список записанных клиентов и текст заметки для выбранного клиента.
+    Поддерживает автосохранение через AJAX.
+    """
+    slot = db.get(Slot, slot_id)
+    if not slot:
+        return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+    bookings = db.query(Booking).filter(Booking.slot_id == slot_id).all()
+    clients = [db.get(Client, b.client_id) for b in bookings]
+    # notes mapping client_id -> text
+    notes = {}
+    for b in bookings:
+        note = db.query(TrainingNote).filter(TrainingNote.slot_id == slot_id, TrainingNote.client_id == b.client_id).first()
+        notes[str(b.client_id)] = note.text if note and note.text else ""
+
+    return templates.TemplateResponse(
+        request=request,
+        name="slot_program.html",
+        context={
+            "slot": slot,
+            "clients": clients,
+            "notes_json": json.dumps(notes),
+            "week_offset": week_offset,
+        },
+    )
+
+
+from fastapi import Request
+from fastapi.responses import JSONResponse
+import urllib.parse
+
+
+@app.post("/slot/{slot_id}/program/save")
+async def slot_program_save(slot_id: int, request: Request, db: Session = Depends(get_db)):
+    """Сохраняет/обновляет заметку для пары (slot, client).
+
+    Поддерживает формы, JSON и сырой urlencoded (например, от sendBeacon).
+    """
+    client_id = None
+    text = ""
+    ct = request.headers.get('content-type', '')
+    try:
+        if 'application/json' in ct:
+            j = await request.json()
+            client_id = j.get('client_id')
+            text = j.get('text', '')
+        elif 'application/x-www-form-urlencoded' in ct or 'multipart/form-data' in ct:
+            form = await request.form()
+            client_id = form.get('client_id')
+            text = form.get('text', '')
+        else:
+            # raw body (sendBeacon may send as text/plain) — try parse as urlencoded
+            body = (await request.body()).decode(errors='ignore')
+            parsed = urllib.parse.parse_qs(body)
+            client_id = parsed.get('client_id', [None])[0]
+            text = parsed.get('text', [''])[0]
+    except Exception:
+        return JSONResponse({"ok": False}, status_code=400)
+
+    try:
+        client_id = int(client_id)
+    except Exception:
+        return JSONResponse({"ok": False}, status_code=400)
+
+    note = (
+        db.query(TrainingNote)
+        .filter(TrainingNote.slot_id == slot_id, TrainingNote.client_id == client_id)
+        .first()
+    )
+    if note is None:
+        note = TrainingNote(slot_id=slot_id, client_id=client_id, text=text)
+    else:
+        note.text = text
+        note.updated_at = datetime.now()
+    db.add(note)
+    db.commit()
+    return JSONResponse({"ok": True})
+
+
 @app.get("/clients")
 def clients_page(
     request: Request,
@@ -470,7 +581,24 @@ def subscriptions_page(request: Request):
 @app.get("/journal")
 def journal_page(request: Request, db: Session = Depends(get_db)):
     """Страница журнала проведённых занятий."""
-    entries = db.query(JournalEntry).order_by(JournalEntry.created_at.desc()).all()
+    raw = db.query(JournalEntry).order_by(JournalEntry.created_at.desc()).all()
+    entries = []
+    for e in raw:
+        comments_map = {}
+        try:
+            if e.comments:
+                comments_map = json.loads(e.comments)
+        except Exception:
+            comments_map = {}
+        comments_list = []
+        for cid, text in comments_map.items():
+            try:
+                c = db.get(Client, int(cid))
+                name = c.fio() if c else f"#{cid}"
+            except Exception:
+                name = f"#{cid}"
+            comments_list.append((name, text))
+        entries.append({"entry": e, "comments": comments_list})
     return templates.TemplateResponse(request=request, name="journal.html", context={"entries": entries})
 
 
@@ -785,6 +913,7 @@ def complete_slot(slot_id: int, week_offset: int = Form(0), db: Session = Depend
     # получаем всех бронировавших
     bookings = db.query(Booking).filter(Booking.slot_id == slot_id).all()
     client_names = []
+    comments_map = {}
     for b in bookings:
         c = db.get(Client, b.client_id)
         if c:
@@ -795,14 +924,23 @@ def complete_slot(slot_id: int, week_offset: int = Form(0), db: Session = Depend
             except Exception:
                 c.remaining_sessions = 0
             db.add(c)
+            # grab training note if any
+            note = (
+                db.query(TrainingNote)
+                .filter(TrainingNote.slot_id == slot_id, TrainingNote.client_id == c.id)
+                .first()
+            )
+            comments_map[str(c.id)] = note.text if note and note.text else ""
 
     # сохраняем запись в журнал
-    entry = JournalEntry(slot_time=slot.start_time, clients=", ".join(client_names))
+    entry = JournalEntry(slot_time=slot.start_time, clients=", ".join(client_names), comments=json.dumps(comments_map))
     db.add(entry)
 
     # удаляем бронирования и слот
     db.query(Booking).filter(Booking.slot_id == slot_id).delete()
     db.query(Slot).filter(Slot.id == slot_id).delete()
+    # remove training notes for this slot (moved to journal)
+    db.query(TrainingNote).filter(TrainingNote.slot_id == slot_id).delete()
     db.commit()
 
     return RedirectResponse(f"/journal", status_code=303)

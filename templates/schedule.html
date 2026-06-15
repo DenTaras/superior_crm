@@ -64,7 +64,9 @@
     <!-- быстрое заполнение календаря пустыми слотами -->
     <form method="post" action="/slots/add" class="form-row" style="flex-direction:row;gap:8px;align-items:center;margin-left:auto;">
         <input type="hidden" name="week_offset" value="{{ week_offset }}" />
+        <span style="font-size: 14px; color: #666; margin-right: 4px;">С:</span>
         <input class="field" type="datetime-local" name="start_time" value="{{ default_time }}" required />
+        <span style="font-size: 14px; color: #666; margin-right: 4px;">По:</span>
         <input class="field" type="datetime-local" name="end_time" value="{{ default_end_time }}" required />
         <select name="capacity" class="field">
             <option value="1">1</option>
