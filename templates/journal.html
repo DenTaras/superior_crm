@@ -19,7 +19,14 @@
                     {% if rec.comments and rec.comments|length > 0 %}
                         <ul>
                         {% for name, comment in rec.comments %}
-                            <li><strong>{{ name }}:</strong> {{ comment }}</li>
+                            <li>
+                                <strong>{{ name }}:</strong>
+                                <div class="journal-comment" style="padding-left: 30px;">
+                                {% for line in comment.splitlines() %}
+                                    {{ line | e }}{% if not loop.last %}<br>{% endif %}
+                                {% endfor %}
+                                </div>
+                            </li>
                         {% endfor %}
                         </ul>
                     {% else %}

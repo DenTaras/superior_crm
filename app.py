@@ -800,6 +800,8 @@ def slots_delete(slot_id: int, week_offset: int = Form(0), db: Session = Depends
     """
     # удалить бронирования в слоте, затем слот
     db.query(Booking).filter(Booking.slot_id == slot_id).delete()
+    # удалить временные заметки по слоту, если они остались
+    db.query(TrainingNote).filter(TrainingNote.slot_id == slot_id).delete()
     db.query(Slot).filter(Slot.id == slot_id).delete()
     db.commit()
     return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
@@ -837,6 +839,8 @@ def slots_remove(
     to_remove_ids = [s.id for s in slots_to_delete if (s.start_time + timedelta(hours=1)) <= end]
     if to_remove_ids:
         db.query(Booking).filter(Booking.slot_id.in_(to_remove_ids)).delete(synchronize_session=False)
+        # удалить временные заметки, связанные с удаляемыми слотами
+        db.query(TrainingNote).filter(TrainingNote.slot_id.in_(to_remove_ids)).delete(synchronize_session=False)
         db.query(Slot).filter(Slot.id.in_(to_remove_ids)).delete(synchronize_session=False)
         db.commit()
 
