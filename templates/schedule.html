@@ -61,17 +61,22 @@
     </div>
     <!-- Форма добавления нового слотa: отправляет `week_offset` чтобы
          после редиректа вернуться на ту же неделю в календаре -->
+    <!-- быстрое заполнение календаря пустыми слотами -->
     <form method="post" action="/slots/add" class="form-row" style="flex-direction:row;gap:8px;align-items:center;margin-left:auto;">
         <input type="hidden" name="week_offset" value="{{ week_offset }}" />
         <input class="field" type="datetime-local" name="start_time" value="{{ default_time }}" required />
+        <input class="field" type="datetime-local" name="end_time" value="{{ default_end_time }}" required />
         <select name="capacity" class="field">
             <option value="1">1</option>
             <option value="2">2</option>
             <option value="3">3</option>
             <option value="4">4</option>
         </select>
-        <button class="btn">Добавить слот</button>
-    </form>
+        <button class="btn">Добавить слоты</button>
+    <!-- быстрое удаление слотов -->
+        <button class="btn" onclick="this.form.action='/slots/remove';">Очистить слоты</button>
+    </form>    
+
 </div>
 
 <div class="calendar">

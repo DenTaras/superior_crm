@@ -16,6 +16,7 @@
     /* цвета вторичноо акцента */
     --warm_1: #8A6A4A;
     --warm_2: #7B5A3D;
+    --green: #3c8f3f;
     /* цвет границы */
     --border: #5B5B5B;
     /* радиусы и отступы */
@@ -39,6 +40,7 @@
 .panel { background: var(--surface); border-radius: var(--radius-lg); padding: var(--pad-lg); color: var(--text); }
 .panel--accent { border-left: 4px solid var(--accent); }
 .btn { display: inline-block; padding: var(--btn-pad); border-radius: var(--radius); background: var(--accent); color: white; border: none; cursor: pointer; text-decoration: none; text-align: center; }
+.btn--green { display: inline-block; padding: var(--btn-pad); border-radius: var(--radius); background: var(--green); color: white; border: none; cursor: pointer; text-decoration: none; text-align: center; }
 .btn--ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
 .btn--small { padding: 4px 8px; font-size: 0.95rem; background: var(--surface-hover); color: var(--text); border-radius: var(--radius); text-decoration: none; }
 .form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }

@@ -234,6 +234,7 @@ def schedule(request: Request, db: Session = Depends(get_db), week_offset: int =
     hours = list(range(8, 23))
 
     default_time = datetime.now().strftime("%Y-%m-%dT%H:%M")
+    default_end_time = (datetime.now() + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M")
 
     # карту ячеек: (day_index, hour) -> slot or None
     grid = {(d_idx, h): None for d_idx in range(7) for h in hours}
@@ -266,6 +267,7 @@ def schedule(request: Request, db: Session = Depends(get_db), week_offset: int =
             "hours": hours,
             "grid": grid,
             "default_time": default_time,
+                "default_end_time": default_end_time,
             "week_offset": week_offset,
         },
     )
@@ -519,44 +521,102 @@ def clients_delete(client_id: int, db: Session = Depends(get_db)):
 
 
 
+# добавить один слот
 @app.post("/slots/add")
 def slots_add(
     start_time: str = Form(...),
+    end_time: str = Form(None),
     capacity: int = Form(1),
     week_offset: int = Form(0),
     db: Session = Depends(get_db),
 ):
-    """Создаёт новый часовой слот.
+    """Создаёт серию часовых слотов внутри заданного интервала.
 
-    Проверяет формат времени, нормализует `capacity` и запрещает создание
-    перекрывающегося слота (слот длится 1 час). При конфликте возвращает
-    редирект с флаш-сообщением.
+    Если `end_time` не указан — поведение как раньше (один слот).
+    Создаём только слоты, полностью укладывающиеся в интервал:
+    слот_start + 1h <= end_time.
+    Учёт рабочих часов: допустимые часы начала слота — 8..22 включительно.
+    При попытке создать слот в прошлом — возвращаем `slot_past`.
+    При пересечении с существующими слотами — возвращаем `slot_conflict`.
     """
-    # ожидается ISO формат: YYYY-MM-DDTHH:MM или YYYY-MM-DD HH:MM
-    ts = start_time.replace(" ", "T")
+    ts = (start_time or "").replace(" ", "T")
     start = datetime.fromisoformat(ts)
-    # запретить создание слота в прошлом
-    if start < datetime.now():
+    # parse end_time if provided
+    end = None
+    if end_time:
+        te = end_time.replace(" ", "T")
+        end = datetime.fromisoformat(te)
+
+    # single-slot behavior when no end provided
+    if not end:
+        # delegate to old behaviour (single slot)
+        if start < datetime.now():
+            return RedirectResponse(f"/schedule?week_offset={week_offset}&flash=slot_past", status_code=303)
+        try:
+            capacity = int(capacity)
+        except Exception:
+            capacity = 1
+        if capacity not in (1, 2, 3, 4):
+            capacity = 1
+        new_start = start
+        new_end = new_start + timedelta(hours=1)
+        overlapping = (
+            db.query(Slot)
+            .filter(Slot.start_time > (new_start - timedelta(hours=1)), Slot.start_time < new_end)
+            .all()
+        )
+        if overlapping:
+            return RedirectResponse(f"/schedule?week_offset={week_offset}&flash=slot_conflict", status_code=303)
+        slot = Slot(start_time=start, capacity=capacity)
+        db.add(slot)
+        db.commit()
+        return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+    # bulk creation: validate interval
+    if end <= start:
+        return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+    now = datetime.now()
+    # build candidate starts: step by 1 hour, include a slot if slot_start +1h <= end
+    candidates = []
+    cur = start
+    while True:
+        slot_end = cur + timedelta(hours=1)
+        if slot_end <= end:
+            # working hours: start.hour in 8..22 inclusive
+            if 8 <= cur.hour <= 22:
+                candidates.append(cur)
+        else:
+            break
+        # move to next hour
+        cur = cur + timedelta(hours=1)
+    # if any candidate in past -> abort
+    if any(s < now for s in candidates):
         return RedirectResponse(f"/schedule?week_offset={week_offset}&flash=slot_past", status_code=303)
+
     try:
         capacity = int(capacity)
     except Exception:
         capacity = 1
     if capacity not in (1, 2, 3, 4):
         capacity = 1
-    # проверка перекрытия: слот длится 1 час; запрещаем пересечение
-    new_start = start
-    new_end = new_start + timedelta(hours=1)
-    overlapping = (
-        db.query(Slot)
-        .filter(Slot.start_time > (new_start - timedelta(hours=1)), Slot.start_time < new_end)
-        .all()
-    )
-    if overlapping:
-        # не создаём слот, возвращаемся на страницу расписания с флаш-сообщением
-        return RedirectResponse(f"/schedule?week_offset={week_offset}&flash=slot_conflict", status_code=303)
-    slot = Slot(start_time=start, capacity=capacity)
-    db.add(slot)
+
+    # check overlaps for all candidates
+    for s in candidates:
+        new_start = s
+        new_end = new_start + timedelta(hours=1)
+        overlapping = (
+            db.query(Slot)
+            .filter(Slot.start_time > (new_start - timedelta(hours=1)), Slot.start_time < new_end)
+            .first()
+        )
+        if overlapping:
+            return RedirectResponse(f"/schedule?week_offset={week_offset}&flash=slot_conflict", status_code=303)
+
+    # create slots
+    for s in candidates:
+        slot = Slot(start_time=s, capacity=capacity)
+        db.add(slot)
     db.commit()
     return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
 
@@ -614,6 +674,44 @@ def slots_delete(slot_id: int, week_offset: int = Form(0), db: Session = Depends
     db.query(Booking).filter(Booking.slot_id == slot_id).delete()
     db.query(Slot).filter(Slot.id == slot_id).delete()
     db.commit()
+    return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+
+
+@app.post("/slots/remove")
+def slots_remove(
+    start_time: str = Form(None),
+    end_time: str = Form(None),
+    week_offset: int = Form(0),
+    db: Session = Depends(get_db),
+):
+    """Массовое удаление слотов, попадающих полностью в указанный интервал.
+
+    Если `start_time`/`end_time` не указаны — удаляет ничего.
+    Удаляются только слоты, у которых `slot.start_time >= start_time` и
+    `slot.start_time + 1h <= end_time`.
+    """
+    if not start_time or not end_time:
+        return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+    ts = start_time.replace(" ", "T")
+    te = end_time.replace(" ", "T")
+    start = datetime.fromisoformat(ts)
+    end = datetime.fromisoformat(te)
+    if end <= start:
+        return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+    # delete bookings for slots that fall fully inside interval
+    slots_to_delete = (
+        db.query(Slot)
+        .filter(Slot.start_time >= start)
+        .all()
+    )
+    to_remove_ids = [s.id for s in slots_to_delete if (s.start_time + timedelta(hours=1)) <= end]
+    if to_remove_ids:
+        db.query(Booking).filter(Booking.slot_id.in_(to_remove_ids)).delete(synchronize_session=False)
+        db.query(Slot).filter(Slot.id.in_(to_remove_ids)).delete(synchronize_session=False)
+        db.commit()
+
     return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
 
 
