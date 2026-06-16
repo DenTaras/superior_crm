@@ -10,7 +10,7 @@ import os
 import hashlib
 from typing import Optional
 
-from fastapi import APIRouter, Request, Form, Depends
+from fastapi import APIRouter, Request, Form, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -35,6 +35,18 @@ def get_current_user(request: Request) -> Optional[dict]:
     return request.session.get("user")
 
 
+def require_role(*roles: str):
+    """Dependency — проверяет, что пользователь авторизован и имеет одну из ролей."""
+    def dependency(request: Request):
+        user = get_current_user(request)
+        if not user:
+            raise HTTPException(status_code=303, detail="/login")
+        if user.get("role") not in roles:
+            raise HTTPException(status_code=303, detail="/")
+        return user
+    return dependency
+
+
 # ---- Страницы ----
 
 
@@ -56,17 +68,20 @@ def login_post(
     """Обработка входа для всех пользователей."""
     # admin
     if login == ADMIN_LOGIN and password == ADMIN_PASSWORD:
+        request.session.regenerate_id()
         request.session["user"] = {"role": "admin", "name": "Администратор"}
         return RedirectResponse("/", status_code=303)
 
     # trainer
     if login == TRAINER_LOGIN and password == TRAINER_PASSWORD:
+        request.session.regenerate_id()
         request.session["user"] = {"role": "trainer", "name": "Тренер"}
         return RedirectResponse("/", status_code=303)
 
     # client — проверка по БД
     client = db.query(Client).filter(Client.login == login).first()
     if client and client.password_hash == hash_password(password):
+        request.session.regenerate_id()
         request.session["user"] = {
             "role": "client",
             "name": client.fio(),
@@ -120,6 +135,7 @@ def register_post(
     db.add(client)
     db.commit()
 
+    request.session.regenerate_id()
     request.session["user"] = {
         "role": "client",
         "name": client.fio(),

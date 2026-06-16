@@ -16,6 +16,7 @@ if ROOT not in sys.path:
 from main import app
 from app.models import Base
 from app.database import get_db
+from app.session import set_session_engine
 
 
 @pytest.fixture(scope="session")
@@ -36,6 +37,8 @@ def engine(tmp_db_path):
     engine = create_engine(conn_str, connect_args={"check_same_thread": False})
     # create tables
     Base.metadata.create_all(engine)
+    # перенаправляем сессии в ту же БД
+    set_session_engine(engine)
     return engine
 
 
@@ -55,7 +58,7 @@ def db_session(engine):
 
 @pytest.fixture()
 def client(engine, db_session):
-    """Фикстура тест-клиента FastAPI с переопределённой зависимостью БД.
+    """Фикстура тест-клиента FastAPI, авторизованного как админ.
 
     Переопределяет `get_db` так, чтобы маршруты использовали `db_session`.
     Возвращает контекстный `TestClient` из `fastapi.testclient`.
@@ -63,6 +66,24 @@ def client(engine, db_session):
     # override dependency
     def override_get_db():
         """Генератор, возвращающий фиктивную сессию БД для использования в тестах."""
+        db = db_session
+        try:
+            yield db
+        finally:
+            pass
+
+    app.dependency_overrides[get_db] = override_get_db
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as c:
+        c.post("/login", data={"login": "admin", "password": "admin"}, follow_redirects=False)
+        yield c
+
+
+@pytest.fixture()
+def anon_client(engine, db_session):
+    """Тест-клиент без авторизации (для тестов логина)."""
+    def override_get_db():
         db = db_session
         try:
             yield db

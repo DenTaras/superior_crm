@@ -71,6 +71,7 @@
         <a class="btn btn--ghost" href="/schedule?week_offset=0">Текущая</a>
         <a class="btn btn--ghost" href="/schedule?week_offset={{ week_offset + 1 }}">Следующая неделя →</a>
     </div>
+    {% if user and user.role in ('admin', 'trainer') %}
     <!-- Форма добавления нового слотa: отправляет `week_offset` чтобы
          после редиректа вернуться на ту же неделю в календаре -->
     <!-- быстрое заполнение календаря пустыми слотами -->
@@ -89,7 +90,8 @@
         <button class="btn">Добавить слоты</button>
     <!-- быстрое удаление слотов -->
         <button class="btn" onclick="this.form.action='/slots/remove';">Очистить слоты</button>
-    </form>    
+    </form>
+    {% endif %}    
 
 </div>
 

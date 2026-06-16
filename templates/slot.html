@@ -64,6 +64,7 @@
 	</script>
 {% endif %}
 
+{% if user and user.role in ('admin', 'trainer') %}
 <!-- Список клиентов, уже записанных в слот. Для каждого доступна кнопка удаления. -->
 <h3>Записаны:</h3>
 <ul class="client-list slot-client-list">
@@ -122,14 +123,29 @@
 
 <!-- кнопки слота -->
 <div style="display: flex; gap: 10px; align-items: center; margin-top: 8px;">
+	<!-- Форма для завершения тренировки -->
+	<form method="post" action="/slot/{{ slot.id }}/complete">
+		<input type="hidden" name="week_offset" value="{{ week_offset }}" />
+		<button class="btn" onclick="return confirm('Завершить тренировку?')">Завершить</button>
+	</form>
 	<!-- Форма для удаления слота -->
 	<form method="post" action="/slots/delete/{{ slot.id }}" 
 		onsubmit="return confirm('Удалить слот? Это удалит все бронирования.');">
 		<input type="hidden" name="week_offset" value="{{ week_offset }}" />
 		<button class="btn" >Удалить слот</button>
 	</form>
+</div>
+{% else %}
+<!-- Для клиента: только список записавшихся -->
+<h3>Записаны:</h3>
+<ul class="client-list slot-client-list">
+	{% for client in clients %}
+	<li>{{ client.fio() }}</li>
+	{% endfor %}
+</ul>
+{% endif %}
+	{% if user and user.role in ('admin', 'trainer') and clients and clients|length > 0 %}
 	<!-- Форма для подтверждения проведения занятия: снимет по 1 занятию у всех записанных и удалит слот -->
-	{% if clients and clients|length > 0 %}
 	<form method="post" action="/slot/{{ slot.id }}/complete" 
 		onsubmit="return confirm('Подтвердить проведение занятия и списать 1 занятие у всех записанных?');">
 		<input type="hidden" name="week_offset" value="{{ week_offset }}" />

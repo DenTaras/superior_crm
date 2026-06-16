@@ -13,6 +13,7 @@ from app.schemas import ClientCreateForm, SubscriptionAddForm
 from app.forms import parse_client_form, parse_subscription_form
 from app.logging_config import audit_log
 from app.timezone import now as tz_now
+from app.auth import require_role
 
 router = APIRouter()
 
@@ -27,6 +28,7 @@ def clients_page(
     q_name: str = "",
     q_phone: str = "",
     page: int = 1,
+    _: dict = Depends(require_role("admin", "trainer")),
 ):
     """Список клиентов с фильтрацией и пагинацией (25 на странице)."""
     query = db.query(Client)
@@ -85,7 +87,7 @@ def clients_page(
 
 
 @router.get("/clients/create")
-def clients_create(request: Request):
+def clients_create(request: Request, _: dict = Depends(require_role("admin", "trainer"))):
     """Форма создания клиента."""
     return templates.TemplateResponse(request=request, name="clients_create.html", context={})
 
@@ -94,6 +96,7 @@ def clients_create(request: Request):
 def add_client_post(
     form: ClientCreateForm = Depends(parse_client_form),
     db: Session = Depends(get_db),
+    _: dict = Depends(require_role("admin", "trainer")),
 ):
     """Создать нового клиента."""
     if not form.first_name:
@@ -116,7 +119,7 @@ def add_client_post(
 
 
 @router.get("/clients/edit/{client_id}")
-def clients_edit(request: Request, client_id: int, db: Session = Depends(get_db)):
+def clients_edit(request: Request, client_id: int, db: Session = Depends(get_db), _: dict = Depends(require_role("admin", "trainer"))):
     """Форма редактирования клиента."""
     client = db.get(Client, client_id)
     if client is None:
@@ -131,6 +134,7 @@ def clients_edit_post(
     client_id: int,
     form: ClientCreateForm = Depends(parse_client_form),
     db: Session = Depends(get_db),
+    _: dict = Depends(require_role("admin", "trainer")),
 ):
     """Обновить данные клиента."""
     client = db.get(Client, client_id)
@@ -149,7 +153,7 @@ def clients_edit_post(
 
 
 @router.post("/clients/delete/{client_id}")
-def clients_delete(client_id: int, db: Session = Depends(get_db)):
+def clients_delete(client_id: int, db: Session = Depends(get_db), _: dict = Depends(require_role("admin", "trainer"))):
     """Удалить клиента и его бронирования."""
     db.query(Booking).filter(Booking.client_id == client_id).delete()
     db.query(Client).filter(Client.id == client_id).delete()
@@ -162,6 +166,7 @@ def clients_delete(client_id: int, db: Session = Depends(get_db)):
 def clients_add_subscription(
     form: SubscriptionAddForm = Depends(parse_subscription_form),
     db: Session = Depends(get_db),
+    _: dict = Depends(require_role("admin", "trainer")),
 ):
     """Добавить абонемент клиенту."""
     client = db.get(Client, form.client_id)

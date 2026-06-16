@@ -14,8 +14,6 @@ import logging as _logging
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
-from starlette.middleware.sessions import SessionMiddleware
-
 import app.database  # noqa: F401 — регистрирует Jinja2-фильтры
 from app.logging_config import logger as _app_logger
 from app.models import Client, Slot, Booking, JournalEntry, TrainingNote  # re-export + seed
@@ -27,14 +25,15 @@ from app.routes.journal import router as journal_router
 from app.auth import router as auth_router
 from app.auth import get_current_user
 from app.timezone import now as tz_now
+from app.session import DbSessionMiddleware
 
 _log = _logging.getLogger("superior.request")
 _trace_log = _logging.getLogger("superior.trace")
 
 app = FastAPI(title="SUPERIOR CRM")
 
-# Сессии (секретный ключ — из переменной окружения)
-app.add_middleware(SessionMiddleware, secret_key=_os.getenv("SESSION_SECRET", "superior-dev-secret-key-change-in-prod"))
+# Сессии на основе БД (разные вкладки — независимые сессии)
+app.add_middleware(DbSessionMiddleware)
 _static_dir = _os.path.join(_os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 

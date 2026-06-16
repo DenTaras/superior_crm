@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db, templates
 from app.models import JournalEntry, Client
+from app.auth import require_role
 
 router = APIRouter()
 
@@ -19,7 +20,7 @@ def home(request: Request):
 
 
 @router.get("/journal")
-def journal_page(request: Request, db: Session = Depends(get_db)):
+def journal_page(request: Request, db: Session = Depends(get_db), _: dict = Depends(require_role("admin", "trainer"))):
     """Журнал проведённых занятий."""
     raw = db.query(JournalEntry).order_by(JournalEntry.created_at.desc()).all()
     entries = []
@@ -45,6 +46,6 @@ def journal_page(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/subscriptions")
-def subscriptions_page(request: Request):
+def subscriptions_page(request: Request, _: dict = Depends(require_role("admin", "trainer"))):
     """Страница с перечнем абонементов."""
     return templates.TemplateResponse(request=request, name="subscriptions.html", context={})

@@ -11,6 +11,7 @@ from app.timezone import now as tz_now
 
 from app.database import get_db, templates
 from app.models import Slot, Booking, Client, TrainingNote
+from app.auth import require_role
 
 router = APIRouter()
 
@@ -21,6 +22,7 @@ def slot_program(
     slot_id: int,
     db: Session = Depends(get_db),
     week_offset: int = 0,
+    _: dict = Depends(require_role("admin", "trainer")),
 ):
     """Страница программы: список клиентов + заметки."""
     slot = db.get(Slot, slot_id)
@@ -50,7 +52,7 @@ def slot_program(
 
 
 @router.post("/slot/{slot_id}/program/save")
-async def slot_program_save(slot_id: int, request: Request, db: Session = Depends(get_db)):
+async def slot_program_save(slot_id: int, request: Request, db: Session = Depends(get_db), _: dict = Depends(require_role("admin", "trainer"))):
     """Сохранить заметку для клиента в слоте (form / JSON / sendBeacon)."""
     client_id = None
     text = ""

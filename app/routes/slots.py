@@ -15,6 +15,7 @@ from app.models import Slot, Booking, Client, JournalEntry, TrainingNote
 from app.schemas import SlotAddForm, SlotEditForm, BookingAddForm, SlotRemoveForm
 from app.forms import parse_slot_add_form, parse_slot_edit_form, parse_booking_add_form, parse_slot_remove_form
 from app.logging_config import audit_log
+from app.auth import require_role
 
 router = APIRouter()
 
@@ -48,6 +49,7 @@ def _retry_on_integrity_error(fn, *args, **kwargs):
 def slots_add(
     form: SlotAddForm = Depends(parse_slot_add_form),
     db: Session = Depends(get_db),
+    _: dict = Depends(require_role("admin", "trainer")),
 ):
     """Создать часовой слот (или серию слотов, если указан end_time).
 
@@ -125,6 +127,7 @@ def slots_edit_post(
     slot_id: int,
     form: SlotEditForm = Depends(parse_slot_edit_form),
     db: Session = Depends(get_db),
+    _: dict = Depends(require_role("admin", "trainer")),
 ):
     """Изменить время и вместимость слота."""
     slot = db.get(Slot, slot_id)
@@ -145,7 +148,7 @@ def slots_edit_post(
 
 
 @router.post("/slots/delete/{slot_id}")
-def slots_delete(slot_id: int, week_offset: int = 0, db: Session = Depends(get_db)):
+def slots_delete(slot_id: int, week_offset: int = 0, db: Session = Depends(get_db), _: dict = Depends(require_role("admin", "trainer"))):
     """Удалить слот, его бронирования и заметки."""
     db.query(Booking).filter(Booking.slot_id == slot_id).delete()
     db.query(TrainingNote).filter(TrainingNote.slot_id == slot_id).delete()
@@ -159,6 +162,7 @@ def slots_delete(slot_id: int, week_offset: int = 0, db: Session = Depends(get_d
 def slots_remove(
     form: SlotRemoveForm = Depends(parse_slot_remove_form),
     db: Session = Depends(get_db),
+    _: dict = Depends(require_role("admin", "trainer")),
 ):
     """Массовое удаление слотов по интервалу."""
     if not form.start_time or not form.end_time:
@@ -188,6 +192,7 @@ def add_client(
     slot_id: int,
     form: BookingAddForm = Depends(parse_booking_add_form),
     db: Session = Depends(get_db),
+    _: dict = Depends(require_role("admin", "trainer")),
 ):
     """Записать клиента в слот (с защитой от гонок: row-level lock + retry)."""
     return _retry_on_integrity_error(_do_add_client, slot_id, form, db)
@@ -241,6 +246,7 @@ def remove_booking(
     slot_id: int,
     form: BookingAddForm = Depends(parse_booking_add_form),
     db: Session = Depends(get_db),
+    _: dict = Depends(require_role("admin", "trainer")),
 ):
     """Удалить бронь клиента из слота."""
     db.query(Booking).filter(
@@ -255,7 +261,7 @@ def remove_booking(
 
 
 @router.post("/slot/{slot_id}/complete")
-def complete_slot(slot_id: int, week_offset: int = 0, db: Session = Depends(get_db)):
+def complete_slot(slot_id: int, week_offset: int = 0, db: Session = Depends(get_db), _: dict = Depends(require_role("admin", "trainer"))):
     """Завершить тренировку: списать занятия, сохранить в журнал, удалить слот."""
     slot = db.get(Slot, slot_id)
     if not slot:

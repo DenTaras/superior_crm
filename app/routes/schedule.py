@@ -9,12 +9,13 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db, templates
 from app.models import Slot, Booking, Client
+from app.auth import get_current_user
 
 router = APIRouter()
 
 
 @router.get("/schedule")
-def schedule(request: Request, db: Session = Depends(get_db), week_offset: int = 0):
+def schedule(request: Request, db: Session = Depends(get_db), week_offset: int = 0, user: dict = Depends(get_current_user)):
     """Недельный календарь 08:00–22:00."""
     slots = db.query(Slot).order_by(Slot.start_time).all()
 
@@ -59,6 +60,7 @@ def schedule(request: Request, db: Session = Depends(get_db), week_offset: int =
             "default_time": default_time,
             "default_end_time": default_end_time,
             "week_offset": week_offset,
+            "user": user,
         },
     )
 
@@ -69,6 +71,7 @@ def slot_page(
     slot_id: int,
     db: Session = Depends(get_db),
     week_offset: int = 0,
+    user: dict = Depends(get_current_user),
 ):
     """Страница отдельного слота со списком записанных клиентов."""
     slot = db.get(Slot, slot_id)
@@ -84,5 +87,6 @@ def slot_page(
             "clients": clients,
             "all_clients": all_clients,
             "week_offset": week_offset,
+            "user": user,
         },
     )
