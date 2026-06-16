@@ -19,8 +19,10 @@ from routes.slots import router as slots_router
 from routes.program import router as program_router
 from routes.journal import router as journal_router
 
+import os as _os
 app = FastAPI(title="SUPERIOR CRM")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+_static_dir = _os.path.join(_os.path.dirname(__file__), "static")
+app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
 # ---- Подключаем роутеры ----
 app.include_router(journal_router)       # /, /journal, /subscriptions

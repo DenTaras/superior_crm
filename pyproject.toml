@@ -10,3 +10,6 @@ ignore = ["E402", "F401"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "e2e: E2E tests (require running server on port 8001)",
+]

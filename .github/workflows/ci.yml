@@ -22,16 +22,27 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install ruff pytest-playwright
 
       - name: Lint with ruff
         run: |
-          pip install ruff
           ruff check --output-format=github .
 
       - name: Run migrations
         run: |
           alembic upgrade head
 
-      - name: Run tests
+      - name: Run tests (unit + integration)
         run: |
-          pytest -q --tb=short
+          pytest -q --tb=short --ignore=tests/test_e2e.py
+
+      - name: Install Playwright browsers
+        run: |
+          pip install pytest-playwright
+          python -m playwright install chromium --with-deps
+
+      - name: Start server and run E2E tests
+        run: |
+          uvicorn app:app --host 127.0.0.1 --port 8001 &
+          sleep 3
+          pytest tests/test_e2e.py -v --tracing=retain-on-failure

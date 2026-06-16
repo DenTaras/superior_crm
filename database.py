@@ -12,7 +12,8 @@ from sqlalchemy.orm import sessionmaker, Session
 from models import Base  # noqa: F401
 
 # ---- Jinja2 templates (доступны всем роутам) ----
-templates = Jinja2Templates(directory="templates")
+_templates_dir = os.path.join(os.path.dirname(__file__), "templates")
+templates = Jinja2Templates(directory=_templates_dir)
 
 
 def format_phone(value: str) -> str:
@@ -32,11 +33,22 @@ templates.env.filters['format_phone'] = format_phone
 
 # ---- Engine & Session ----
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///superior.db")
+
+# Если для DATABASE_URL не установлен нужный драйвер (например, psycopg2),
+# бесшумно падаем на SQLite. Это позволяет запускать pytest, не сбрасывая
+# переменную окружения, когда PostgreSQL не запущен / не установлен драйвер.
 connect_args = {}
 if DATABASE_URL.startswith("sqlite"):
     connect_args["check_same_thread"] = False
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+try:
+    engine = create_engine(DATABASE_URL, connect_args=connect_args)
+except ModuleNotFoundError:
+    fallback_url = "sqlite:///superior.db"
+    print(f"[WARN] Driver for {DATABASE_URL} not installed, falling back to {fallback_url}")
+    DATABASE_URL = fallback_url
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+
 SessionLocal = sessionmaker(bind=engine)
 
 
