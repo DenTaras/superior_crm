@@ -6,7 +6,11 @@
     <h1>Программа для слота {{ slot.start_time.strftime('%d.%m %H:%M') }}</h1>
 </div>
 
-<div style="display:flex;gap:16px;align-items:flex-start;">
+<div id="slot-program"
+     data-slot-id="{{ slot.id }}"
+     data-week-offset="{{ week_offset }}"
+     style="display:flex;gap:16px;align-items:flex-start;">
+
     <div style="width:260px;">
         <h3>Клиенты</h3>
         <ul id="clients-list" class="client-list">
@@ -26,9 +30,17 @@
     </div>
 </div>
 
+<script id="notes-data" type="application/json">{{ notes_json|safe }}</script>
+
 <script>
 (function(){
-    var notes = {{ notes_json|safe }};
+    var slotProgram = document.getElementById('slot-program');
+    var slotId = slotProgram.getAttribute('data-slot-id');
+
+    var notesEl = document.getElementById('notes-data');
+    var notes = {};
+    try { notes = JSON.parse(notesEl.textContent); } catch(e) {}
+
     var clients = Array.from(document.querySelectorAll('.client-item'));
     var selected = null;
     var textarea = document.getElementById('note-text');
@@ -40,7 +52,7 @@
         var fd = new FormData();
         fd.append('client_id', clientId);
         fd.append('text', textarea.value || '');
-        return fetch('/slot/' + {{ slot.id }} + '/program/save', { method: 'POST', body: fd }).then(function(r){ return r.json(); }).then(function(j){
+        return fetch('/slot/' + slotId + '/program/save', { method: 'POST', body: fd }).then(function(r){ return r.json(); }).then(function(j){
             notes[clientId] = textarea.value || '';
             status.textContent = 'Сохранено';
             setTimeout(function(){ status.textContent = 'Автосохранение включено'; }, 900);
@@ -55,16 +67,13 @@
         textarea.focus();
     }
 
-    // handle switching with saving of previous
     var timeout = null;
     var pendingClient = null;
     clients.forEach(function(el, idx){
         el.addEventListener('click', function(){
-            // if there is a pending debounce, flush it first
             if(timeout){
                 clearTimeout(timeout);
                 timeout = null;
-                // save current selected immediately
                 if(selected){
                     pendingClient = selected;
                 }
@@ -73,7 +82,6 @@
                 selectClient(el);
             };
             if(pendingClient){
-                // save previous then switch
                 doSave(pendingClient).then(function(){ pendingClient = null; doSwitch(); }).catch(function(){ pendingClient = null; doSwitch(); });
             } else {
                 doSwitch();
@@ -82,7 +90,6 @@
         if(idx === 0) selectClient(el);
     });
 
-    // autosave with debounce (shorter)
     textarea.addEventListener('input', function(){
         status.textContent = 'Сохранение...';
         if(timeout) clearTimeout(timeout);
@@ -93,13 +100,12 @@
         }, 300);
     });
 
-    // save on unload to avoid losing edits
     window.addEventListener('beforeunload', function(e){
         if(timeout) { clearTimeout(timeout); timeout = null; }
         if(selected){
             var blob = new Blob([new URLSearchParams({client_id: selected, text: textarea.value})], { type: 'application/x-www-form-urlencoded' });
             if(navigator.sendBeacon){
-                navigator.sendBeacon('/slot/' + {{ slot.id }} + '/program/save', blob);
+                navigator.sendBeacon('/slot/' + slotId + '/program/save', blob);
             }
         }
     });

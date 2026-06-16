@@ -9,7 +9,7 @@ from app import Client, Slot, Booking, TrainingNote, JournalEntry
 
 
 def extract_notes_json(html_text: str) -> dict:
-    m = re.search(r"var notes\s*=\s*(\{.*?\});", html_text, re.S)
+    m = re.search(r'<script id="notes-data" type="application/json">(.*?)</script>', html_text, re.S)
     if not m:
         return {}
     try:
