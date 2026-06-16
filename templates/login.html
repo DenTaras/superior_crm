@@ -14,6 +14,7 @@
     {% endif %}
 
     <form method="post" action="/login" class="form-stack" style="display:flex;flex-direction:column;gap:12px;">
+        {{ csrf_input(request) }}
         <label>
             Логин
             <input class="field" type="text" name="login" required style="width:100%;" />

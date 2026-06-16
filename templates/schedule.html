@@ -76,6 +76,7 @@
          после редиректа вернуться на ту же неделю в календаре -->
     <!-- быстрое заполнение календаря пустыми слотами -->
     <form method="post" action="/slots/add" class="form-row" style="flex-direction:row;gap:8px;align-items:center;margin-left:auto;">
+        {{ csrf_input(request) }}
         <input type="hidden" name="week_offset" value="{{ week_offset }}" />
         <span style="font-size: 14px; color: #666; margin-right: 4px;">С:</span>
         <input class="field" type="datetime-local" name="start_time" value="{{ default_time }}" required />

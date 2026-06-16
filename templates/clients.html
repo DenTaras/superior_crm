@@ -39,6 +39,7 @@
                 <td>
                     <a class="btn btn--small" href="/clients/edit/{{ client.id }}">Редактировать</a>
                     <form method="post" action="/clients/add_subscription" style="display:inline;margin-left:8px;">
+                        {{ csrf_input(request) }}
                         <input type="hidden" name="client_id" value="{{ client.id }}" />
                         <select name="package" class="field" style="display:inline-block;width:auto;">
                             <option value="12">12 занятий</option>

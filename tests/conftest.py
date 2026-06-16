@@ -8,6 +8,9 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+# Отключаем CSRF для тестов (токен проверяется отдельными тестами)
+os.environ["CSRF_DISABLE"] = "1"
+
 # Ensure project root is on sys.path so `import app` works when pytest runs
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if ROOT not in sys.path:

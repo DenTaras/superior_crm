@@ -5,6 +5,7 @@
 <h1>Новый клиент</h1>
 
 <form method="post" action="/clients/create" class="edit-form">
+    {{ csrf_input(request) }}
     <div class="form-row"><label class="label">Имя</label><input class="field" type="text" name="first_name" value="" required /></div>
     <div class="form-row"><label class="label">Фамилия</label><input class="field" type="text" name="last_name" value="" /></div>
     <div class="form-row"><label class="label">Отчество</label><input class="field" type="text" name="patronymic" value="" /></div>

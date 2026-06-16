@@ -72,6 +72,7 @@
 	<li>
 	{{ client.fio() }}
 		<form method="post" action="/slot/{{ slot.id }}/remove" style="display:inline">
+			{{ csrf_input(request) }}
 			<input type="hidden" name="client_id" value="{{ client.id }}" />
 			<input type="hidden" name="week_offset" value="{{ week_offset }}" />
 			<button class="btn"> Удалить из слота </button>
@@ -82,6 +83,7 @@
 
 <!-- Форма добавления существующего клиента в слот -->
 <form method="post" action="/slot/{{ slot.id }}/add">
+	{{ csrf_input(request) }}
 	<select name="client_id" class="field">
 		{% for client in all_clients %}
 		<option value="{{ client.id }}">
@@ -106,6 +108,7 @@
 <hr />
 <h3>Настройки слота</h3>
 <form method="post" action="/slots/edit/{{ slot.id }}" class="field">
+	{{ csrf_input(request) }}
 	<input type="hidden" name="week_offset" value="{{ week_offset }}" />
 	<label class="label">Время</label>
 	<input class="field" type="text" name="start_time" value="{{ slot.start_time.strftime('%Y-%m-%d %H:%M') }}" required />
@@ -125,12 +128,14 @@
 <div style="display: flex; gap: 10px; align-items: center; margin-top: 8px;">
 	<!-- Форма для завершения тренировки -->
 	<form method="post" action="/slot/{{ slot.id }}/complete">
+		{{ csrf_input(request) }}
 		<input type="hidden" name="week_offset" value="{{ week_offset }}" />
 		<button class="btn" onclick="return confirm('Завершить тренировку?')">Завершить</button>
 	</form>
 	<!-- Форма для удаления слота -->
 	<form method="post" action="/slots/delete/{{ slot.id }}" 
 		onsubmit="return confirm('Удалить слот? Это удалит все бронирования.');">
+		{{ csrf_input(request) }}
 		<input type="hidden" name="week_offset" value="{{ week_offset }}" />
 		<button class="btn" >Удалить слот</button>
 	</form>
@@ -148,6 +153,7 @@
 	<!-- Форма для подтверждения проведения занятия: снимет по 1 занятию у всех записанных и удалит слот -->
 	<form method="post" action="/slot/{{ slot.id }}/complete" 
 		onsubmit="return confirm('Подтвердить проведение занятия и списать 1 занятие у всех записанных?');">
+		{{ csrf_input(request) }}
 		<input type="hidden" name="week_offset" value="{{ week_offset }}" />
 		<button class="btn--green" type="submit">Занятие проведено</button>
 	</form>

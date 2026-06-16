@@ -5,6 +5,7 @@
 <h1>Редактировать клиента</h1>
 
 <form method="post" action="/clients/edit/{{ client.id }}" class="edit-form">
+    {{ csrf_input(request) }}
     <div class="form-row"><label class="label">Имя</label><input class="field" type="text" name="first_name" value="{{ client.first_name or '' }}" required /></div>
     <div class="form-row"><label class="label">Фамилия</label><input class="field" type="text" name="last_name" value="{{ client.last_name or '' }}" /></div>
     <div class="form-row"><label class="label">Отчество</label><input class="field" type="text" name="patronymic" value="{{ client.patronymic or '' }}" /></div>
@@ -20,6 +21,7 @@
 <!-- Удаление оставляем отдельной формой -->
 <div class="edit-actions">
     <form method="post" action="/clients/delete/{{ client.id }}" onsubmit="return confirm('Удалить клиента?');" style="display:inline">
+        {{ csrf_input(request) }}
         <button class="btn btn--small">Удалить</button>
     </form>
 </div>

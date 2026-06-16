@@ -33,6 +33,14 @@ templates.env.filters['format_phone'] = format_phone
 from app.timezone import localtime  # noqa: E402
 templates.env.filters['localtime'] = localtime
 
+# CSRF-токен для шаблонов (Markup — чтобы Jinja2 не экранировал HTML)
+try:
+    from markupsafe import Markup
+except ImportError:
+    from jinja2 import Markup
+from app.csrf import get_csrf_token as _get_csrf
+templates.env.globals['csrf_input'] = lambda request: Markup(f'<input type="hidden" name="_csrf_token" value="{_get_csrf(request)}" />')
+
 
 # ---- Engine & Session ----
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///superior.db")

@@ -30,7 +30,7 @@
     </div>
 </div>
 
-<script id="notes-data" type="application/json">{{ notes_json|safe }}</script>
+<script id="notes-data" type="application/json">{{ notes_json|replace('</script>', '<\\/script>')|safe }}</script></script>
 
 <script>
 (function(){
