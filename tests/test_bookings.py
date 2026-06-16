@@ -70,6 +70,32 @@ def test_prevent_duplicate_booking(client, db_session):
     assert len(bookings) == 1
 
 
+def test_db_level_unique_constraint_on_booking(client, db_session):
+    """Прямая вставка дубликата в БД должна вызывать IntegrityError."""
+    from app import Client, Slot, Booking
+    from sqlalchemy.exc import IntegrityError
+
+    now = datetime.now().replace(second=0, microsecond=0)
+    s = Slot(start_time=now + timedelta(hours=9), capacity=4)
+    c = Client(first_name="DB", last_name="Constraint", phone="+70000000006", name="DB Constraint")
+    db_session.add_all([s, c])
+    db_session.commit()
+
+    b1 = Booking(client_id=c.id, slot_id=s.id)
+    db_session.add(b1)
+    db_session.commit()
+
+    b2 = Booking(client_id=c.id, slot_id=s.id)
+    db_session.add(b2)
+    import pytest
+    with pytest.raises(IntegrityError):
+        db_session.commit()
+    db_session.rollback()
+
+    count = db_session.query(Booking).filter(Booking.slot_id == s.id, Booking.client_id == c.id).count()
+    assert count == 1
+
+
 def test_training_notes_removed_on_slot_delete_and_bulk_remove(client, db_session):
     """Проверяем, что training_notes удаляются при удалении одного слота и при массовом удалении."""
     from app import Client, Slot, TrainingNote

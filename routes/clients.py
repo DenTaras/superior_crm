@@ -2,15 +2,20 @@
 
 from datetime import datetime
 
-from fastapi import APIRouter, Request, Form, Depends
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from database import get_db, templates
 from models import Client, Slot, Booking
+from schemas import ClientCreateForm, SubscriptionAddForm
+from forms import parse_client_form, parse_subscription_form
 
 router = APIRouter()
+
+
+PAGE_SIZE = 25
 
 
 @router.get("/clients")
@@ -19,8 +24,9 @@ def clients_page(
     db: Session = Depends(get_db),
     q_name: str = "",
     q_phone: str = "",
+    page: int = 1,
 ):
-    """Список клиентов с фильтрацией по имени и телефону."""
+    """Список клиентов с фильтрацией и пагинацией (25 на странице)."""
     query = db.query(Client)
     if q_name:
         pat = f"%{q_name}%"
@@ -40,7 +46,17 @@ def clients_page(
         else:
             query = query.filter(Client.phone.ilike(f"%{q_phone}%"))
 
-    clients = query.order_by(Client.last_name, Client.first_name).limit(1000).all()
+    total = query.count()
+    total_pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
+    page = max(1, min(page, total_pages))
+
+    clients = (
+        query.order_by(Client.last_name, Client.first_name)
+        .offset((page - 1) * PAGE_SIZE)
+        .limit(PAGE_SIZE)
+        .all()
+    )
+
     now_dt = datetime.now()
     client_rows = []
     for c in clients:
@@ -55,7 +71,14 @@ def clients_page(
     return templates.TemplateResponse(
         request=request,
         name="clients.html",
-        context={"client_rows": client_rows, "q_name": q_name, "q_phone": q_phone},
+        context={
+            "client_rows": client_rows,
+            "q_name": q_name,
+            "q_phone": q_phone,
+            "page": page,
+            "total_pages": total_pages,
+            "total": total,
+        },
     )
 
 
@@ -67,27 +90,21 @@ def clients_create(request: Request):
 
 @router.post("/clients/create")
 def add_client_post(
-    first_name: str = Form(...),
-    last_name: str = Form(""),
-    patronymic: str = Form(""),
-    birth_year: int = Form(None),
-    birth_place: str = Form(""),
-    phone: str = Form(""),
+    form: ClientCreateForm = Depends(parse_client_form),
     db: Session = Depends(get_db),
 ):
     """Создать нового клиента."""
-    first_name = (first_name or "").strip()
-    if not first_name:
+    if not form.first_name:
         return RedirectResponse("/clients", status_code=303)
 
     client = Client(
-        first_name=first_name,
-        last_name=(last_name or "").strip(),
-        patronymic=(patronymic or "").strip(),
-        birth_year=birth_year,
-        birth_place=(birth_place or "").strip(),
-        phone=(phone or "").strip(),
-        name=f"{(last_name or '').strip()} {(first_name or '').strip()}".strip(),
+        first_name=form.first_name,
+        last_name=form.last_name,
+        patronymic=form.patronymic,
+        birth_year=form.birth_year,
+        birth_place=form.birth_place,
+        phone=form.phone,
+        name=f"{form.last_name} {form.first_name}".strip(),
         remaining_sessions=1,
     )
     db.add(client)
@@ -109,24 +126,19 @@ def clients_edit(request: Request, client_id: int, db: Session = Depends(get_db)
 @router.post("/clients/edit/{client_id}")
 def clients_edit_post(
     client_id: int,
-    first_name: str = Form(...),
-    last_name: str = Form(""),
-    patronymic: str = Form(""),
-    birth_year: int = Form(None),
-    birth_place: str = Form(""),
-    phone: str = Form(""),
+    form: ClientCreateForm = Depends(parse_client_form),
     db: Session = Depends(get_db),
 ):
     """Обновить данные клиента."""
     client = db.get(Client, client_id)
     if client:
-        client.first_name = (first_name or "").strip()
-        client.last_name = (last_name or "").strip()
-        client.patronymic = (patronymic or "").strip()
-        client.birth_year = birth_year
-        client.birth_place = (birth_place or "").strip()
-        client.phone = (phone or "").strip()
-        client.name = f"{client.last_name} {client.first_name}".strip()
+        client.first_name = form.first_name
+        client.last_name = form.last_name
+        client.patronymic = form.patronymic
+        client.birth_year = form.birth_year
+        client.birth_place = form.birth_place
+        client.phone = form.phone
+        client.name = f"{form.last_name} {form.first_name}".strip()
         db.add(client)
         db.commit()
     return RedirectResponse("/clients", status_code=303)
@@ -143,18 +155,13 @@ def clients_delete(client_id: int, db: Session = Depends(get_db)):
 
 @router.post("/clients/add_subscription")
 def clients_add_subscription(
-    client_id: int = Form(...),
-    package: int = Form(...),
+    form: SubscriptionAddForm = Depends(parse_subscription_form),
     db: Session = Depends(get_db),
 ):
     """Добавить абонемент клиенту."""
-    client = db.get(Client, client_id)
-    try:
-        package = int(package)
-    except Exception:
-        package = 0
-    if client and package in (12, 8, 4):
-        client.remaining_sessions = (client.remaining_sessions or 0) + package
+    client = db.get(Client, form.client_id)
+    if client and form.package in (12, 8, 4):
+        client.remaining_sessions = (client.remaining_sessions or 0) + form.package
         db.add(client)
         db.commit()
     return RedirectResponse("/clients", status_code=303)

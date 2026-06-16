@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, create_engine
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, UniqueConstraint, create_engine
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -46,6 +46,9 @@ class Slot(Base):
 class Booking(Base):
     """Бронирование — связь клиента со слотом."""
     __tablename__ = "bookings"
+    __table_args__ = (
+        UniqueConstraint('slot_id', 'client_id', name='uq_booking_slot_client'),
+    )
     id = Column(Integer, primary_key=True)
     client_id = Column(Integer, ForeignKey("clients.id"))
     slot_id = Column(Integer, ForeignKey("slots.id"))

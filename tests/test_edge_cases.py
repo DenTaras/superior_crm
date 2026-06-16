@@ -170,34 +170,23 @@ def test_bulk_remove_with_empty_dates(client):
     assert r.status_code == 303
 
 
-def test_negative_capacity_slot(client, db_session):
-    """Отрицательная вместимость слота приводится к 1."""
-    from app import Slot
-
-    # уникальное время, чтобы не пересекаться с другими тестами
+def test_negative_capacity_rejected_by_validation(client, db_session):
+    """Отрицательная вместимость слота отклоняется Pydantic (422)."""
     start = (datetime.now() + timedelta(days=30, hours=4)).replace(second=0, microsecond=0)
     r = client.post("/slots/add", data={
         "start_time": start.strftime("%Y-%m-%dT%H:%M"), "capacity": -5
     }, follow_redirects=False)
-    assert r.status_code == 303
-    slot = db_session.query(Slot).filter(Slot.start_time == start).first()
-    assert slot is not None, "Слот не найден по времени"
-    assert slot.capacity == 1
+    # Pydantic валидация не пропускает capacity вне диапазона 1–4
+    assert r.status_code == 422
 
 
-def test_zero_capacity_slot(client, db_session):
-    """Нулевая вместимость слота приводится к 1."""
-    from app import Slot
-
-    # уникальное время, чтобы не пересекаться с другими тестами
+def test_zero_capacity_rejected_by_validation(client, db_session):
+    """Нулевая вместимость слота отклоняется Pydantic (422)."""
     start = (datetime.now() + timedelta(days=30, hours=5)).replace(second=0, microsecond=0)
     r = client.post("/slots/add", data={
         "start_time": start.strftime("%Y-%m-%dT%H:%M"), "capacity": 0
     }, follow_redirects=False)
-    assert r.status_code == 303
-    slot = db_session.query(Slot).filter(Slot.start_time == start).first()
-    assert slot is not None, "Слот не найден по времени"
-    assert slot.capacity == 1
+    assert r.status_code == 422
 
 
 # ===== КРАЕВЫЕ СЛУЧАИ: КЛИЕНТЫ =====

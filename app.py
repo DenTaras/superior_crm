@@ -11,7 +11,8 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 import database  # noqa: F401 — регистрирует Jinja2-фильтры
-from models import Client, Slot, Booking, JournalEntry, TrainingNote  # re-export for tests
+from models import Client, Slot  # seed-data models
+from models import Booking, JournalEntry, TrainingNote  # re-export for tests (keep last)
 from routes.clients import router as clients_router
 from routes.schedule import router as schedule_router
 from routes.slots import router as slots_router

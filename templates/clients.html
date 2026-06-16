@@ -13,6 +13,7 @@
 
 <div class="page-controls">
     <form method="get" action="/clients" class="form-row" style="flex-direction:row;gap:8px;align-items:center;">
+        <input type="hidden" name="page" value="1" />
         <input class="field" type="search" name="q_name" placeholder="Поиск по ФИО" value="{{ q_name or '' }}" />
         <input class="field" type="search" name="q_phone" placeholder="Поиск по телефону" value="{{ q_phone or '' }}" />
         <button class="btn btn--small" type="submit">Фильтр</button>
@@ -54,6 +55,23 @@
     </div>
 </div>
 
+<!-- Пагинация -->
+{% if total_pages > 1 %}
+<div class="pagination" style="margin-top:16px;display:flex;gap:8px;align-items:center;justify-content:center;">
+    {% if page > 1 %}
+    <a class="btn btn--small" href="/clients?page=1&amp;q_name={{ q_name|urlencode }}&amp;q_phone={{ q_phone|urlencode }}">«</a>
+    <a class="btn btn--small" href="/clients?page={{ page-1 }}&amp;q_name={{ q_name|urlencode }}&amp;q_phone={{ q_phone|urlencode }}">‹</a>
+    {% endif %}
 
+    <span style="font-size:14px;color:#666;">
+        {{ page }} / {{ total_pages }} ({{ total }})
+    </span>
+
+    {% if page < total_pages %}
+    <a class="btn btn--small" href="/clients?page={{ page+1 }}&amp;q_name={{ q_name|urlencode }}&amp;q_phone={{ q_phone|urlencode }}">›</a>
+    <a class="btn btn--small" href="/clients?page={{ total_pages }}&amp;q_name={{ q_name|urlencode }}&amp;q_phone={{ q_phone|urlencode }}">»</a>
+    {% endif %}
+</div>
+{% endif %}
 
 {% endblock %}

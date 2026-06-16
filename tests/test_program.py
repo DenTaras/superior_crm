@@ -72,7 +72,9 @@ def test_program_save_and_persistence(client, db_session):
     assert r3.status_code == 200
     assert r3.json().get('ok') is True
 
-    tn2 = db_session.query(TrainingNote).filter(TrainingNote.slot_id == slot.id, TrainingNote.client_id == c2.id).first()
+    tn2 = (db_session.query(TrainingNote)
+           .filter(TrainingNote.slot_id == slot.id, TrainingNote.client_id == c2.id)
+           .first())
     assert tn2 is not None and tn2.text == 'note for two'
 
     # reload program page and verify both notes appear in HTML
