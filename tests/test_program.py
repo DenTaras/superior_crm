@@ -5,7 +5,7 @@ import html
 
 import pytest
 
-from app import Client, Slot, Booking, TrainingNote, JournalEntry
+from app.models import Client, Slot, Booking, TrainingNote, JournalEntry
 
 
 def extract_notes_json(html_text: str) -> dict:

@@ -13,9 +13,9 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from app import app
-from models import Base
-from database import get_db
+from main import app
+from app.models import Base
+from app.database import get_db
 
 
 @pytest.fixture(scope="session")

@@ -1,4 +1,6 @@
 /.venv
 /__pycache__
+tests/__pycache__
 *.db
 alembic/__pycache__
+.gitignore

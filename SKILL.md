@@ -20,7 +20,7 @@ pip install -r requirements.txt
 # проверить синтаксис
 python -m py_compile app.py
 # запустить сервер (uvicorn должен быть в requirements)
-uvicorn app:app --reload --host 0.0.0.0 --port 8000
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Unix / macOS (bash/zsh)
@@ -30,7 +30,7 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python -m py_compile app.py
-uvicorn app:app --reload --host 0.0.0.0 --port 8000
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 3) Работа с базой данных

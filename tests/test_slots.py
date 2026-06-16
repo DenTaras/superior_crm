@@ -27,7 +27,7 @@ def test_add_slot_and_conflict(client):
 def test_edit_slot_conflict(client, db_session):
     """Тест редактирования слота, при котором новое время конфликтует с другим слотом."""
     # create two slots directly in DB
-    from app import Slot
+    from app.models import Slot
 
     now = datetime.now().replace(second=0, microsecond=0)
     s1 = Slot(start_time=now + timedelta(hours=5), capacity=2)
@@ -53,7 +53,7 @@ def test_cannot_create_slot_in_past(client):
 
 def test_cannot_edit_slot_to_past(client, db_session):
     """Нельзя переместить существующий слот в прошлое."""
-    from app import Slot
+    from app.models import Slot
 
     now = datetime.now().replace(second=0, microsecond=0)
     s = Slot(start_time=now + timedelta(hours=5), capacity=2)

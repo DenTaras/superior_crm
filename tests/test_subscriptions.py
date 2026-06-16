@@ -12,7 +12,7 @@ def test_subscriptions_page_shows_packages(client):
 
 
 def test_add_subscription_increases_counter(client, db_session):
-    from app import Client
+    from app.models import Client
 
     c = Client(first_name="Sub", last_name="User", phone="+70000000010", name="Sub User", remaining_sessions=0)
     db_session.add(c)
@@ -25,7 +25,7 @@ def test_add_subscription_increases_counter(client, db_session):
 
 
 def test_booking_respects_remaining_sessions(client, db_session):
-    from app import Client, Slot, Booking
+    from app.models import Client, Slot, Booking
 
     now = datetime.now().replace(second=0, microsecond=0)
     c = Client(first_name="Limit", last_name="One", phone="+70000000012", name="Limit One", remaining_sessions=1)

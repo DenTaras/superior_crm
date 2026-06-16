@@ -9,10 +9,10 @@ from sqlalchemy import create_engine, text, inspect as sa_inspect
 from sqlalchemy.orm import sessionmaker, Session
 
 # Импортируем модели, чтобы они зарегистрировались на Base.metadata
-from models import Base  # noqa: F401
+from app.models import Base  # noqa: F401
 
 # ---- Jinja2 templates (доступны всем роутам) ----
-_templates_dir = os.path.join(os.path.dirname(__file__), "templates")
+_templates_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
 templates = Jinja2Templates(directory=_templates_dir)
 
 

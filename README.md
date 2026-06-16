@@ -20,7 +20,7 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python -m alembic upgrade head
-uvicorn app:app --reload
+uvicorn main:app --reload
 ```
 
 Открыть: http://127.0.0.1:8000/
@@ -30,7 +30,7 @@ uvicorn app:app --reload
 ```powershell
 $env:DATABASE_URL="postgresql://user:pass@localhost:5432/superior_crm"
 python -m alembic upgrade head
-uvicorn app:app --reload
+uvicorn main:app --reload
 ```
 
 ## Модели данных

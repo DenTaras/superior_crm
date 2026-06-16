@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from app import Client
+from app.models import Client
 
 
 def test_clients_pagination_basic(client, db_session):
@@ -52,7 +52,7 @@ def test_create_edit_delete_client(client, db_session):
     r = client.post("/clients/create", data=payload, follow_redirects=False)
     assert r.status_code == 303
 
-    from app import Client
+    from app.models import Client
 
     created = db_session.query(Client).filter(Client.first_name == "Тест").first()
     assert created is not None

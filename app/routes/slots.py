@@ -9,10 +9,10 @@ from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from database import get_db, templates
-from models import Slot, Booking, Client, JournalEntry, TrainingNote
-from schemas import SlotAddForm, SlotEditForm, BookingAddForm, SlotRemoveForm
-from forms import parse_slot_add_form, parse_slot_edit_form, parse_booking_add_form, parse_slot_remove_form
+from app.database import get_db, templates
+from app.models import Slot, Booking, Client, JournalEntry, TrainingNote
+from app.schemas import SlotAddForm, SlotEditForm, BookingAddForm, SlotRemoveForm
+from app.forms import parse_slot_add_form, parse_slot_edit_form, parse_booking_add_form, parse_slot_remove_form
 
 router = APIRouter()
 

@@ -42,7 +42,7 @@ def test_slot_link_in_schedule_includes_week_offset(client, db_session):
     """
     # create a slot that belongs to week_offset = -1 (previous week)
     offset = -1
-    from app import Slot
+    from app.models import Slot
 
     week_start = compute_week_start(datetime.now(), offset)
     # pick first hour in schedule range

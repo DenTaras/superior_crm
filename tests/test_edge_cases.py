@@ -19,7 +19,7 @@ import pytest
 
 def test_booking_with_zero_remaining_sessions_is_blocked(client, db_session):
     """Клиент с remaining_sessions=0 не может записаться на слот."""
-    from app import Client, Slot, Booking
+    from app.models import Client, Slot, Booking
 
     now = datetime.now().replace(second=0, microsecond=0)
     c = Client(first_name="Zero", last_name="Sessions", phone="+70000000050",
@@ -39,7 +39,7 @@ def test_booking_with_zero_remaining_sessions_is_blocked(client, db_session):
 
 def test_booking_blocked_when_future_bookings_equal_remaining(client, db_session):
     """Клиент не может записаться, если число будущих броней == remaining_sessions."""
-    from app import Client, Slot, Booking
+    from app.models import Client, Slot, Booking
 
     now = datetime.now().replace(second=0, microsecond=0)
     c = Client(first_name="Exact", last_name="Limit", phone="+70000000051",
@@ -61,7 +61,7 @@ def test_booking_blocked_when_future_bookings_equal_remaining(client, db_session
 
 def test_add_client_to_full_slot_fails(client, db_session):
     """Попытка записать клиента в уже заполненный слот отклоняется."""
-    from app import Client, Slot, Booking
+    from app.models import Client, Slot, Booking
 
     now = datetime.now().replace(second=0, microsecond=0)
     s = Slot(start_time=now + timedelta(hours=3), capacity=1)
@@ -81,7 +81,7 @@ def test_add_client_to_full_slot_fails(client, db_session):
 
 def test_remove_nonexistent_booking_does_not_crash(client, db_session):
     """Удаление несуществующей брони не должно вызывать ошибку."""
-    from app import Client, Slot
+    from app.models import Client, Slot
 
     now = datetime.now().replace(second=0, microsecond=0)
     c = Client(first_name="Ghost", last_name="Booking", phone="+70000000054", name="Ghost")
@@ -96,7 +96,7 @@ def test_remove_nonexistent_booking_does_not_crash(client, db_session):
 
 def test_double_booking_removal_does_not_crash(client, db_session):
     """Повторное удаление одной и той же брони не вызывает ошибку."""
-    from app import Client, Slot, Booking
+    from app.models import Client, Slot, Booking
 
     now = datetime.now().replace(second=0, microsecond=0)
     c = Client(first_name="Double", last_name="Remove", phone="+70000000055", name="Double")
@@ -194,7 +194,7 @@ def test_zero_capacity_rejected_by_validation(client, db_session):
 
 def test_create_client_with_empty_first_name(client, db_session):
     """Пустое имя не создаёт клиента (редирект без создания)."""
-    from app import Client
+    from app.models import Client
 
     r = client.post("/clients/create", data={
         "first_name": "", "last_name": "",
@@ -242,7 +242,7 @@ def test_client_with_very_long_name(client, db_session):
 
 def test_save_empty_note(client, db_session):
     """Сохранение пустой заметки не вызывает ошибку."""
-    from app import Client, Slot, Booking, TrainingNote
+    from app.models import Client, Slot, Booking, TrainingNote
 
     now = datetime.now().replace(second=0, microsecond=0)
     c = Client(first_name="Empty", last_name="Note", phone="+70000000070", name="Empty Note")
@@ -266,7 +266,7 @@ def test_program_save_nonexistent_slot_creates_orphan_note(client, db_session):
     В текущей реализации отсутствует проверка существования слота.
     Это тест-документация: в будущем endpoint должен проверять slot_id.
     """
-    from app import TrainingNote
+    from app.models import TrainingNote
 
     r = client.post("/slot/99999/program/save", data={
         "client_id": "1", "text": "test"
@@ -284,7 +284,7 @@ def test_program_save_nonexistent_client_still_saves(client, db_session):
 
     Текущая реализация не проверяет существование client_id.
     """
-    from app import Slot, TrainingNote
+    from app.models import Slot, TrainingNote
 
     s = Slot(start_time=datetime.now() + timedelta(days=1, hours=3), capacity=2)
     db_session.add(s)
@@ -331,7 +331,7 @@ def test_xss_in_client_name_is_escaped(client, db_session, payload):
 @pytest.mark.parametrize("payload", XSS_PAYLOADS)
 def test_xss_in_program_note_is_escaped(client, db_session, payload):
     """XSS-попытки в заметке тренировки не должны быть в неэкранированном виде."""
-    from app import Client, Slot, Booking
+    from app.models import Client, Slot, Booking
 
     now = datetime.now().replace(second=0, microsecond=0)
     c = Client(first_name="Safe", last_name="Note", phone="+70000000081", name="Safe Note")
@@ -420,7 +420,7 @@ def test_malformed_slot_time_does_not_crash(client):
 
 def test_mass_assignment_on_client_edit(client, db_session):
     """Попытка передать лишние поля при редактировании клиента безопасна."""
-    from app import Client
+    from app.models import Client
 
     c = Client(first_name="Safe", last_name="Edit", phone="+70000000091", name="Safe Edit")
     db_session.add(c)
@@ -447,7 +447,7 @@ def test_mass_assignment_on_client_edit(client, db_session):
 
 def test_double_complete_slot_is_safe(client, db_session):
     """Повторное завершение уже завершённого слота не вызывает 500."""
-    from app import Client, Slot, Booking
+    from app.models import Client, Slot, Booking
 
     now = datetime.now().replace(second=0, microsecond=0)
     c = Client(first_name="Double", last_name="Complete", phone="+70000000100",
@@ -495,7 +495,7 @@ def test_home_page(client):
 
 def test_very_long_comment_in_program_note(client, db_session):
     """Очень длинный текст заметки (50k символов) сохраняется без ошибки."""
-    from app import Client, Slot, Booking, TrainingNote
+    from app.models import Client, Slot, Booking, TrainingNote
 
     now = datetime.now().replace(second=0, microsecond=0)
     c = Client(first_name="Long", last_name="Comment", phone="+70000000110",

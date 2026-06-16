@@ -10,16 +10,16 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-import database  # noqa: F401 — регистрирует Jinja2-фильтры
-from models import Client, Slot  # seed-data models
-from models import Booking, JournalEntry, TrainingNote  # re-export for tests (keep last)
-from routes.clients import router as clients_router
-from routes.schedule import router as schedule_router
-from routes.slots import router as slots_router
-from routes.program import router as program_router
-from routes.journal import router as journal_router
-
 import os as _os
+
+import app.database  # noqa: F401 — регистрирует Jinja2-фильтры
+from app.models import Client, Slot, Booking, JournalEntry, TrainingNote  # re-export + seed
+from app.routes.clients import router as clients_router
+from app.routes.schedule import router as schedule_router
+from app.routes.slots import router as slots_router
+from app.routes.program import router as program_router
+from app.routes.journal import router as journal_router
+
 app = FastAPI(title="SUPERIOR CRM")
 _static_dir = _os.path.join(_os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=_static_dir), name="static")
@@ -33,7 +33,7 @@ app.include_router(program_router)       # /slot/{id}/program
 
 # ---- Инициализация БД (только при прямом запуске, не через Alembic) ----
 if "alembic" not in __import__("sys").modules:
-    from database import run_startup_migrations, SessionLocal
+    from app.database import run_startup_migrations, SessionLocal
 
     run_startup_migrations()
 

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 
 def test_complete_slot_creates_journal_and_decrements(client, db_session):
-    from app import Client, Slot, Booking, JournalEntry
+    from app.models import Client, Slot, Booking, JournalEntry
 
     now = datetime.now().replace(second=0, microsecond=0)
     c1 = Client(first_name="J1", last_name="One", phone="+70000000020", name="J1", remaining_sessions=2)
@@ -22,11 +22,11 @@ def test_complete_slot_creates_journal_and_decrements(client, db_session):
     assert r.status_code == 303
 
     # slot should be removed
-    from app import Slot as SlotModel
+    from app.models import Slot as SlotModel
     assert db_session.query(SlotModel).filter(SlotModel.id == s.id).first() is None
 
     # bookings should be removed
-    from app import Booking as BookingModel
+    from app.models import Booking as BookingModel
     assert db_session.query(BookingModel).filter(BookingModel.slot_id == s.id).count() == 0
 
     # clients remaining_sessions decremented

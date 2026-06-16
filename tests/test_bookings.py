@@ -6,7 +6,7 @@ def test_add_and_remove_booking(client, db_session):
 
     Создаёт клиента и слот напрямую в БД, затем добавляет бронь и удаляет её.
     """
-    from app import Client, Slot, Booking
+    from app.models import Client, Slot, Booking
 
     # create client and slot directly in DB
     now = datetime.now().replace(second=0, microsecond=0)
@@ -31,7 +31,7 @@ def test_add_and_remove_booking(client, db_session):
 
 def test_capacity_enforced(client, db_session):
     """Тест, проверяющий что вместимость слота (`capacity`) соблюдается при добавлении броней."""
-    from app import Client, Slot, Booking
+    from app.models import Client, Slot, Booking
 
     now = datetime.now().replace(second=0, microsecond=0)
     s = Slot(start_time=now + timedelta(hours=6), capacity=1)
@@ -53,7 +53,7 @@ def test_capacity_enforced(client, db_session):
 
 def test_prevent_duplicate_booking(client, db_session):
     """Повторная попытка записать того же клиента в тот же слот не должна создавать дубликат."""
-    from app import Client, Slot, Booking
+    from app.models import Client, Slot, Booking
 
     now = datetime.now().replace(second=0, microsecond=0)
     s = Slot(start_time=now + timedelta(hours=8), capacity=2)
@@ -72,7 +72,7 @@ def test_prevent_duplicate_booking(client, db_session):
 
 def test_db_level_unique_constraint_on_booking(client, db_session):
     """Прямая вставка дубликата в БД должна вызывать IntegrityError."""
-    from app import Client, Slot, Booking
+    from app.models import Client, Slot, Booking
     from sqlalchemy.exc import IntegrityError
 
     now = datetime.now().replace(second=0, microsecond=0)
@@ -98,7 +98,7 @@ def test_db_level_unique_constraint_on_booking(client, db_session):
 
 def test_training_notes_removed_on_slot_delete_and_bulk_remove(client, db_session):
     """Проверяем, что training_notes удаляются при удалении одного слота и при массовом удалении."""
-    from app import Client, Slot, TrainingNote
+    from app.models import Client, Slot, TrainingNote
 
     now = datetime.now().replace(second=0, microsecond=0)
 

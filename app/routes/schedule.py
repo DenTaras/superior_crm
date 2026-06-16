@@ -7,8 +7,8 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from database import get_db, templates
-from models import Slot, Booking, Client
+from app.database import get_db, templates
+from app.models import Slot, Booking, Client
 
 router = APIRouter()
 

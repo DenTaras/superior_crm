@@ -7,4 +7,4 @@ if [ -f .venv/bin/activate ]; then
 fi
 
 # по умолчанию запускаем на 0.0.0.0:8000
-uvicorn app:app --reload --host 0.0.0.0 --port 8000
+uvicorn main:app --reload --host 0.0.0.0 --port 8000

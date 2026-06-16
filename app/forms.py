@@ -10,7 +10,7 @@ from typing import Optional
 
 from fastapi import Form, Depends, HTTPException
 from pydantic import ValidationError
-from schemas import (
+from app.schemas import (
     ClientCreateForm,
     SlotAddForm,
     SlotEditForm,

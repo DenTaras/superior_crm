@@ -20,7 +20,7 @@ MANY_NOTES = 50
 
 def test_schedule_performance_with_many_slots(client, db_session):
     """Страница расписания с ~150 слотами загружается быстро (< 2 сек)."""
-    from app import Slot
+    from app.models import Slot
 
     now = datetime.now().replace(second=0, microsecond=0)
     week_start = (now - timedelta(days=now.weekday())).replace(hour=8, minute=0, second=0, microsecond=0)
@@ -40,7 +40,7 @@ def test_schedule_performance_with_many_slots(client, db_session):
 
 def test_journal_performance_with_many_entries(client, db_session):
     """Страница журнала со 100+ записей загружается быстро (< 2 сек)."""
-    from app import JournalEntry
+    from app.models import JournalEntry
 
     entries = []
     for i in range(MANY_CLIENTS):
@@ -62,7 +62,7 @@ def test_journal_performance_with_many_entries(client, db_session):
 
 def test_many_clients_page_loads(client, db_session):
     """Страница клиентов со 100 записями загружается быстро (< 2 сек)."""
-    from app import Client
+    from app.models import Client
 
     clients = []
     for i in range(MANY_CLIENTS):
@@ -106,7 +106,7 @@ def test_bulk_slot_creation_performance(client, db_session):
 
 def test_many_program_saves_performance(client, db_session):
     """Многократное сохранение заметок (50 раз) работает стабильно."""
-    from app import Client, Slot, Booking, TrainingNote
+    from app.models import Client, Slot, Booking, TrainingNote
 
     now = datetime.now().replace(second=0, microsecond=0)
     c = Client(first_name="Stress", last_name="Save", phone="+70000000999",
@@ -143,7 +143,7 @@ def test_concurrent_like_booking_requests(client, db_session):
     Отправляет много запросов подряд — слот должен принять ровно столько,
     сколько позволяет capacity.
     """
-    from app import Client, Slot, Booking
+    from app.models import Client, Slot, Booking
 
     now = datetime.now().replace(second=0, microsecond=0)
     s = Slot(start_time=now + timedelta(days=1, hours=6), capacity=4)
@@ -169,7 +169,7 @@ def test_concurrent_like_booking_requests(client, db_session):
 
 def test_slot_page_performance_with_many_clients(client, db_session):
     """Страница слота с 20 записанными клиентами загружается быстро (< 1.5 сек)."""
-    from app import Client, Slot, Booking
+    from app.models import Client, Slot, Booking
 
     now = datetime.now().replace(second=0, microsecond=0)
     s = Slot(start_time=now + timedelta(days=1, hours=7), capacity=20)
@@ -196,7 +196,7 @@ def test_slot_page_performance_with_many_clients(client, db_session):
 
 def test_program_page_performance_with_many_clients(client, db_session):
     """Страница программы с 20 клиентами + заметки загружается быстро (< 1.5 сек)."""
-    from app import Client, Slot, Booking, TrainingNote
+    from app.models import Client, Slot, Booking, TrainingNote
 
     now = datetime.now().replace(second=0, microsecond=0)
     s = Slot(start_time=now + timedelta(days=1, hours=8), capacity=20)
@@ -225,7 +225,7 @@ def test_program_page_performance_with_many_clients(client, db_session):
 
 def test_mass_slot_deletion_performance(client, db_session):
     """Массовое удаление большого количества слотов работает быстро (< 3 сек)."""
-    from app import Slot
+    from app.models import Slot
 
     now = datetime.now().replace(second=0, microsecond=0)
     # создаём слоты на завтра

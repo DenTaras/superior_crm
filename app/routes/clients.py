@@ -7,10 +7,10 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
-from database import get_db, templates
-from models import Client, Slot, Booking
-from schemas import ClientCreateForm, SubscriptionAddForm
-from forms import parse_client_form, parse_subscription_form
+from app.database import get_db, templates
+from app.models import Client, Slot, Booking
+from app.schemas import ClientCreateForm, SubscriptionAddForm
+from app.forms import parse_client_form, parse_subscription_form
 
 router = APIRouter()
 

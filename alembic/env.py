@@ -18,7 +18,7 @@ if config.config_file_name is not None:
 # ---- Подключаем модели приложения ----
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from models import Base
+from app.models import Base
 
 target_metadata = Base.metadata
 
