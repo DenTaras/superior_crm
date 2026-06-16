@@ -9,12 +9,11 @@ from app import Client, Slot, Booking, TrainingNote, JournalEntry
 
 
 def extract_notes_json(html_text: str) -> dict:
-    m = re.search(r"<script id=\"notes-data\" type=\"application/json\">(.*?)</script>", html_text, re.S)
+    m = re.search(r"var notes\s*=\s*(\{.*?\});", html_text, re.S)
     if not m:
         return {}
     try:
         raw = m.group(1)
-        raw = html.unescape(raw)
         return json.loads(raw)
     except Exception:
         return {}
@@ -38,9 +37,14 @@ def test_program_save_and_persistence(client, db_session):
     db_session.add_all([b1, b2])
     db_session.commit()
 
-    # page loads
+    # page loads — notes should be empty initially
     r = client.get(f"/slot/{slot.id}/program")
     assert r.status_code == 200
+    notes_initial = extract_notes_json(r.text)
+    assert str(c1.id) in notes_initial
+    assert notes_initial[str(c1.id)] == ''
+    assert str(c2.id) in notes_initial
+    assert notes_initial[str(c2.id)] == ''
 
     # save note for client 1 using form post
     r = client.post(f"/slot/{slot.id}/program/save", data={
@@ -53,9 +57,13 @@ def test_program_save_and_persistence(client, db_session):
     tn = db_session.query(TrainingNote).filter(TrainingNote.slot_id == slot.id, TrainingNote.client_id == c1.id).first()
     assert tn is not None and tn.text == 'note for one'
 
-    # reload program page (status only) and ensure DB contains saved note
+    # reload program page and verify note appears in HTML
     r2 = client.get(f"/slot/{slot.id}/program")
     assert r2.status_code == 200
+    notes_after_reload = extract_notes_json(r2.text)
+    assert notes_after_reload.get(str(c1.id)) == 'note for one'
+    assert str(c2.id) in notes_after_reload
+    assert notes_after_reload[str(c2.id)] == ''
 
     # simulate sendBeacon/raw body save for client 2 (text/plain body)
     payload = f"client_id={c2.id}&text={"note for two"}"
@@ -67,9 +75,14 @@ def test_program_save_and_persistence(client, db_session):
     tn2 = db_session.query(TrainingNote).filter(TrainingNote.slot_id == slot.id, TrainingNote.client_id == c2.id).first()
     assert tn2 is not None and tn2.text == 'note for two'
 
-    # page loads after second save
+    # reload program page and verify both notes appear in HTML
     r4 = client.get(f"/slot/{slot.id}/program")
     assert r4.status_code == 200
+    notes_after_both = extract_notes_json(r4.text)
+    assert str(c1.id) in notes_after_both
+    assert str(c2.id) in notes_after_both
+    assert notes_after_both[str(c1.id)] == 'note for one'
+    assert notes_after_both[str(c2.id)] == 'note for two'
 
     # complete the slot -> should copy notes to journal and remove training notes
     r5 = client.post(f"/slot/{slot.id}/complete", data={'week_offset': 0})
