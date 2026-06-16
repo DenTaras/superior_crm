@@ -68,7 +68,7 @@ def test_program_save_and_persistence(client, db_session):
     # simulate sendBeacon/raw body save for client 2 (text/plain body)
     payload = f"client_id={c2.id}&text={"note for two"}"
     # send as raw body with content-type text/plain (endpoint will parse)
-    r3 = client.post(f"/slot/{slot.id}/program/save", data=payload, headers={"Content-Type": "text/plain"})
+    r3 = client.post(f"/slot/{slot.id}/program/save", content=payload, headers={"Content-Type": "text/plain"})
     assert r3.status_code == 200
     assert r3.json().get('ok') is True
 

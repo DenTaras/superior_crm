@@ -13,6 +13,7 @@ from app.database import get_db, templates
 from app.models import Slot, Booking, Client, JournalEntry, TrainingNote
 from app.schemas import SlotAddForm, SlotEditForm, BookingAddForm, SlotRemoveForm
 from app.forms import parse_slot_add_form, parse_slot_edit_form, parse_booking_add_form, parse_slot_remove_form
+from app.logging_config import audit_log
 
 router = APIRouter()
 
@@ -78,8 +79,10 @@ def _do_slots_add(form: SlotAddForm, db: Session):
         new_end = start + timedelta(hours=1)
         if _has_overlap(db, start, new_end, exclude_id=None):
             return RedirectResponse(f"/schedule?week_offset={form.week_offset}&flash=slot_conflict", status_code=303)
-        db.add(Slot(start_time=start, capacity=capacity))
+        new_slot = Slot(start_time=start, capacity=capacity)
+        db.add(new_slot)
         db.commit()
+        audit_log("superior.audit.slots", "CREATE", slot_id=new_slot.id, time=start.isoformat())
         return RedirectResponse(f"/schedule?week_offset={form.week_offset}", status_code=303)
 
     # ---- массовое создание ----
@@ -109,6 +112,7 @@ def _do_slots_add(form: SlotAddForm, db: Session):
     for s in candidates:
         db.add(Slot(start_time=s, capacity=capacity))
     db.commit()
+    audit_log("superior.audit.slots", "BULK_CREATE", count=len(candidates), start=start.isoformat(), end=end.isoformat())
     return RedirectResponse(f"/schedule?week_offset={form.week_offset}", status_code=303)
 
 
@@ -135,6 +139,7 @@ def slots_edit_post(
         slot.capacity = _normalize_capacity(form.capacity)
         db.add(slot)
         db.commit()
+        audit_log("superior.audit.slots", "UPDATE", slot_id=slot_id, time=new_start.isoformat())
     return RedirectResponse(f"/schedule?week_offset={form.week_offset}", status_code=303)
 
 
@@ -145,6 +150,7 @@ def slots_delete(slot_id: int, week_offset: int = 0, db: Session = Depends(get_d
     db.query(TrainingNote).filter(TrainingNote.slot_id == slot_id).delete()
     db.query(Slot).filter(Slot.id == slot_id).delete()
     db.commit()
+    audit_log("superior.audit.slots", "DELETE", slot_id=slot_id)
     return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
 
 
@@ -225,6 +231,7 @@ def _do_add_client(slot_id: int, form: BookingAddForm, db: Session):
     if count < slot.capacity:
         db.add(Booking(client_id=form.client_id, slot_id=slot_id))
         db.commit()
+        audit_log("superior.audit.bookings", "ADD", client_id=form.client_id, slot_id=slot_id)
     return RedirectResponse(f"/slot/{slot_id}?week_offset={week_off}", status_code=303)
 
 
@@ -239,6 +246,7 @@ def remove_booking(
         Booking.slot_id == slot_id, Booking.client_id == form.client_id
     ).delete()
     db.commit()
+    audit_log("superior.audit.bookings", "REMOVE", client_id=form.client_id, slot_id=slot_id)
     return RedirectResponse(f"/slot/{slot_id}?week_offset={form.week_offset}", status_code=303)
 
 
@@ -281,6 +289,7 @@ def complete_slot(slot_id: int, week_offset: int = 0, db: Session = Depends(get_
     db.query(TrainingNote).filter(TrainingNote.slot_id == slot_id).delete()
     db.query(Slot).filter(Slot.id == slot_id).delete()
     db.commit()
+    audit_log("superior.audit.training", "COMPLETE", slot_id=slot_id, clients=", ".join(client_names))
     return RedirectResponse("/journal", status_code=303)
 
 

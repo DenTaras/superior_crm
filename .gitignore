@@ -1,6 +1,24 @@
-/.venv
-/__pycache__
-tests/__pycache__
+# virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# ruff cache
+.ruff_cache/
+
+# pytest cache
+.pytest_cache/
+
+# database files (generated at runtime)
 *.db
-alembic/__pycache__
-.gitignore
+*.db-journal
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

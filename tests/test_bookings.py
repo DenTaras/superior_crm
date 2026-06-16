@@ -98,6 +98,8 @@ def test_db_level_unique_constraint_on_booking(client, db_session):
 
 def test_training_notes_removed_on_slot_delete_and_bulk_remove(client, db_session):
     """Проверяем, что training_notes удаляются при удалении одного слота и при массовом удалении."""
+    import warnings
+    warnings.filterwarnings("ignore", message="Identity map already had an identity")
     from app.models import Client, Slot, TrainingNote
 
     now = datetime.now().replace(second=0, microsecond=0)
@@ -116,7 +118,6 @@ def test_training_notes_removed_on_slot_delete_and_bulk_remove(client, db_sessio
     assert r.status_code == 303
     after1 = db_session.query(TrainingNote).filter(TrainingNote.slot_id == s1_id).all()
     assert len(after1) == 0
-
     # bulk remove
     start = (now + timedelta(hours=20)).replace(second=0, microsecond=0)
     s2 = Slot(start_time=start + timedelta(hours=0), capacity=2)

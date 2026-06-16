@@ -11,6 +11,7 @@ from app.database import get_db, templates
 from app.models import Client, Slot, Booking
 from app.schemas import ClientCreateForm, SubscriptionAddForm
 from app.forms import parse_client_form, parse_subscription_form
+from app.logging_config import audit_log
 
 router = APIRouter()
 
@@ -109,6 +110,7 @@ def add_client_post(
     )
     db.add(client)
     db.commit()
+    audit_log("superior.audit.clients", "CREATE", client_id=client.id, phone=client.phone)
     return RedirectResponse("/clients", status_code=303)
 
 
@@ -141,6 +143,7 @@ def clients_edit_post(
         client.name = f"{form.last_name} {form.first_name}".strip()
         db.add(client)
         db.commit()
+        audit_log("superior.audit.clients", "UPDATE", client_id=client.id)
     return RedirectResponse("/clients", status_code=303)
 
 
@@ -150,6 +153,7 @@ def clients_delete(client_id: int, db: Session = Depends(get_db)):
     db.query(Booking).filter(Booking.client_id == client_id).delete()
     db.query(Client).filter(Client.id == client_id).delete()
     db.commit()
+    audit_log("superior.audit.clients", "DELETE", client_id=client_id)
     return RedirectResponse("/clients", status_code=303)
 
 
@@ -164,4 +168,5 @@ def clients_add_subscription(
         client.remaining_sessions = (client.remaining_sessions or 0) + form.package
         db.add(client)
         db.commit()
+        audit_log("superior.audit.subscriptions", "ADD", client_id=form.client_id, package=form.package)
     return RedirectResponse("/clients", status_code=303)

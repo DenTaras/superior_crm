@@ -7,12 +7,15 @@ SUPERIOR CRM — точка входа.
 
 from datetime import datetime, timedelta
 
-from fastapi import FastAPI
+import os as _os
+import time as _time
+import logging as _logging
+
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
-import os as _os
-
 import app.database  # noqa: F401 — регистрирует Jinja2-фильтры
+from app.logging_config import logger as _app_logger
 from app.models import Client, Slot, Booking, JournalEntry, TrainingNote  # re-export + seed
 from app.routes.clients import router as clients_router
 from app.routes.schedule import router as schedule_router
@@ -20,9 +23,43 @@ from app.routes.slots import router as slots_router
 from app.routes.program import router as program_router
 from app.routes.journal import router as journal_router
 
+_log = _logging.getLogger("superior.request")
+_trace_log = _logging.getLogger("superior.trace")
+
 app = FastAPI(title="SUPERIOR CRM")
 _static_dir = _os.path.join(_os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=_static_dir), name="static")
+
+
+# ---- Request-логгер (метод, путь, статус, длительность) ----
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = _time.time()
+    response = await call_next(request)
+    duration = _time.time() - start
+    _log.info("%s %s → %s (%.0fms)",
+              request.method, request.url.path, response.status_code, duration * 1000)
+    return response
+
+
+# ---- Трассировка запросов (вкл через TRACE=1) ----
+if _os.getenv("TRACE"):
+    @app.middleware("http")
+    async def trace_requests(request: Request, call_next):
+        req_id = _os.urandom(4).hex()
+        _trace_log.debug("[%s] >>> %s %s | headers: %s, query: %s",
+                         req_id, request.method, request.url.path,
+                         dict(request.headers), dict(request.query_params))
+        body = await request.body()
+        if body:
+            _trace_log.debug("[%s] body: %s", req_id, body.decode(errors="replace")[:2000])
+        start = _time.time()
+        response = await call_next(request)
+        duration = _time.time() - start
+        _trace_log.debug("[%s] <<< %s (%.0fms) | headers: %s",
+                         req_id, response.status_code, duration * 1000,
+                         dict(response.headers))
+        return response
 
 # ---- Подключаем роутеры ----
 app.include_router(journal_router)       # /, /journal, /subscriptions
