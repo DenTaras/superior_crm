@@ -1,0 +1,272 @@
+"""Маршруты: управление слотами (CRUD, массовые операции, бронирования, завершение)."""
+
+from datetime import datetime, timedelta
+import json
+
+from fastapi import APIRouter, Request, Form, Depends
+from fastapi.responses import RedirectResponse, JSONResponse
+from sqlalchemy.orm import Session
+
+from database import get_db, templates
+from models import Slot, Booking, Client, JournalEntry, TrainingNote
+
+router = APIRouter()
+
+
+# ---- Создание слотов (одиночное / массовое) ----
+
+
+@router.post("/slots/add")
+def slots_add(
+    start_time: str = Form(...),
+    end_time: str = Form(None),
+    capacity: int = Form(1),
+    week_offset: int = Form(0),
+    db: Session = Depends(get_db),
+):
+    """Создать часовой слот (или серию слотов, если указан end_time)."""
+    ts = (start_time or "").replace(" ", "T")
+    try:
+        start = datetime.fromisoformat(ts)
+    except ValueError:
+        return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+    end = None
+    if end_time:
+        te = end_time.replace(" ", "T")
+        try:
+            end = datetime.fromisoformat(te)
+        except ValueError:
+            return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+    # ---- одиночный слот ----
+    if not end:
+        if start < datetime.now():
+            return RedirectResponse(f"/schedule?week_offset={week_offset}&flash=slot_past", status_code=303)
+        capacity = _normalize_capacity(capacity)
+        new_end = start + timedelta(hours=1)
+        if _has_overlap(db, start, new_end, exclude_id=None):
+            return RedirectResponse(f"/schedule?week_offset={week_offset}&flash=slot_conflict", status_code=303)
+        db.add(Slot(start_time=start, capacity=capacity))
+        db.commit()
+        return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+    # ---- массовое создание ----
+    if end <= start:
+        return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+    now = datetime.now()
+    candidates = []
+    cur = start
+    while True:
+        slot_end = cur + timedelta(hours=1)
+        if slot_end <= end:
+            if 8 <= cur.hour <= 22:
+                candidates.append(cur)
+        else:
+            break
+        cur += timedelta(hours=1)
+
+    if any(s < now for s in candidates):
+        return RedirectResponse(f"/schedule?week_offset={week_offset}&flash=slot_past", status_code=303)
+
+    capacity = _normalize_capacity(capacity)
+    for s in candidates:
+        if _has_overlap(db, s, s + timedelta(hours=1), exclude_id=None):
+            return RedirectResponse(f"/schedule?week_offset={week_offset}&flash=slot_conflict", status_code=303)
+
+    for s in candidates:
+        db.add(Slot(start_time=s, capacity=capacity))
+    db.commit()
+    return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+
+# ---- Редактирование / удаление слотов ----
+
+
+@router.post("/slots/edit/{slot_id}")
+def slots_edit_post(
+    slot_id: int,
+    start_time: str = Form(...),
+    capacity: int = Form(1),
+    week_offset: int = Form(0),
+    db: Session = Depends(get_db),
+):
+    """Изменить время и вместимость слота."""
+    slot = db.get(Slot, slot_id)
+    if slot:
+        ts = start_time.replace(" ", "T")
+        new_start = datetime.fromisoformat(ts)
+        if new_start < datetime.now():
+            return RedirectResponse(f"/schedule?week_offset={week_offset}&flash=slot_past", status_code=303)
+        new_end = new_start + timedelta(hours=1)
+        if _has_overlap(db, new_start, new_end, exclude_id=slot_id):
+            return RedirectResponse(f"/schedule?week_offset={week_offset}&flash=slot_conflict", status_code=303)
+        slot.start_time = new_start
+        slot.capacity = _normalize_capacity(capacity)
+        db.add(slot)
+        db.commit()
+    return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+
+@router.post("/slots/delete/{slot_id}")
+def slots_delete(slot_id: int, week_offset: int = Form(0), db: Session = Depends(get_db)):
+    """Удалить слот, его бронирования и заметки."""
+    db.query(Booking).filter(Booking.slot_id == slot_id).delete()
+    db.query(TrainingNote).filter(TrainingNote.slot_id == slot_id).delete()
+    db.query(Slot).filter(Slot.id == slot_id).delete()
+    db.commit()
+    return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+
+@router.post("/slots/remove")
+def slots_remove(
+    start_time: str = Form(None),
+    end_time: str = Form(None),
+    week_offset: int = Form(0),
+    db: Session = Depends(get_db),
+):
+    """Массовое удаление слотов по интервалу."""
+    if not start_time or not end_time:
+        return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+    ts = start_time.replace(" ", "T")
+    te = end_time.replace(" ", "T")
+    start = datetime.fromisoformat(ts)
+    end = datetime.fromisoformat(te)
+    if end <= start:
+        return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+    slots_to_delete = db.query(Slot).filter(Slot.start_time >= start).all()
+    to_remove_ids = [s.id for s in slots_to_delete if (s.start_time + timedelta(hours=1)) <= end]
+    if to_remove_ids:
+        db.query(Booking).filter(Booking.slot_id.in_(to_remove_ids)).delete(synchronize_session=False)
+        db.query(TrainingNote).filter(TrainingNote.slot_id.in_(to_remove_ids)).delete(synchronize_session=False)
+        db.query(Slot).filter(Slot.id.in_(to_remove_ids)).delete(synchronize_session=False)
+        db.commit()
+    return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+
+# ---- Бронирования ----
+
+
+@router.post("/slot/{slot_id}/add")
+def add_client(
+    slot_id: int,
+    client_id: int = Form(...),
+    week_offset: int = Form(0),
+    db: Session = Depends(get_db),
+):
+    """Записать клиента в слот (с проверками лимитов и дубликатов)."""
+    slot = db.get(Slot, slot_id)
+    client = db.get(Client, client_id)
+
+    if slot is None:
+        return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+    if client is None:
+        return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}&flash=limit_reached", status_code=303)
+
+    # проверка remaining_sessions
+    now_dt = datetime.now()
+    booked_future = (
+        db.query(Booking)
+        .join(Slot, Booking.slot_id == Slot.id)
+        .filter(Booking.client_id == client_id, Slot.start_time >= now_dt)
+        .count()
+    )
+    remaining = int(client.remaining_sessions or 0)
+    if remaining == 0 or booked_future >= remaining:
+        return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}&flash=limit_reached", status_code=303)
+
+    # проверка дубликата
+    existing = (
+        db.query(Booking)
+        .filter(Booking.slot_id == slot_id, Booking.client_id == client_id)
+        .first()
+    )
+    if existing:
+        return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}", status_code=303)
+
+    # проверка вместимости
+    count = db.query(Booking).filter(Booking.slot_id == slot_id).count()
+    if count < slot.capacity:
+        db.add(Booking(client_id=client_id, slot_id=slot_id))
+        db.commit()
+    return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}", status_code=303)
+
+
+@router.post("/slot/{slot_id}/remove")
+def remove_booking(
+    slot_id: int,
+    client_id: int = Form(...),
+    week_offset: int = Form(0),
+    db: Session = Depends(get_db),
+):
+    """Удалить бронь клиента из слота."""
+    db.query(Booking).filter(Booking.slot_id == slot_id, Booking.client_id == client_id).delete()
+    db.commit()
+    return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}", status_code=303)
+
+
+# ---- Завершение тренировки ----
+
+
+@router.post("/slot/{slot_id}/complete")
+def complete_slot(slot_id: int, week_offset: int = Form(0), db: Session = Depends(get_db)):
+    """Завершить тренировку: списать занятия, сохранить в журнал, удалить слот."""
+    slot = db.get(Slot, slot_id)
+    if not slot:
+        return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+    bookings = db.query(Booking).filter(Booking.slot_id == slot_id).all()
+    client_names = []
+    comments_map = {}
+    for b in bookings:
+        c = db.get(Client, b.client_id)
+        if c:
+            client_names.append(c.fio())
+            try:
+                c.remaining_sessions = max(0, int(c.remaining_sessions or 0) - 1)
+            except Exception:
+                c.remaining_sessions = 0
+            db.add(c)
+            note = (
+                db.query(TrainingNote)
+                .filter(TrainingNote.slot_id == slot_id, TrainingNote.client_id == c.id)
+                .first()
+            )
+            comments_map[str(c.id)] = note.text if note and note.text else ""
+
+    entry = JournalEntry(
+        slot_time=slot.start_time,
+        clients=", ".join(client_names),
+        comments=json.dumps(comments_map),
+    )
+    db.add(entry)
+    db.query(Booking).filter(Booking.slot_id == slot_id).delete()
+    db.query(TrainingNote).filter(TrainingNote.slot_id == slot_id).delete()
+    db.query(Slot).filter(Slot.id == slot_id).delete()
+    db.commit()
+    return RedirectResponse("/journal", status_code=303)
+
+
+# ---- Вспомогательные функции ----
+
+
+def _normalize_capacity(capacity: int) -> int:
+    """Привести вместимость к допустимому значению {1,2,3,4}."""
+    try:
+        capacity = int(capacity)
+    except Exception:
+        return 1
+    return capacity if capacity in (1, 2, 3, 4) else 1
+
+
+def _has_overlap(db: Session, new_start: datetime, new_end: datetime, exclude_id: int | None) -> bool:
+    """Проверить, перекрывается ли интервал с существующими слотами."""
+    query = db.query(Slot).filter(
+        Slot.start_time > (new_start - timedelta(hours=1)),
+        Slot.start_time < new_end,
+    )
+    if exclude_id is not None:
+        query = query.filter(Slot.id != exclude_id)
+    return query.first() is not None
