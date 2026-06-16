@@ -20,6 +20,8 @@ class Client(Base):
     phone = Column(String, nullable=True)
     name = Column(String, nullable=True)          # legacy — полное имя одной строкой
     remaining_sessions = Column(Integer, default=1)
+    login = Column(String, unique=True, nullable=True)
+    password_hash = Column(String, nullable=True)
 
     def fio(self) -> str:
         """Краткое ФИО: «Фамилия Имя» или fallback на `name`."""

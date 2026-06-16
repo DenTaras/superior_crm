@@ -37,6 +37,8 @@
         <a href="/">
             Главная
         </a>
+        {% set _user = request.session.get('user') %}
+        {% if _user and _user.role in ('admin', 'trainer') %}
         <a href="/schedule">
             Расписание
         </a>
@@ -49,7 +51,22 @@
         <a href="/journal">
             Журнал 
         </a>
+        {% elif _user and _user.role == 'client' %}
+        <a href="/schedule">
+            Расписание
+        </a>
+        {% endif %}
     </nav>
+    <div class="user-info" style="display:flex;align-items:center;gap:8px;margin-left:16px;font-size:14px;color:#999;">
+        {% if _user %}
+        <a href="/profile" style="color:inherit;text-decoration:none;">{{ _user.name }}</a>
+        <form method="post" action="/logout" style="display:inline;">
+            <button class="btn btn--ghost btn--small" type="submit">Выйти</button>
+        </form>
+        {% else %}
+        <a href="/login" style="color:inherit;text-decoration:none;">Войти</a>
+        {% endif %}
+    </div>
 </header>
 
 <main class="container">

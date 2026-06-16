@@ -14,6 +14,8 @@ import logging as _logging
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
+from starlette.middleware.sessions import SessionMiddleware
+
 import app.database  # noqa: F401 — регистрирует Jinja2-фильтры
 from app.logging_config import logger as _app_logger
 from app.models import Client, Slot, Booking, JournalEntry, TrainingNote  # re-export + seed
@@ -22,12 +24,17 @@ from app.routes.schedule import router as schedule_router
 from app.routes.slots import router as slots_router
 from app.routes.program import router as program_router
 from app.routes.journal import router as journal_router
+from app.auth import router as auth_router
+from app.auth import get_current_user
 from app.timezone import now as tz_now
 
 _log = _logging.getLogger("superior.request")
 _trace_log = _logging.getLogger("superior.trace")
 
 app = FastAPI(title="SUPERIOR CRM")
+
+# Сессии (секретный ключ — из переменной окружения)
+app.add_middleware(SessionMiddleware, secret_key=_os.getenv("SESSION_SECRET", "superior-dev-secret-key-change-in-prod"))
 _static_dir = _os.path.join(_os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
@@ -63,11 +70,14 @@ if _os.getenv("TRACE"):
         return response
 
 # ---- Подключаем роутеры ----
+app.include_router(auth_router)          # /login, /logout, /profile
 app.include_router(journal_router)       # /, /journal, /subscriptions
 app.include_router(clients_router)       # /clients, /clients/*
 app.include_router(schedule_router)      # /schedule, /slot/{id}
 app.include_router(slots_router)         # /slots/*, /slot/{id}/add|remove|complete
 app.include_router(program_router)       # /slot/{id}/program
+
+
 
 # ---- Инициализация БД (только при прямом запуске, не через Alembic) ----
 if "alembic" not in __import__("sys").modules:
@@ -76,19 +86,24 @@ if "alembic" not in __import__("sys").modules:
     run_startup_migrations()
 
     # Seed-данные для разработки
+    from app.auth import hash_password
+
     db = SessionLocal()
     try:
         if db.query(Client).count() == 0:
             db.add_all([
                 Client(first_name="Иван", last_name="Петров",
                        birth_year=1985, birth_place="Москва",
-                       phone="+79990000001", name="Петров Иван", remaining_sessions=1),
+                       phone="+79990000001", name="Петров Иван", remaining_sessions=1,
+                       login="client_1", password_hash=hash_password("client_1")),
                 Client(first_name="Мария", last_name="Иванова",
                        birth_year=1990, birth_place="Санкт-Петербург",
-                       phone="+79990000002", name="Иванова Мария", remaining_sessions=1),
+                       phone="+79990000002", name="Иванова Мария", remaining_sessions=1,
+                       login="client_2", password_hash=hash_password("client_2")),
                 Client(first_name="Алексей", last_name="Сидоров",
                        birth_year=1988, birth_place="Казань",
-                       phone="+79990000003", name="Сидоров Алексей", remaining_sessions=1),
+                       phone="+79990000003", name="Сидоров Алексей", remaining_sessions=1,
+                       login="client_3", password_hash=hash_password("client_3")),
             ])
             db.commit()
 

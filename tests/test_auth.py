@@ -1,0 +1,98 @@
+"""Тесты аутентификации и ролей."""
+
+from app.auth import hash_password
+
+
+def test_login_page_available(client):
+    """Страница /login доступна без авторизации."""
+    r = client.get("/login")
+    assert r.status_code == 200
+    assert "Вход" in r.text
+
+
+def test_admin_login(client):
+    """Вход админа: редирект на /, профиль доступен."""
+    r = client.post("/login", data={"login": "admin", "password": "admin"}, follow_redirects=False)
+    assert r.status_code == 303
+
+    r2 = client.get("/profile")
+    assert r2.status_code == 200
+    assert "Администратор" in r2.text
+
+
+def test_trainer_login(client):
+    """Вход тренера."""
+    r = client.post("/login", data={"login": "trainer", "password": "trainer"}, follow_redirects=False)
+    assert r.status_code == 303
+
+    r2 = client.get("/profile")
+    assert r2.status_code == 200
+    assert "Тренер" in r2.text
+
+
+def test_client_login(client, db_session):
+    """Вход клиента по логину/паролю."""
+    from app.models import Client as ClientModel
+
+    c = ClientModel(first_name="Auth", last_name="Client", phone="+70000000999",
+                    remaining_sessions=3, login="test_client",
+                    password_hash=hash_password("pass123"))
+    db_session.add(c)
+    db_session.commit()
+
+    r = client.post("/login", data={"login": "test_client", "password": "pass123"}, follow_redirects=False)
+    assert r.status_code == 303
+
+    r2 = client.get("/profile")
+    assert r2.status_code == 200
+    assert "Auth" in r2.text
+    assert "3" in r2.text
+
+
+def test_invalid_login(client):
+    """Неверные данные — страница логина с ошибкой."""
+    r = client.post("/login", data={"login": "wrong", "password": "wrong"}, follow_redirects=False)
+    assert r.status_code == 403
+    assert "Неверный" in r.text
+
+
+def test_logout(client):
+    """После выхода профиль недоступен."""
+    client.post("/login", data={"login": "admin", "password": "admin"}, follow_redirects=False)
+    r = client.post("/logout", follow_redirects=False)
+    assert r.status_code == 303
+
+    r2 = client.get("/profile", follow_redirects=False)
+    assert r2.status_code == 303
+    assert "/login" in r2.headers.get("location", "")
+
+
+def test_register(client):
+    """Регистрация нового клиента."""
+    r = client.post("/register", data={
+        "login": "new_user", "password": "pass",
+        "first_name": "New", "last_name": "User", "phone": "+70000000123",
+    }, follow_redirects=False)
+    assert r.status_code == 303
+
+    r2 = client.get("/profile")
+    assert r2.status_code == 200
+    assert "New" in r2.text
+
+
+def test_register_duplicate_login(client, db_session):
+    """Повторная регистрация с тем же логином возвращает ошибку."""
+    from app.models import Client as ClientModel
+    from app.auth import hash_password
+
+    c = ClientModel(first_name="Dup", login="dup_user",
+                    password_hash=hash_password("x"))
+    db_session.add(c)
+    db_session.commit()
+
+    r = client.post("/register", data={
+        "login": "dup_user", "password": "x",
+        "first_name": "Dup2", "last_name": "", "phone": "",
+    }, follow_redirects=False)
+    assert r.status_code == 403
+    assert "занят" in r.text

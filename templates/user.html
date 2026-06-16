@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-title">
+    <h1>Личный кабинет</h1>
+</div>
+
+<div class="panel">
+    <p><strong>Пользователь:</strong> {{ user.name }}</p>
+    <p><strong>Роль:</strong>
+        {% if user.role == 'admin' %}Администратор
+        {% elif user.role == 'trainer' %}Тренер
+        {% elif user.role == 'client' %}Клиент
+        {% else %}{{ user.role }}
+        {% endif %}
+    </p>
+
+    {% if client %}
+    <hr style="margin:16px 0;">
+    <p><strong>Телефон:</strong> {{ client.phone|format_phone }}</p>
+    <p><strong>Осталось занятий:</strong> {{ client.remaining_sessions or 0 }}</p>
+
+    {% if bookings %}
+    <h3 style="margin-top:20px;">Мои записи</h3>
+    <table class="clients-table">
+        <thead><tr><th>Дата и время</th></tr></thead>
+        <tbody>
+        {% for b in bookings %}
+        <tr><td>{{ b.slot_time.strftime('%d.%m.%Y %H:%M') if b.slot_time else '' }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">У вас нет активных записей.</p>
+    {% endif %}
+    {% endif %}
+
+    {% if total_clients is defined %}
+    <hr style="margin:16px 0;">
+    <div style="display:flex;gap:24px;flex-wrap:wrap;">
+        <div class="panel" style="flex:1;min-width:120px;text-align:center;">
+            <div style="font-size:28px;font-weight:700;">{{ total_clients }}</div>
+            <div class="muted">Клиентов</div>
+        </div>
+        <div class="panel" style="flex:1;min-width:120px;text-align:center;">
+            <div style="font-size:28px;font-weight:700;">{{ total_slots }}</div>
+            <div class="muted">Слотов</div>
+        </div>
+        <div class="panel" style="flex:1;min-width:120px;text-align:center;">
+            <div style="font-size:28px;font-weight:700;">{{ total_journal }}</div>
+            <div class="muted">Записей в журнале</div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-title">
+    <h1>Вход</h1>
+</div>
+
+<div style="max-width:400px;margin:0 auto;">
+    {% if error %}
+    <div class="flash flash--error" style="padding:12px;background:#fdd;border-radius:6px;margin-bottom:16px;">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="post" action="/login" class="form-stack" style="display:flex;flex-direction:column;gap:12px;">
+        <label>
+            Логин
+            <input class="field" type="text" name="login" required style="width:100%;" />
+        </label>
+        <label>
+            Пароль
+            <input class="field" type="password" name="password" required style="width:100%;" />
+        </label>
+        <button class="btn" type="submit">Войти</button>
+    </form>
+
+    <p style="margin-top:16px;text-align:center;">
+        <a href="/register">Зарегистрироваться</a>
+    </p>
+</div>
+
+{% endblock %}
