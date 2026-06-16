@@ -8,62 +8,69 @@
 ## ✅ Выполнено
 
 ### Инфраструктура
-- **Alembic** — миграции настроены, `env.py` читает `DATABASE_URL`.
-- **PostgreSQL** — поддержка через `DATABASE_URL`, Inspector вместо PRAGMA.
-- **Рефакторинг** — `app.py` разбит на `models.py`, `database.py`, `schemas.py`, `routes/`, `forms.py`.
-- **CI/CD** — GitHub Actions: `pytest` (78), `ruff`, `alembic upgrade head`.
-- **pyproject.toml** — конфиг ruff и pytest.
+- **Рефакторинг** — `app/` пакет: `models`, `database`, `schemas`, `forms`, `routes/`, точка входа `main.py`
+- **Alembic** — миграции, `env.py` читает `DATABASE_URL`
+- **PostgreSQL** — поддержка через `DATABASE_URL`, fallback при отсутствии драйвера
+- **CI/CD** — GitHub Actions: `pytest` (84), `ruff`, `alembic upgrade head`
+- **Логирование** — request-логгер (middleware), audit-лог (`CREATE/UPDATE/DELETE/COMPLETE`), трассировка (`TRACE=1`)
+- **pyproject.toml** — конфиг ruff, pytest, маркеры
 
 ### База данных
-- **UNIQUE constraint** `(slot_id, client_id)` на `bookings` — модель + миграция + тест.
-- **Race conditions** — `select_for_update` в бронировании, retry при `IntegrityError`.
+- **UNIQUE constraint** `(slot_id, client_id)` — модель + миграция + тест
+- **Race conditions** — `select_for_update` + retry при `IntegrityError`
 
 ### Валидация
-- **Pydantic-формы** — `ClientCreateForm`, `SlotAddForm`, `BookingAddForm` и др. с `ge`/`le`/`min_length`/`field_validator`.
-- **422 вместо 500** для невалидных данных форм.
+- **Pydantic-формы** — `ClientCreateForm`, `SlotAddForm`, `BookingAddForm` и др.
+- **422 вместо 500** для невалидных данных
 
 ### Функционал
-- **Абонементы** — пакеты 4/8/12, списание при завершении, блокировка при 0.
-- **Программа тренировки** — автосохранение (sendBeacon + debounce), data-атрибуты вместо Jinja2 в JS.
-- **Журнал** — перенос строк в комментариях.
-- **Пагинация** клиентов (25 на странице).
+- **Абонементы** — пакеты 4/8/12, списание при завершении, блокировка при 0
+- **Программа тренировки** — автосохранение (sendBeacon + debounce), data-атрибуты вместо Jinja2 в JS
+- **Журнал** — перенос строк в комментариях
+- **Пагинация** клиентов (25 на странице)
+- **Трассировка запросов** — `TRACE=1` для детального лога (headers, body, timing)
 
-### Тесты — 78 шт.
-- `test_bookings` — capacity, дубликаты, DB-level constraint, удаление слота
-- `test_calendar` — отображение недели, week_offset
-- `test_clients` — CRUD, пагинация
-- `test_edge_cases` — XSS, SQLi, mass assignment, граничные значения
-- `test_journal` — создание записи при завершении, декремент
-- `test_optimization` — тайминги (150 слотов, 100 клиентов, bulk)
-- `test_program` — save + persist, HTML-level проверка
-- `test_slots` — конфликты, прошлое
-- `test_subscriptions` — страница абонементов, добавление, лимиты
+### Тесты — 84 шт.
+| Файл | Тестов | Что проверяет |
+|------|--------|--------------|
+| `test_bookings` | 5 | capacity, дубликаты, DB constraint, очистка notes |
+| `test_calendar` | 3 | отображение недели, week_offset |
+| `test_clients` | 3 | CRUD, пагинация |
+| `test_edge_cases` | 34 | XSS, SQLi, mass assignment, граничные значения |
+| `test_journal` | 2 | завершение слота, декремент |
+| `test_logging` | 6 | audit-логи (CREATE, DELETE, ADD, SUBSCRIPTION) |
+| `test_optimization` | 10 | тайминги (150 слотов, 100 записей, bulk) |
+| `test_program` | 1 | save + persist, HTML-level проверка |
+| `test_slots` | 3 | конфликты, прошлое |
+| `test_subscriptions` | 3 | абонементы, лимиты |
+| E2E (`test_e2e`) | 8 | Playwright: навигация, создание клиента/слота |
+
+### Прочее
+- `.gitignore` — `*.db`, `__pycache__`, `.ruff_cache`, `.pytest_cache`, IDE
+- `main.py` — абсолютные пути к `static/` и `templates/`
+- 0 предупреждений в тестах
 
 ---
 
 ## ◻ P2 — Средний приоритет
 
-- **Аутентификация** — базовая auth (+ роли), если приложение будет доступно извне.
-- **Таймзоны** — хранить даты в UTC, конвертировать при рендеринге.
-- **Flash-уведомления** — автоскрытие через JS, показывать детали конфликта (время/ID).
-- **Логирование** — audit log для CRUD-операций.
-- **requirements pinning** — зафиксировать версии зависимостей.
+- **Аутентификация** — базовая auth (+ роли)
+- **Таймзоны** — хранить даты в UTC, конвертировать при рендеринге
+- **Flash-уведомления** — автоскрытие через JS, детали конфликта
+- **requirements pinning** — зафиксировать версии зависимостей
 
 ---
 
 ## ◻ P3 — Низкий / Опционально
 
-- **Keyboard navigation** для календаря (стрелки, Enter).
-- **Улучшить UX** модальных окон (анимация, понятные сообщения).
-- **Production-конфигурация** — CORS, middleware, метрики.
-- **Иконки / цветовая система** для статусов тренировок.
-- **Деплой** — Dockerfile, docker-compose (app + postgres).
-- ~~E2E-тесты~~ через Playwright. ✅ 8 тестов (навигация, создание клиента, создание слота, просмотр слота)
+- **Keyboard navigation** для календаря (стрелки, Enter)
+- **Улучшить UX** модальных окон (анимация, понятные сообщения)
+- **Production-конфигурация** — CORS, middleware, метрики
+- **Иконки / цветовая система** для статусов тренировок
+- **Деплой** — Dockerfile, docker-compose (app + postgres)
 
 ---
 
 ## Заметки
 
-- Проверка пересечения слотов — на уровне приложения с `select_for_update` + retry.
-- Для продакшна: Postgres + транзакции.
-- `ensure_client_columns()` / `ensure_journal_columns()` — runtime-миграции для локальной разработки; при переходе на чистый PG их можно удалить.
+- `ensure_client_columns()` / `ensure_journal_columns()` — runtime-миграции; при переходе на чистый PG можно удалить

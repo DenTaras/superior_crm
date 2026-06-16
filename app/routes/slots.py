@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta
 import json
 import time
+from app.timezone import now as tz_now
 
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
@@ -73,7 +74,7 @@ def _do_slots_add(form: SlotAddForm, db: Session):
 
     # ---- одиночный слот ----
     if not end:
-        if start < datetime.now():
+        if start < tz_now():
             return RedirectResponse(f"/schedule?week_offset={form.week_offset}&flash=slot_past", status_code=303)
         capacity = _normalize_capacity(form.capacity)
         new_end = start + timedelta(hours=1)
@@ -89,7 +90,7 @@ def _do_slots_add(form: SlotAddForm, db: Session):
     if end <= start:
         return RedirectResponse(f"/schedule?week_offset={form.week_offset}", status_code=303)
 
-    now = datetime.now()
+    now = tz_now()
     candidates = []
     cur = start
     while True:
@@ -130,7 +131,7 @@ def slots_edit_post(
     if slot:
         ts = form.start_time.replace(" ", "T")
         new_start = datetime.fromisoformat(ts)
-        if new_start < datetime.now():
+        if new_start < tz_now():
             return RedirectResponse(f"/schedule?week_offset={form.week_offset}&flash=slot_past", status_code=303)
         new_end = new_start + timedelta(hours=1)
         if _has_overlap(db, new_start, new_end, exclude_id=slot_id):
@@ -206,7 +207,7 @@ def _do_add_client(slot_id: int, form: BookingAddForm, db: Session):
         return RedirectResponse(f"/slot/{slot_id}?week_offset={week_off}&flash=limit_reached", status_code=303)
 
     # проверка remaining_sessions
-    now_dt = datetime.now()
+    now_dt = tz_now()
     booked_future = (
         db.query(Booking)
         .join(Slot, Booking.slot_id == Slot.id)

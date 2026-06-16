@@ -1,7 +1,7 @@
 """Маршруты: календарь расписания и страница слота."""
 
 from datetime import datetime, timedelta
-from typing import List
+from app.timezone import now as tz_now
 
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
@@ -18,7 +18,7 @@ def schedule(request: Request, db: Session = Depends(get_db), week_offset: int =
     """Недельный календарь 08:00–22:00."""
     slots = db.query(Slot).order_by(Slot.start_time).all()
 
-    now = datetime.now()
+    now = tz_now()
     base_week_start = (now - timedelta(days=now.weekday())).replace(
         hour=0, minute=0, second=0, microsecond=0
     )
@@ -26,8 +26,8 @@ def schedule(request: Request, db: Session = Depends(get_db), week_offset: int =
     days = [week_start + timedelta(days=i) for i in range(7)]
     hours = list(range(8, 23))
 
-    default_time = datetime.now().strftime("%Y-%m-%dT%H:%M")
-    default_end_time = (datetime.now() + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M")
+    default_time = tz_now().strftime("%Y-%m-%dT%H:%M")
+    default_end_time = (tz_now() + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M")
 
     grid = {(d_idx, h): None for d_idx in range(7) for h in hours}
 

@@ -7,6 +7,7 @@ import urllib.parse
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
+from app.timezone import now as tz_now
 
 from app.database import get_db, templates
 from app.models import Slot, Booking, Client, TrainingNote
@@ -85,7 +86,7 @@ async def slot_program_save(slot_id: int, request: Request, db: Session = Depend
         note = TrainingNote(slot_id=slot_id, client_id=client_id, text=text)
     else:
         note.text = text
-        note.updated_at = datetime.now()
+        note.updated_at = tz_now()
     db.add(note)
     db.commit()
     return JSONResponse({"ok": True})

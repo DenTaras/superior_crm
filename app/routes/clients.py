@@ -12,6 +12,7 @@ from app.models import Client, Slot, Booking
 from app.schemas import ClientCreateForm, SubscriptionAddForm
 from app.forms import parse_client_form, parse_subscription_form
 from app.logging_config import audit_log
+from app.timezone import now as tz_now
 
 router = APIRouter()
 
@@ -58,7 +59,7 @@ def clients_page(
         .all()
     )
 
-    now_dt = datetime.now()
+    now_dt = tz_now()
     client_rows = []
     for c in clients:
         booked_future = (

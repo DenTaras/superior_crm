@@ -21,7 +21,8 @@
         {% set msg = flash %}
     {% endif %}
 
-    <div id="flash-modal" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="flash-title">
+    {% set flash_seconds = request.query_params.get('flash_seconds', '5') %}
+    <div id="flash-modal" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="flash-title" data-seconds="{{ flash_seconds }}">
         <div class="modal__backdrop" id="flash-backdrop"></div>
         <div class="modal__content">
             <div class="modal__header">
@@ -30,6 +31,7 @@
             </div>
             <div class="modal__body">
                 <p>{{ msg }}</p>
+                <p class="muted" style="font-size:13px;">Закроется через <span id="flash-countdown">5</span> с</p>
             </div>
             <div class="modal__footer">
                 <a class="btn" href="/schedule?week_offset={{ week_offset }}">ОК</a>
@@ -43,11 +45,21 @@
         if(!modal) return;
         var close = document.getElementById('flash-close');
         var backdrop = document.getElementById('flash-backdrop');
-        function hide(){ modal.parentNode && modal.parentNode.removeChild(modal); }
+        var countdown = document.getElementById('flash-countdown');
+        var seconds = parseInt(modal.getAttribute('data-seconds')) || 5;
+        function hide(){
+            modal.parentNode && modal.parentNode.removeChild(modal);
+            if(window.history && window.history.replaceState) window.history.replaceState({}, '', window.location.pathname);
+        }
         close && close.addEventListener('click', hide);
         backdrop && backdrop.addEventListener('click', hide);
-        // allow ESC to close
         document.addEventListener('keydown', function(e){ if(e.key === 'Escape') hide(); });
+        if(countdown) countdown.textContent = seconds;
+        var timer = setInterval(function(){
+            seconds--;
+            if(countdown) countdown.textContent = seconds;
+            if(seconds <= 0){ clearInterval(timer); hide(); }
+        }, 1000);
     })();
     </script>
 {% endif %}

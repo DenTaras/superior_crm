@@ -94,7 +94,6 @@ def test_create_slot_and_navigate(page: Page, app_url: str):
 
 def test_slot_page_shows_details(page: Page, app_url: str):
     """Страница существующего слота отображает информацию."""
-    # идём на расписание и кликаем первый слот
     page.goto(f"{app_url}/schedule")
     slot_link = page.locator("a[href*='/slot/']").first
     if slot_link.is_visible():
@@ -102,3 +101,26 @@ def test_slot_page_shows_details(page: Page, app_url: str):
         assert slot_href is not None
         page.goto(f"{app_url}{slot_href}")
         expect(page.locator("h2").first).to_be_visible()
+
+
+def test_flash_auto_hide(page: Page, app_url: str):
+    """Flash-модалка скрывается через 1 секунду (flash_seconds=1)."""
+    page.goto(f"{app_url}/schedule?flash=limit_reached&flash_seconds=1")
+    modal = page.locator("#flash-modal")
+    countdown = page.locator("#flash-countdown")
+
+    expect(modal).to_be_visible()
+    expect(countdown).to_have_text("1")
+
+    page.wait_for_timeout(1500)
+    expect(modal).not_to_be_visible()
+
+
+def test_flash_manual_close(page: Page, app_url: str):
+    """Flash-модалка закрывается по кнопке ×."""
+    page.goto(f"{app_url}/schedule?flash=slot_conflict")
+    modal = page.locator("#flash-modal")
+    expect(modal).to_be_visible()
+
+    page.locator("#flash-close").click()
+    expect(modal).not_to_be_visible()

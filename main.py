@@ -22,6 +22,7 @@ from app.routes.schedule import router as schedule_router
 from app.routes.slots import router as slots_router
 from app.routes.program import router as program_router
 from app.routes.journal import router as journal_router
+from app.timezone import now as tz_now
 
 _log = _logging.getLogger("superior.request")
 _trace_log = _logging.getLogger("superior.trace")

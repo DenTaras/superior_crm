@@ -30,6 +30,9 @@ def format_phone(value: str) -> str:
 
 templates.env.filters['format_phone'] = format_phone
 
+from app.timezone import localtime  # noqa: E402
+templates.env.filters['localtime'] = localtime
+
 
 # ---- Engine & Session ----
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///superior.db")
