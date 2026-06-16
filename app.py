@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 from typing import Generator, List
 
@@ -14,6 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy import *
 from sqlalchemy.orm import *
 from sqlalchemy.orm import Session
+from sqlalchemy import inspect as sa_inspect
 import json
 
 # Файл app.py - основной файл приложения, который содержит все маршруты и логику работы с базой данных. 
@@ -24,13 +26,15 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 # Настраиваем Jinja2Templates для рендеринга HTML-шаблонов из папки "templates"
 templates = Jinja2Templates(directory="templates")
-# Настраиваем SQLAlchemy для работы с базой данных SQLite. 
-# Мы создаем движок базы данных, определяем базовый класс для моделей и создаем сессию 
-# для взаимодействия с базой данных.
-engine = create_engine(
-    "sqlite:///superior.db",
-    connect_args={"check_same_thread": False},
-)
+
+# ---- База данных ----
+# Переменная окружения DATABASE_URL (например, postgresql://user:pass@localhost:5432/superior_crm)
+# По умолчанию — SQLite для локальной разработки (файл superior.db).
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///superior.db")
+connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args["check_same_thread"] = False
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 # Определяем модели данных для клиентов, слотов и бронирований.
 Base = declarative_base()
 # Создаем сессию для взаимодействия с базой данных
@@ -114,66 +118,57 @@ class TrainingNote(Base):
     text = Column(Text, nullable=True)
     updated_at = Column(DateTime, default=datetime.now)
 
-# Создаем все таблицы в базе данных, если они еще не существуют.
-Base.metadata.create_all(engine)
+# ---- Инициализация схемы (только при прямом запуске, не через Alembic) ----
+if "alembic" not in __import__("sys").modules:
+    Base.metadata.create_all(engine)
 
-# Для существующей SQLite БД: добавляем недостающие колонки в таблицу clients,
-# чтобы обновление модели не ломало приложение при локальной разработке.
-def ensure_client_columns():
-    """Проверяет и добавляет отсутствующие колонки в таблицу `clients`.
+    # Добавляет недостающие колонки в уже существующие таблицы (работает и с SQLite, и с PostgreSQL)
+    def _get_table_columns(table_name: str) -> list:
+        """Возвращает список имен колонок таблицы через SQLAlchemy Inspector."""
+        try:
+            inspector = sa_inspect(engine)
+            return [col["name"] for col in inspector.get_columns(table_name)]
+        except Exception:
+            return []
 
-    Утилита полезна при локальной разработке: если модель `Client` была
-    расширена, но в существующей SQLite базе нет колонок, функция выполнит
-    `ALTER TABLE` для добавления недостающих полей (мягко, без критических ошибок).
-    """
-    with engine.connect() as conn:
-        res = conn.execute(text("PRAGMA table_info(clients)"))
-        existing = [row[1] for row in res.fetchall()]
+    def _ensure_client_columns():
+        existing = _get_table_columns("clients")
+        if not existing:
+            return
         to_add = [
-            ("first_name", "TEXT"),
-            ("last_name", "TEXT"),
-            ("patronymic", "TEXT"),
-            ("birth_year", "INTEGER"),
-            ("birth_place", "TEXT"),
-            ("phone", "TEXT"),
-            ("name", "TEXT"),
-            ("remaining_sessions", "INTEGER DEFAULT 1"),
+            ("first_name", "TEXT"), ("last_name", "TEXT"), ("patronymic", "TEXT"),
+            ("birth_year", "INTEGER"), ("birth_place", "TEXT"), ("phone", "TEXT"),
+            ("name", "TEXT"), ("remaining_sessions", "INTEGER DEFAULT 1"),
         ]
-        for col, coltype in to_add:
-            if col not in existing:
+        with engine.connect() as conn:
+            for col, coltype in to_add:
+                if col not in existing:
+                    try:
+                        conn.execute(text(f"ALTER TABLE clients ADD COLUMN {col} {coltype}"))
+                    except Exception:
+                        pass
+
+    def _ensure_journal_columns():
+        existing = _get_table_columns("journal")
+        if not existing:
+            return
+        if 'comments' not in existing:
+            with engine.connect() as conn:
                 try:
-                    conn.execute(text(f"ALTER TABLE clients ADD COLUMN {col} {coltype}"))
+                    conn.execute(text("ALTER TABLE journal ADD COLUMN comments TEXT"))
                 except Exception:
-                    # если что-то пошло не так — пропускаем, можно логировать
                     pass
 
+    _ensure_client_columns()
+    _ensure_journal_columns()
 
-def ensure_journal_columns():
-    """Добавляет колонку `comments` в таблицу `journal`, если её нет.
-
-    Используется для плавного обновления локальной SQLite БД в разработке.
-    """
     with engine.connect() as conn:
         try:
-            res = conn.execute(text("PRAGMA table_info(journal)"))
-            existing = [row[1] for row in res.fetchall()]
-            if 'comments' not in existing:
-                conn.execute(text("ALTER TABLE journal ADD COLUMN comments TEXT"))
+            conn.execute(text("UPDATE clients SET remaining_sessions = 1 WHERE remaining_sessions IS NULL OR remaining_sessions = 0"))
         except Exception:
             pass
 
-
-ensure_client_columns()
-ensure_journal_columns()
-# После добавления колонки приводим существующие записи к дефолту 1 (пробное занятие)
-with engine.connect() as conn:
-    try:
-        conn.execute(text("UPDATE clients SET remaining_sessions = 1 WHERE remaining_sessions IS NULL OR remaining_sessions = 0"))
-    except Exception:
-        pass
-
-# Создаём таблицу журнала, если ещё нет
-Base.metadata.create_all(engine)
+    Base.metadata.create_all(engine)
 
 
 # Регистрируем Jinja2 фильтр для форматирования телефонов
@@ -888,6 +883,19 @@ def add_client(
     if remaining == 0 or booked_future >= remaining:
         return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}&flash=limit_reached", status_code=303)
 
+    # если слот не найден, редиректим
+    if slot is None:
+        return RedirectResponse(f"/schedule?week_offset={week_offset}", status_code=303)
+
+    # не допускаем дубликатов бронирования одного клиента в одном слоте
+    existing = (
+        db.query(Booking)
+        .filter(Booking.slot_id == slot.id, Booking.client_id == client_id)
+        .first()
+    )
+    if existing:
+        return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}", status_code=303)
+
     # затем проверяем вместимость слота
     count = (
         db.query(Booking)
@@ -950,78 +958,78 @@ def complete_slot(slot_id: int, week_offset: int = Form(0), db: Session = Depend
     return RedirectResponse(f"/journal", status_code=303)
 
 
-# При первом запуске приложения мы проверяем, есть ли в базе данных клиенты и слоты. 
-# Если их нет, то мы добавляем несколько клиентов и слотов для тестирования.
-db = SessionLocal()
-try:
-    if db.query(Client).count() == 0:
+# Seed-данные — только при прямом запуске (не через Alembic)
+if "alembic" not in __import__("sys").modules:
+    db = SessionLocal()
+    try:
+        if db.query(Client).count() == 0:
 
-        db.add_all([
-            Client(
-                first_name="Иван",
-                last_name="Петров",
-                patronymic="",
-                birth_year=1985,
-                birth_place="Москва",
-                phone="+79990000001",
-                name="Петров Иван",
-                remaining_sessions=1,
-            ),
-            Client(
-                first_name="Мария",
-                last_name="Иванова",
-                patronymic="",
-                birth_year=1990,
-                birth_place="Санкт-Петербург",
-                phone="+79990000002",
-                name="Иванова Мария",
-                remaining_sessions=1,
-            ),
-            Client(
-                first_name="Алексей",
-                last_name="Сидоров",
-                patronymic="",
-                birth_year=1988,
-                birth_place="Казань",
-                phone="+79990000003",
-                name="Сидоров Алексей",
-                remaining_sessions=1,
-            ),
-        ])
-        for i in range(1):
             db.add_all([
                 Client(
-                    first_name=f"{i}",
-                    last_name=f"{i}",
+                    first_name="Иван",
+                    last_name="Петров",
                     patronymic="",
                     birth_year=1985,
-                    birth_place=f"{i}",
+                    birth_place="Москва",
                     phone="+79990000001",
-                    name=f"{i}",
+                    name="Петров Иван",
                     remaining_sessions=1,
-                )
+                ),
+                Client(
+                    first_name="Мария",
+                    last_name="Иванова",
+                    patronymic="",
+                    birth_year=1990,
+                    birth_place="Санкт-Петербург",
+                    phone="+79990000002",
+                    name="Иванова Мария",
+                    remaining_sessions=1,
+                ),
+                Client(
+                    first_name="Алексей",
+                    last_name="Сидоров",
+                    patronymic="",
+                    birth_year=1988,
+                    birth_place="Казань",
+                    phone="+79990000003",
+                    name="Сидоров Алексей",
+                    remaining_sessions=1,
+                ),
             ])
-        db.commit()
+            for i in range(1):
+                db.add_all([
+                    Client(
+                        first_name=f"{i}",
+                        last_name=f"{i}",
+                        patronymic="",
+                        birth_year=1985,
+                        birth_place=f"{i}",
+                        phone="+79990000001",
+                        name=f"{i}",
+                        remaining_sessions=1,
+                    )
+                ])
+            db.commit()
 
-    if db.query(Slot).count() == 0:
+        if db.query(Slot).count() == 0:
 
-        now = datetime.now()
+            now = datetime.now()
 
-        db.add_all([
-            Slot(
-                start_time=now + timedelta(hours=1),
-                capacity=1,
-            ),
-            Slot(
-                start_time=now + timedelta(hours=2),
-                capacity=2,
-            ),
-            Slot(
-                start_time=now + timedelta(hours=3),
-                capacity=4,
-            ),
-        ])
+            db.add_all([
+                Slot(
+                    start_time=now + timedelta(hours=1),
+                    capacity=1,
+                ),
+                Slot(
+                    start_time=now + timedelta(hours=2),
+                    capacity=2,
+                ),
+                Slot(
+                    start_time=now + timedelta(hours=3),
+                    capacity=4,
+                ),
+            ])
 
-        db.commit()
-finally:
-    db.close()
+            db.commit()
+    finally:
+        db.close()
