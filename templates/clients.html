@@ -2,46 +2,42 @@
 
 {% block content %}
 
-<div class="page-title">
+<div class="page__title">
     <h1>Клиенты</h1>
+    <a class="btn btn--primary" href="/clients/create">Добавить</a>
 </div>
 
-<div style="margin-top:16px;">
-    <a class="btn" href="/clients/create">Добавить</a>
-</div>
-<br>
-
-<div class="page-controls">
-    <form method="get" action="/clients" class="form-row" style="flex-direction:row;gap:8px;align-items:center;">
+<div class="page__controls">
+    <form method="get" action="/clients" class="form--row">
         <input type="hidden" name="page" value="1" />
-        <input class="field" type="search" name="q_name" placeholder="Поиск по ФИО" value="{{ q_name or '' }}" />
-        <input class="field" type="search" name="q_phone" placeholder="Поиск по телефону" value="{{ q_phone or '' }}" />
+        <input class="form__input" type="search" name="q_name" placeholder="Поиск по ФИО" value="{{ q_name or '' }}" style="width:200px;" />
+        <input class="form__input" type="search" name="q_phone" placeholder="Поиск по телефону" value="{{ q_phone or '' }}" style="width:200px;" />
         <button class="btn btn--small" type="submit">Фильтр</button>
         <a class="btn btn--ghost btn--small" href="/clients">Сброс</a>
     </form>
 </div>
 
 <div class="clients-list">
-    <div class="clients-table-wrapper">
-    <table class="clients-table">
+    <div class="table__wrapper">
+    <table class="table">
         <thead>
-            <tr><th>ФИО</th><th>Телефон</th><th>Осталось/Забронировано</th><th></th></tr>
+            <tr><th class="table__header">ФИО</th><th class="table__header">Телефон</th><th class="table__header">Осталось/Забронировано</th><th class="table__header"></th></tr>
         </thead>
         <tbody>
         {% for row in client_rows %}
             {% set client = row.client %}
-            <tr>
-                <td>{{ client.fio() }}</td>
-                <td>{{ client.phone|format_phone }}</td>
-                <td>
+            <tr class="table__row">
+                <td class="table__cell">{{ client.fio() }}</td>
+                <td class="table__cell">{{ client.phone|format_phone }}</td>
+                <td class="table__cell">
                     {{ client.remaining_sessions or 0 }} / {{ row.booked_future }}
                 </td>
-                <td>
+                <td class="table__cell">
                     <a class="btn btn--small" href="/clients/edit/{{ client.id }}">Редактировать</a>
-                    <form method="post" action="/clients/add_subscription" style="display:inline;margin-left:8px;">
+                    <form method="post" action="/clients/add_subscription" class="form--inline" style="display:inline-flex;margin-left:8px;">
                         {{ csrf_input(request) }}
                         <input type="hidden" name="client_id" value="{{ client.id }}" />
-                        <select name="package" class="field" style="display:inline-block;width:auto;">
+                        <select name="package" class="form__select" style="width:auto;">
                             <option value="12">12 занятий</option>
                             <option value="8">8 занятий</option>
                             <option value="4">4 занятия</option>
@@ -56,21 +52,14 @@
     </div>
 </div>
 
-<!-- Пагинация -->
 {% if total_pages > 1 %}
-<div class="pagination" style="margin-top:16px;display:flex;gap:8px;align-items:center;justify-content:center;">
+<div class="pagination">
     {% if page > 1 %}
-    <a class="btn btn--small" href="/clients?page=1&amp;q_name={{ q_name|urlencode }}&amp;q_phone={{ q_phone|urlencode }}">«</a>
-    <a class="btn btn--small" href="/clients?page={{ page-1 }}&amp;q_name={{ q_name|urlencode }}&amp;q_phone={{ q_phone|urlencode }}">‹</a>
+    <a class="btn btn--ghost btn--small" href="/clients?page={{ page - 1 }}{% if q_name %}&q_name={{ q_name }}{% endif %}{% if q_phone %}&q_phone={{ q_phone }}{% endif %}">← Назад</a>
     {% endif %}
-
-    <span style="font-size:14px;color:#666;">
-        {{ page }} / {{ total_pages }} ({{ total }})
-    </span>
-
+    <span class="pagination__info">{{ page }} / {{ total_pages }}</span>
     {% if page < total_pages %}
-    <a class="btn btn--small" href="/clients?page={{ page+1 }}&amp;q_name={{ q_name|urlencode }}&amp;q_phone={{ q_phone|urlencode }}">›</a>
-    <a class="btn btn--small" href="/clients?page={{ total_pages }}&amp;q_name={{ q_name|urlencode }}&amp;q_phone={{ q_phone|urlencode }}">»</a>
+    <a class="btn btn--ghost btn--small" href="/clients?page={{ page + 1 }}{% if q_name %}&q_name={{ q_name }}{% endif %}{% if q_phone %}&q_phone={{ q_phone }}{% endif %}">Вперёд →</a>
     {% endif %}
 </div>
 {% endif %}

@@ -2,13 +2,11 @@
 
 {% block content %}
 
-<hr />
-<div class="slot-header">
-	<h2>Запись на {{ slot.start_time.strftime('%d.%m %H:%M') }}</h2>
-	<div class="muted">Вместимость: {{ slot.capacity }} — Записано: {{ clients|length }}</div>
+<div class="slot__header">
+	<h2 class="slot__header-title">Запись на {{ slot.start_time.strftime('%d.%m %H:%M') }}</h2>
+	<div class="slot__header-meta">Вместимость: {{ slot.capacity }} — Записано: {{ clients|length }}</div>
 </div>
 
-{# flash modal for slot page (e.g., limit_reached) #}
 {% set flash = request.query_params.get('flash') %}
 {% if flash %}
 	{% if flash == 'slot_conflict' %}
@@ -23,18 +21,17 @@
 
 	{% set flash_seconds = request.query_params.get('flash_seconds', '5') %}
 	<div id="flash-modal" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="flash-title" data-seconds="{{ flash_seconds }}">
-		<div class="modal__backdrop" id="flash-backdrop"></div>
 		<div class="modal__content">
 			<div class="modal__header">
-				<h3 id="flash-title">Внимание</h3>
+				<h3 class="modal__title" id="flash-title">Внимание</h3>
 				<button class="modal__close" id="flash-close" aria-label="Закрыть">×</button>
 			</div>
 			<div class="modal__body">
 				<p>{{ msg }}</p>
-				<p class="muted" style="font-size:13px;">Закроется через <span id="flash-countdown">5</span> с</p>
+				<p class="text-muted" style="font-size:13px;">Закроется через <span id="flash-countdown">5</span> с</p>
 			</div>
 			<div class="modal__footer">
-				<a class="btn" href="/slot/{{ slot.id }}?week_offset={{ week_offset }}">ОК</a>
+				<a class="btn btn--primary" href="/slot/{{ slot.id }}?week_offset={{ week_offset }}">ОК</a>
 			</div>
 		</div>
 	</div>
@@ -44,7 +41,6 @@
 		var modal = document.getElementById('flash-modal');
 		if(!modal) return;
 		var close = document.getElementById('flash-close');
-		var backdrop = document.getElementById('flash-backdrop');
 		var countdown = document.getElementById('flash-countdown');
 		var seconds = parseInt(modal.getAttribute('data-seconds')) || 5;
 		function hide(){
@@ -52,7 +48,6 @@
 			if(window.history && window.history.replaceState) window.history.replaceState({}, '', window.location.pathname);
 		}
 		close && close.addEventListener('click', hide);
-		backdrop && backdrop.addEventListener('click', hide);
 		document.addEventListener('keydown', function(e){ if(e.key === 'Escape') hide(); });
 		if(countdown) countdown.textContent = seconds;
 		var timer = setInterval(function(){
@@ -65,97 +60,85 @@
 {% endif %}
 
 {% if user and user.role in ('admin', 'trainer') %}
-<!-- Список клиентов, уже записанных в слот. Для каждого доступна кнопка удаления. -->
 <h3>Записаны:</h3>
-<ul class="client-list slot-client-list">
+<ul class="client-list">
 	{% for client in clients %}
-	<li>
+	<li class="client-list__item">
 	{{ client.fio() }}
-		<form method="post" action="/slot/{{ slot.id }}/remove" style="display:inline">
+		<form method="post" action="/slot/{{ slot.id }}/remove" class="form--inline">
 			{{ csrf_input(request) }}
 			<input type="hidden" name="client_id" value="{{ client.id }}" />
 			<input type="hidden" name="week_offset" value="{{ week_offset }}" />
-			<button class="btn"> Удалить из слота </button>
+			<button class="btn btn--small">Удалить из слота</button>
 		</form>
 	</li>
 	{% endfor %}
 </ul>
 
-<!-- Форма добавления существующего клиента в слот -->
-<form method="post" action="/slot/{{ slot.id }}/add">
+<form method="post" action="/slot/{{ slot.id }}/add" class="form--row">
 	{{ csrf_input(request) }}
-	<select name="client_id" class="field">
+	<select name="client_id" class="form__select">
 		{% for client in all_clients %}
-		<option value="{{ client.id }}">
-		{{ client.name }}
-		</option>
+		<option value="{{ client.id }}">{{ client.name }}</option>
 		{% endfor %}
 	</select>
 	<input type="hidden" name="week_offset" value="{{ week_offset }}" />
-	<button class="btn">Добавить</button>
+	<button class="btn btn--primary">Добавить</button>
 </form>
 
+<hr class="mt-2 mb-2" />
+<a class="btn btn--primary" href="/slot/{{ slot.id }}/program?week_offset={{ week_offset }}">Тренировка</a>
 
-<!-- программа тренировки на этот слот -->
-<hr />
-<br />
-<a class="btn" href="/slot/{{ slot.id }}/program?week_offset={{ week_offset }}">Тренировка</a>
-<br />
-<br />
-
-
-<!-- Форма редактирования слота -->
-<hr />
+<hr class="mt-2 mb-2" />
 <h3>Настройки слота</h3>
-<form method="post" action="/slots/edit/{{ slot.id }}" class="field">
+<form method="post" action="/slots/edit/{{ slot.id }}" class="form">
 	{{ csrf_input(request) }}
 	<input type="hidden" name="week_offset" value="{{ week_offset }}" />
-	<label class="label">Время</label>
-	<input class="field" type="text" name="start_time" value="{{ slot.start_time.strftime('%Y-%m-%d %H:%M') }}" required />
-	<label class="label">Вместимость</label>
-	<select name="capacity" class="field">
-		<option value="1" {% if slot.capacity == 1 %}selected{% endif %}>1</option>
-		<option value="2" {% if slot.capacity == 2 %}selected{% endif %}>2</option>
-		<option value="3" {% if slot.capacity == 3 %}selected{% endif %}>3</option>
-		<option value="4" {% if slot.capacity == 4 %}selected{% endif %}>4</option>
-	</select>
-	<div class="edit-actions">
-		<button class="btn" type="submit">Сохранить</button>
+	<div class="form__group">
+		<label class="form__label">Время</label>
+		<input class="form__input" type="text" name="start_time" value="{{ slot.start_time.strftime('%Y-%m-%d %H:%M') }}" required />
+	</div>
+	<div class="form__group">
+		<label class="form__label">Вместимость</label>
+		<select name="capacity" class="form__select">
+			<option value="1" {% if slot.capacity == 1 %}selected{% endif %}>1</option>
+			<option value="2" {% if slot.capacity == 2 %}selected{% endif %}>2</option>
+			<option value="3" {% if slot.capacity == 3 %}selected{% endif %}>3</option>
+			<option value="4" {% if slot.capacity == 4 %}selected{% endif %}>4</option>
+		</select>
+	</div>
+	<div class="form__actions">
+		<button class="btn btn--primary" type="submit">Сохранить</button>
 	</div>
 </form>
 
-<!-- кнопки слота -->
-<div style="display: flex; gap: 10px; align-items: center; margin-top: 8px;">
-	<!-- Форма для завершения тренировки -->
+<div class="flex-row mt-2">
 	<form method="post" action="/slot/{{ slot.id }}/complete">
 		{{ csrf_input(request) }}
 		<input type="hidden" name="week_offset" value="{{ week_offset }}" />
-		<button class="btn" onclick="return confirm('Завершить тренировку?')">Завершить</button>
+		<button class="btn btn--primary" onclick="return confirm('Завершить тренировку?')">Завершить</button>
 	</form>
-	<!-- Форма для удаления слота -->
 	<form method="post" action="/slots/delete/{{ slot.id }}" 
 		onsubmit="return confirm('Удалить слот? Это удалит все бронирования.');">
 		{{ csrf_input(request) }}
 		<input type="hidden" name="week_offset" value="{{ week_offset }}" />
-		<button class="btn" >Удалить слот</button>
+		<button class="btn btn--secondary">Удалить слот</button>
 	</form>
 </div>
 {% else %}
-<!-- Для клиента: только список записавшихся -->
 <h3>Записаны:</h3>
-<ul class="client-list slot-client-list">
+<ul class="client-list">
 	{% for client in clients %}
-	<li>{{ client.fio() }}</li>
+	<li class="client-list__item">{{ client.fio() }}</li>
 	{% endfor %}
 </ul>
 {% endif %}
 	{% if user and user.role in ('admin', 'trainer') and clients and clients|length > 0 %}
-	<!-- Форма для подтверждения проведения занятия: снимет по 1 занятию у всех записанных и удалит слот -->
-	<form method="post" action="/slot/{{ slot.id }}/complete" 
+	<form method="post" action="/slot/{{ slot.id }}/complete" class="mt-2"
 		onsubmit="return confirm('Подтвердить проведение занятия и списать 1 занятие у всех записанных?');">
 		{{ csrf_input(request) }}
 		<input type="hidden" name="week_offset" value="{{ week_offset }}" />
-		<button class="btn--green" type="submit">Занятие проведено</button>
+		<button class="btn btn--success" type="submit">Занятие проведено</button>
 	</form>
 	{% endif %}
 </div>

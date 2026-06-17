@@ -2,13 +2,10 @@
 
 {% block content %}
 
-<div class="page-title">
+<div class="page__title">
     <h1>Расписание</h1>
 </div>
 
-<!-- Блок флеш-сообщений: при наличии параметра `flash` в query params
-     показываем модальное окно с сообщением. Используется, например,
-     для уведомления об ошибке создания слота (конфликт времени). -->
 {% set flash = request.query_params.get('flash') %}
 {% if flash %}
     {% if flash == 'slot_conflict' %}
@@ -23,18 +20,17 @@
 
     {% set flash_seconds = request.query_params.get('flash_seconds', '5') %}
     <div id="flash-modal" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="flash-title" data-seconds="{{ flash_seconds }}">
-        <div class="modal__backdrop" id="flash-backdrop"></div>
         <div class="modal__content">
             <div class="modal__header">
-                <h3 id="flash-title">Внимание</h3>
+                <h3 class="modal__title" id="flash-title">Внимание</h3>
                 <button class="modal__close" id="flash-close" aria-label="Закрыть">×</button>
             </div>
             <div class="modal__body">
                 <p>{{ msg }}</p>
-                <p class="muted" style="font-size:13px;">Закроется через <span id="flash-countdown">5</span> с</p>
+                <p class="text-muted" style="font-size:13px;">Закроется через <span id="flash-countdown">5</span> с</p>
             </div>
             <div class="modal__footer">
-                <a class="btn" href="/schedule?week_offset={{ week_offset }}">ОК</a>
+                <a class="btn btn--primary" href="/schedule?week_offset={{ week_offset }}">ОК</a>
             </div>
         </div>
     </div>
@@ -44,7 +40,6 @@
         var modal = document.getElementById('flash-modal');
         if(!modal) return;
         var close = document.getElementById('flash-close');
-        var backdrop = document.getElementById('flash-backdrop');
         var countdown = document.getElementById('flash-countdown');
         var seconds = parseInt(modal.getAttribute('data-seconds')) || 5;
         function hide(){
@@ -52,7 +47,6 @@
             if(window.history && window.history.replaceState) window.history.replaceState({}, '', window.location.pathname);
         }
         close && close.addEventListener('click', hide);
-        backdrop && backdrop.addEventListener('click', hide);
         document.addEventListener('keydown', function(e){ if(e.key === 'Escape') hide(); });
         if(countdown) countdown.textContent = seconds;
         var timer = setInterval(function(){
@@ -64,78 +58,68 @@
     </script>
 {% endif %}
 
-<div class="page-controls" style="margin-bottom:12px; display:flex; gap:12px; align-items:center;">
+<div class="page__controls">
     <div class="week-nav">
-        <!-- Навигация по неделям: предыдущая / текущая / следующая -->
         <a class="btn btn--ghost" href="/schedule?week_offset={{ week_offset - 1 }}">← Предыдущая неделя</a>
         <a class="btn btn--ghost" href="/schedule?week_offset=0">Текущая</a>
         <a class="btn btn--ghost" href="/schedule?week_offset={{ week_offset + 1 }}">Следующая неделя →</a>
     </div>
     {% if user and user.role in ('admin', 'trainer') %}
-    <!-- Форма добавления нового слотa: отправляет `week_offset` чтобы
-         после редиректа вернуться на ту же неделю в календаре -->
-    <!-- быстрое заполнение календаря пустыми слотами -->
-    <form method="post" action="/slots/add" class="form-row" style="flex-direction:row;gap:8px;align-items:center;margin-left:auto;">
+    <form method="post" action="/slots/add" class="form--row" style="margin-left:auto;">
         {{ csrf_input(request) }}
         <input type="hidden" name="week_offset" value="{{ week_offset }}" />
-        <span style="font-size: 14px; color: #666; margin-right: 4px;">С:</span>
-        <input class="field" type="datetime-local" name="start_time" value="{{ default_time }}" required />
-        <span style="font-size: 14px; color: #666; margin-right: 4px;">По:</span>
-        <input class="field" type="datetime-local" name="end_time" value="{{ default_end_time }}" required />
-        <select name="capacity" class="field">
+        <span class="text-muted" style="font-size:14px;">С:</span>
+        <input class="form__input" type="datetime-local" name="start_time" value="{{ default_time }}" required style="width:auto;" />
+        <span class="text-muted" style="font-size:14px;">По:</span>
+        <input class="form__input" type="datetime-local" name="end_time" value="{{ default_end_time }}" required style="width:auto;" />
+        <select name="capacity" class="form__select" style="width:auto;">
             <option value="1">1</option>
             <option value="2">2</option>
             <option value="3">3</option>
             <option value="4">4</option>
         </select>
-        <button class="btn">Добавить слоты</button>
-    <!-- быстрое удаление слотов -->
-        <button class="btn" onclick="this.form.action='/slots/remove';">Очистить слоты</button>
+        <button class="btn btn--primary">Добавить слоты</button>
+        <button class="btn btn--secondary" onclick="this.form.action='/slots/remove';">Очистить слоты</button>
     </form>
-    {% endif %}    
-
+    {% endif %}
 </div>
 
 <div class="calendar">
-    <table class="calendar-table">
+    <table class="calendar__table">
         <thead>
             <tr>
-                <th></th>
+                <th class="calendar__header-cell"></th>
                 {% set ru_days = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'] %}
                 {% for day in days %}
-                <!-- Заголовки колонок: день недели и дата -->
-                <th>{{ ru_days[loop.index0] }} {{ day.strftime('%d.%m') }}</th>
+                <th class="calendar__header-cell">{{ ru_days[loop.index0] }} {{ day.strftime('%d.%m') }}</th>
                 {% endfor %}
             </tr>
         </thead>
         <tbody>
             {% for hour in hours %}
             <tr>
-                <td class="calendar-time">{{ '%02d:00' % hour }}</td>
+                <td class="calendar__time">{{ '%02d:00' % hour }}</td>
                 {% for d_idx in range(0,7) %}
-                <td class="calendar-cell">
+                <td class="calendar__cell">
                     {% set cell = grid.get((d_idx, hour)) %}
                     {% if cell %}
-                    <!-- Если в ячейке есть слот — подготавливаем класс цвета и рендерим карточку -->
                     {%- set color_class = '' -%}
                     {%- if cell.slot.capacity == 1 -%}
-                        {%- set color_class = 'slot--red' -%}
+                        {%- set color_class = 'calendar__slot--red' -%}
                     {%- elif cell.slot.capacity == 2 -%}
-                        {%- set color_class = 'slot--yellow' -%}
+                        {%- set color_class = 'calendar__slot--yellow' -%}
                     {%- else -%}
                         {%- if cell.booked >= cell.slot.capacity -%}
-                            {%- set color_class = 'slot--green' -%}
+                            {%- set color_class = 'calendar__slot--green' -%}
                         {%- else -%}
-                            {%- set color_class = 'slot--gray' -%}
+                            {%- set color_class = 'calendar__slot--gray' -%}
                         {%- endif -%}
                     {%- endif -%}
-                    <a class="panel {{ color_class }}" href="/slot/{{ cell.slot.id }}?week_offset={{ week_offset }}">
-                        <div class="slot-meta">
-                            <div class="card-time">{{ cell.slot.start_time.strftime('%H:%M') }}</div>
-                            <div class="card-capacity">{{ cell.booked }}/{{ cell.slot.capacity }}</div>
-                        </div>
+                    <a class="calendar__slot {{ color_class }}" href="/slot/{{ cell.slot.id }}?week_offset={{ week_offset }}">
+                        <div class="calendar__slot-time">{{ cell.slot.start_time.strftime('%H:%M') }}</div>
+                        <div class="calendar__slot-capacity">{{ cell.booked }}/{{ cell.slot.capacity }}</div>
                         {% if cell.clients %}
-                        <ul class="cell-clients">
+                        <ul class="calendar__slot-clients">
                             {% for c in cell.clients %}
                             <li>{{ c.fio() }}</li>
                             {% endfor %}

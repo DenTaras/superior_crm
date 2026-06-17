@@ -2,35 +2,33 @@
 
 {% block content %}
 
-<div class="page-title">
-    <h1>Программа для слота {{ slot.start_time.strftime('%d.%m %H:%M') }}</h1>
-</div>
+<div class="page__title"><h1>Программа для слота {{ slot.start_time.strftime('%d.%m %H:%M') }}</h1></div>
 
 <div id="slot-program"
      data-slot-id="{{ slot.id }}"
      data-week-offset="{{ week_offset }}"
-     style="display:flex;gap:16px;align-items:flex-start;">
+     class="program__layout">
 
-    <div style="width:260px;">
+    <div class="program__sidebar">
         <h3>Клиенты</h3>
         <ul id="clients-list" class="client-list">
             {% for c in clients %}
-            <li data-client-id="{{ c.id }}" class="client-item">{{ c.fio() }}</li>
+            <li data-client-id="{{ c.id }}" class="client-list__item client-list__item--interactive">{{ c.fio() }}</li>
             {% endfor %}
         </ul>
-        <a class="btn" href="/slot/{{ slot.id }}?week_offset={{ week_offset }}">Назад к слоту</a>
+        <a class="btn btn--ghost mt-2" href="/slot/{{ slot.id }}?week_offset={{ week_offset }}">Назад к слоту</a>
     </div>
 
-    <div style="flex:1;">
+    <div class="program__editor">
         <h3>Описание тренировки</h3>
-        <textarea id="note-text" class="field" style="width:100%;height:320px;"></textarea>
-        <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
-            <span id="save-status" class="muted">Автосохранение включено</span>
+        <textarea id="note-text" class="form__textarea" style="height:320px;"></textarea>
+        <div class="flex-row mt-1">
+            <span id="save-status" class="text-muted">Автосохранение включено</span>
         </div>
     </div>
 </div>
 
-<script id="notes-data" type="application/json">{{ notes_json|replace('</script>', '<\\/script>')|safe }}</script></script>
+<script id="notes-data" type="application/json">{{ notes_json|replace('</script>', '<\/script>')|safe }}</script>
 
 <script>
 (function(){
@@ -41,7 +39,7 @@
     var notes = {};
     try { notes = JSON.parse(notesEl.textContent); } catch(e) {}
 
-    var clients = Array.from(document.querySelectorAll('.client-item'));
+    var clients = Array.from(document.querySelectorAll('.client-list__item--interactive'));
     var selected = null;
     var textarea = document.getElementById('note-text');
     var status = document.getElementById('save-status');
@@ -49,10 +47,11 @@
     function doSave(clientId){
         if(!clientId) return Promise.resolve();
         status.textContent = 'Сохранение...';
-        var fd = new FormData();
-        fd.append('client_id', clientId);
-        fd.append('text', textarea.value || '');
-        return fetch('/slot/' + slotId + '/program/save', { method: 'POST', body: fd }).then(function(r){ return r.json(); }).then(function(j){
+        return fetch('/slot/' + slotId + '/program/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ client_id: clientId, text: textarea.value || '' })
+        }).then(function(r){ return r.json(); }).then(function(j){
             notes[clientId] = textarea.value || '';
             status.textContent = 'Сохранено';
             setTimeout(function(){ status.textContent = 'Автосохранение включено'; }, 900);
@@ -60,8 +59,8 @@
     }
 
     function selectClient(el){
-        clients.forEach(function(it){ it.classList.remove('selected'); });
-        el.classList.add('selected');
+        clients.forEach(function(it){ it.classList.remove('client-list__item--selected'); });
+        el.classList.add('client-list__item--selected');
         selected = el.getAttribute('data-client-id');
         textarea.value = notes[selected] || '';
         textarea.focus();
@@ -103,7 +102,9 @@
     window.addEventListener('beforeunload', function(e){
         if(timeout) { clearTimeout(timeout); timeout = null; }
         if(selected){
-            var blob = new Blob([new URLSearchParams({client_id: selected, text: textarea.value})], { type: 'application/x-www-form-urlencoded' });
+            var csrfToken = (document.querySelector('input[name="_csrf_token"]') || {}).value || '';
+            var params = new URLSearchParams({client_id: selected, text: textarea.value, _csrf_token: csrfToken});
+            var blob = new Blob([params], { type: 'application/x-www-form-urlencoded' });
             if(navigator.sendBeacon){
                 navigator.sendBeacon('/slot/' + slotId + '/program/save', blob);
             }

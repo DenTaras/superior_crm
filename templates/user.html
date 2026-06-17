@@ -2,9 +2,7 @@
 
 {% block content %}
 
-<div class="page-title">
-    <h1>Личный кабинет</h1>
-</div>
+<div class="page__title"><h1>Личный кабинет</h1></div>
 
 <div class="panel">
     <p><strong>Пользователь:</strong> {{ user.name }}</p>
@@ -17,39 +15,39 @@
     </p>
 
     {% if client %}
-    <hr style="margin:16px 0;">
+    <hr class="mt-2 mb-2" />
     <p><strong>Телефон:</strong> {{ client.phone|format_phone }}</p>
     <p><strong>Осталось занятий:</strong> {{ client.remaining_sessions or 0 }}</p>
 
     {% if bookings %}
-    <h3 style="margin-top:20px;">Мои записи</h3>
-    <table class="clients-table">
-        <thead><tr><th>Дата и время</th></tr></thead>
+    <h3 class="mt-3">Мои записи</h3>
+    <table class="table mt-1">
+        <thead><tr><th class="table__header">Дата и время</th></tr></thead>
         <tbody>
         {% for b in bookings %}
-        <tr><td>{{ b.slot_time.strftime('%d.%m.%Y %H:%M') if b.slot_time else '' }}</td></tr>
+        <tr class="table__row"><td class="table__cell">{{ b.slot_time.strftime('%d.%m.%Y %H:%M') if b.slot_time else '' }}</td></tr>
         {% endfor %}
         </tbody>
     </table>
     {% else %}
-    <p class="muted">У вас нет активных записей.</p>
+    <p class="text-muted mt-2">У вас нет активных записей.</p>
     {% endif %}
     {% endif %}
 
     {% if total_clients is defined %}
-    <hr style="margin:16px 0;">
-    <div style="display:flex;gap:24px;flex-wrap:wrap;">
-        <div class="panel" style="flex:1;min-width:120px;text-align:center;">
-            <div style="font-size:28px;font-weight:700;">{{ total_clients }}</div>
-            <div class="muted">Клиентов</div>
+    <hr class="mt-2 mb-2" />
+    <div class="stats">
+        <div class="stats__card">
+            <div class="stats__value">{{ total_clients }}</div>
+            <div class="stats__label">Клиентов</div>
         </div>
-        <div class="panel" style="flex:1;min-width:120px;text-align:center;">
-            <div style="font-size:28px;font-weight:700;">{{ total_slots }}</div>
-            <div class="muted">Слотов</div>
+        <div class="stats__card">
+            <div class="stats__value">{{ total_slots }}</div>
+            <div class="stats__label">Слотов</div>
         </div>
-        <div class="panel" style="flex:1;min-width:120px;text-align:center;">
-            <div style="font-size:28px;font-weight:700;">{{ total_journal }}</div>
-            <div class="muted">Записей в журнале</div>
+        <div class="stats__card">
+            <div class="stats__value">{{ total_journal }}</div>
+            <div class="stats__label">Записей в журнале</div>
         </div>
     </div>
     {% endif %}

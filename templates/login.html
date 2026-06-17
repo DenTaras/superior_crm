@@ -2,33 +2,27 @@
 
 {% block content %}
 
-<div class="page-title">
-    <h1>Вход</h1>
-</div>
+<div class="page__title"><h1>Вход</h1></div>
 
 <div style="max-width:400px;margin:0 auto;">
     {% if error %}
-    <div class="flash flash--error" style="padding:12px;background:#fdd;border-radius:6px;margin-bottom:16px;">
-        {{ error }}
-    </div>
+    <div class="alert alert--error">{{ error }}</div>
     {% endif %}
 
-    <form method="post" action="/login" class="form-stack" style="display:flex;flex-direction:column;gap:12px;">
+    <form method="post" action="/login" class="form">
         {{ csrf_input(request) }}
-        <label>
-            Логин
-            <input class="field" type="text" name="login" required style="width:100%;" />
-        </label>
-        <label>
-            Пароль
-            <input class="field" type="password" name="password" required style="width:100%;" />
-        </label>
-        <button class="btn" type="submit">Войти</button>
+        <div class="form__group">
+            <label class="form__label">Логин</label>
+            <input class="form__input" type="text" name="login" required />
+        </div>
+        <div class="form__group">
+            <label class="form__label">Пароль</label>
+            <input class="form__input" type="password" name="password" required />
+        </div>
+        <button class="btn btn--primary" type="submit">Войти</button>
     </form>
 
-    <p style="margin-top:16px;text-align:center;">
-        <a href="/register">Зарегистрироваться</a>
-    </p>
+    <p class="mt-2 text-center"><a href="/register" class="header__nav-link">Зарегистрироваться</a></p>
 </div>
 
 {% endblock %}
