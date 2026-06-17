@@ -37,10 +37,11 @@ body { background:var(--bg-primary); color:var(--text-primary); font-family:Inte
 .header__inner { display:flex; justify-content:space-between; align-items:center; height:72px; }
 .header__logo { display:flex; align-items:center; gap:14px; text-decoration:none; }
 .header__accent-line { width:4px; height:42px; background:var(--accent); display:block; }
+.header__back { display:flex; align-items:center; }
 .header__brand { font-size:24px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--text-primary); }
 .header__subtitle { font-size:11px; letter-spacing:4px; color:var(--text-muted); }
 .header__nav { display:flex; gap:24px; }
-.header__nav-link { color:var(--text-secondary); text-decoration:none; transition:var(--transition); font-size:0.95rem; }
+.header__nav-link { color:var(--text-secondary); text-decoration:none; transition:var(--transition); font-size:1.05rem; }
 .header__nav-link:hover { color:var(--accent); }
 .header__user { display:flex; align-items:center; gap:12px; font-size:14px; }
 .header__user-name { color:var(--text-secondary); text-decoration:none; transition:var(--transition); }

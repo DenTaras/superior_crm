@@ -7,7 +7,8 @@ def test_login_page_available(anon_client):
     """Страница /login доступна без авторизации."""
     r = anon_client.get("/login")
     assert r.status_code == 200
-    assert "Вход" in r.text
+    assert "Логин" in r.text
+    assert "Пароль" in r.text
 
 
 def test_admin_login(anon_client):

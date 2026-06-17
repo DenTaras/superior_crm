@@ -31,7 +31,6 @@
             </div>
         </a>
         <nav class="header__nav">
-            <a href="/" class="header__nav-link">Главная</a>
             {% set _user = request.session.get('user') %}
             {% if _user and _user.role in ('admin', 'trainer') %}
             <a href="/schedule" class="header__nav-link">Расписание</a>
@@ -50,7 +49,7 @@
                 <button class="btn btn--ghost btn--small" type="submit">Выйти</button>
             </form>
             {% else %}
-            <a href="/login" class="header__user-name">Войти</a>
+            <a href="/login" class="btn btn--primary btn--small">Войти в личный кабинет</a>
             {% endif %}
         </div>
     </div>
