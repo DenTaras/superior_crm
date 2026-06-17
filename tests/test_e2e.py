@@ -74,10 +74,13 @@ def _login(page: Page, url: str, login: str, pw: str):
     page.wait_for_load_state("domcontentloaded")
     page.fill("input[name='login']", login)
     page.fill("input[name='password']", pw)
-    page.locator("button[type='submit']").last.click()
+    # ищем кнопку именно внутри формы логина
+    page.locator("form[action='/login'] button[type='submit']").click()
     page.wait_for_load_state("domcontentloaded")
     if page.url.endswith("/login"):
-        raise AssertionError(f"Login failed for {login}")
+        # смотрим, есть ли ошибка на странице
+        body = page.locator("body").text_content()
+        raise AssertionError(f"Login failed for {login}. Page shows: {body[:300]}")
 
 
 @pytest.fixture()
@@ -251,3 +254,53 @@ class TestProgram:
         # в журнале должна быть запись с нашим текстом
         expect(admin_pg.get_by_text("Приседания").first).to_be_visible()
         expect(admin_pg.get_by_text("Жим лёжа").first).to_be_visible()
+
+
+class TestSignup:
+    """Тесты записи на пробную тренировку (/signup)."""
+
+    def test_signup_form_visible(self, page: Page, app_url):
+        """Аноним видит форму записи на тренировку."""
+        page.goto(f"{app_url}/signup")
+        expect(page.locator("h1")).to_contain_text("Записаться на тренировку")
+        expect(page.locator("input[name='first_name']")).to_be_visible()
+        expect(page.locator("input[name='last_name']")).to_be_visible()
+        expect(page.locator("input[name='phone']")).to_be_visible()
+        expect(page.locator("textarea[name='goal']")).to_be_visible()
+        expect(page.locator("input[name='preferred_time']")).to_be_visible()
+        expect(page.get_by_role("button", name="Отправить заявку")).to_be_visible()
+
+    def test_signup_success(self, page: Page, app_url):
+        """После отправки формы — страница благодарности."""
+        page.goto(f"{app_url}/signup")
+        page.fill("input[name='first_name']", "Елена")
+        page.fill("input[name='last_name']", "Козлова")
+        page.fill("input[name='phone']", "+79001234567")
+        page.fill("textarea[name='goal']", "Йога и растяжка")
+        page.fill("input[name='preferred_time']", "Вечер после 19:00")
+        page.get_by_role("button", name="Отправить заявку").click()
+        page.wait_for_load_state("domcontentloaded")
+        expect(page.locator("h1")).to_contain_text("Спасибо, Елена Козлова!")
+        expect(page.get_by_text("Ваша заявка принята")).to_be_visible()
+        expect(page.get_by_role("link", name="На главную")).to_be_visible()
+
+    def test_signup_minimal(self, page: Page, app_url):
+        """Можно отправить только имя."""
+        page.goto(f"{app_url}/signup")
+        page.fill("input[name='first_name']", "Ольга")
+        page.get_by_role("button", name="Отправить заявку").click()
+        page.wait_for_load_state("domcontentloaded")
+        expect(page.locator("h1")).to_contain_text("Спасибо, Ольга!")
+
+    def test_signup_nav_link(self, page: Page, app_url):
+        """Аноним видит ссылку 'Записаться' в навигации."""
+        page.goto(app_url)
+        nav_link = page.locator("nav a.header__nav-link", has_text="Записаться")
+        expect(nav_link).to_be_visible()
+        expect(nav_link).to_have_attribute("href", "/signup")
+
+    def test_signup_nav_hidden_for_admin(self, admin_pg: Page, app_url):
+        """Авторизованный админ не видит ссылку 'Записаться' в навигации."""
+        admin_pg.goto(app_url)
+        nav_link = admin_pg.locator("nav a.header__nav-link", has_text="Записаться")
+        expect(nav_link).not_to_be_visible()

@@ -1,61 +1,56 @@
-"""CSRF-защита: токен в сессии, проверка на POST-запросах."""
+"""CSRF-защита: подписанный токен (stateless, без request.session)."""
 
 import secrets
+import hashlib
+import hmac
+import os
 from urllib.parse import parse_qs
 
 from fastapi import Request, HTTPException
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+
+
+def _get_secret() -> bytes:
+    secret = os.getenv("APP_SECRET")
+    return secret.encode() if secret else b"superior-crm-csrf-secret"
 
 
 def get_csrf_token(request: Request) -> str:
-    """Получить или создать CSRF-токен в сессии."""
-    token = request.session.get("csrf_token")
-    if not token:
-        token = secrets.token_hex(32)
-        request.session["csrf_token"] = token
-    return token
+    """Сгенерировать подписанный CSRF-токен (stateless)."""
+    random_part = secrets.token_hex(16)
+    sig = hmac.new(_get_secret(), random_part.encode(), hashlib.sha256).hexdigest()
+    return f"{random_part}:{sig}"
 
 
 def csrf_input(request: Request) -> str:
-    """HTML скрытого поля с CSRF-токеном для вставки в формы."""
-    token = get_csrf_token(request)
-    return f'<input type="hidden" name="_csrf_token" value="{token}" />'
+    """HTML скрытого поля с CSRF-токеном."""
+    return f'<input type="hidden" name="_csrf_token" value="{get_csrf_token(request)}" />'
 
 
-class CsrfMiddleware(BaseHTTPMiddleware):
-    """Middleware: проверяет CSRF-токен на POST/PUT/DELETE запросах.
-
-    Токен ищется в:
-    1. Поле формы `_csrf_token`
-    2. Заголовке `X-CSRF-Token`
-
-    JSON-запросы пропускаются без проверки.
-    Отключается переменной окружения CSRF_DISABLE=1 (только для тестов).
-    """
-
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint):
-        if request.method in ("POST", "PUT", "DELETE", "PATCH"):
-            ct = request.headers.get("content-type", "")
-            if "application/json" not in ct and not _is_disabled():
-                token = ""
-                if "application/x-www-form-urlencoded" in ct:
-                    body = await request.body()
-                    parsed = parse_qs(body.decode("utf-8", errors="replace"))
-                    token = parsed.get("_csrf_token", [""])[0]
-                if not token:
-                    token = request.headers.get("X-CSRF-Token", "")
-                if not _validate_csrf(request, token):
-                    raise HTTPException(status_code=403, detail="CSRF-токен недействителен")
-        return await call_next(request)
-
-
-def _validate_csrf(request: Request, token: str) -> bool:
-    expected = request.session.get("csrf_token")
-    if not expected or not secrets.compare_digest(expected, token):
+def _validate_csrf(token: str) -> bool:
+    """Проверить подпись CSRF-токена."""
+    if ":" not in token:
         return False
-    return True
+    random_part, sig = token.split(":", 1)
+    expected = hmac.new(_get_secret(), random_part.encode(), hashlib.sha256).hexdigest()
+    return secrets.compare_digest(expected, sig)
+
+
+async def csrf_middleware(request: Request, call_next):
+    """Проверить CSRF-токен на POST/PUT/DELETE запросах (stateless)."""
+    if request.method in ("POST", "PUT", "DELETE", "PATCH"):
+        ct = request.headers.get("content-type", "")
+        if "application/json" not in ct and not _is_disabled():
+            token = ""
+            if "application/x-www-form-urlencoded" in ct:
+                body = await request.body()
+                parsed = parse_qs(body.decode("utf-8", errors="replace"))
+                token = parsed.get("_csrf_token", [""])[0]
+            if not token:
+                token = request.headers.get("X-CSRF-Token", "")
+            if not _validate_csrf(token):
+                raise HTTPException(status_code=403, detail="CSRF-токен недействителен")
+    return await call_next(request)
 
 
 def _is_disabled() -> bool:
-    import os
     return os.getenv("CSRF_DISABLE") == "1"

@@ -74,3 +74,15 @@ class TrainingNote(Base):
     client_id = Column(Integer, ForeignKey("clients.id"), index=True)
     text = Column(Text, nullable=True)
     updated_at = Column(DateTime, default=datetime.now)
+
+
+class TrainingRequest(Base):
+    """Заявка на пробную тренировку от незарегистрированного пользователя."""
+    __tablename__ = "training_requests"
+    id = Column(Integer, primary_key=True)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, default="")
+    phone = Column(String, default="")
+    goal = Column(String, default="")              # цель тренировок
+    preferred_time = Column(String, default="")    # предпочитаемое время
+    created_at = Column(DateTime, default=datetime.now)

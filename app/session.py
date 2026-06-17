@@ -65,7 +65,8 @@ class DbSessionMiddleware(BaseHTTPMiddleware):
         if sid:
             data = _load_session(sid)
             if data is None:
-                sid = None  # сессия не найдена — создадим новую
+                sid = None
+                data = {}  # сессия не найдена — чистая сессия
 
         if sid is None:
             sid = _generate_sid()

@@ -65,7 +65,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-family:Inte
 .form--row { flex-direction:row; align-items:center; }
 .form--inline { display:inline-flex; flex-direction:row; align-items:center; gap:8px; }
 .form__group { display:flex; flex-direction:column; gap:6px; }
-.form__label { color:var(--text-muted); font-size:0.9rem; }
+.form__label { color:var(--text-secondary); font-size:0.9rem; }
 .form__input, .form__select, .form__textarea { width:100%; padding:10px 14px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text-primary); font-family:inherit; font-size:0.95rem; transition:var(--transition); }
 .form__input:focus, .form__select:focus, .form__textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(217,4,41,.15); }
 .form__textarea { min-height:100px; resize:vertical; }

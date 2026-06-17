@@ -39,6 +39,9 @@
             <a href="/journal" class="header__nav-link">Журнал</a>
             {% elif _user and _user.role == 'client' %}
             <a href="/schedule" class="header__nav-link">Расписание</a>
+            {% else %}
+            <a href="/signup" class="header__nav-link">Записаться</a>
+            <a href="/subscriptions" class="header__nav-link">Абонементы</a>
             {% endif %}
         </nav>
         <div class="header__user">

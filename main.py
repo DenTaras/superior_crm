@@ -22,26 +22,50 @@ from app.routes.schedule import router as schedule_router
 from app.routes.slots import router as slots_router
 from app.routes.program import router as program_router
 from app.routes.journal import router as journal_router
+from app.routes.signup import router as signup_router
 from app.auth import router as auth_router
 from app.auth import get_current_user
 from app.timezone import now as tz_now
 from app.session import DbSessionMiddleware
-from app.csrf import CsrfMiddleware, csrf_input
+from app.csrf import csrf_middleware
 
 _log = _logging.getLogger("superior.request")
 _trace_log = _logging.getLogger("superior.trace")
 
 app = FastAPI(title="SUPERIOR CRM")
 
-# Порядок middleware: DbSessionMiddleware (внешняя — выполняется первой)
-# задаёт request.session, затем CsrfMiddleware проверяет токен уже имея session.
-app.add_middleware(CsrfMiddleware)
-app.add_middleware(DbSessionMiddleware)
 _static_dir = _os.path.join(_os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
+# Порядок middleware (от внешнего к внутреннему):
+#   DbSessionMiddleware (самый внешний) → csrf_check → log → headers → роутер
+# DbSessionMiddleware должен быть снаружи, чтобы request.session был доступен
+# во всех внутренних middleware (особенно csrf_check).
+app.add_middleware(DbSessionMiddleware)
 
-# ---- Jinja2-фильтры и глобальные переменные ----
+
+# ---- CSRF-защита ----
+@app.middleware("http")
+async def csrf_check(request, call_next):
+    from app.csrf import csrf_middleware as _csrf
+    return await _csrf(request, call_next)
+
+
+# ---- Content-Security-Policy (защита от XSS) ----
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "connect-src 'self'; "
+        "form-action 'self'"
+    )
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    return response
 
 
 # ---- Request-логгер (метод, путь, статус, длительность) ----
@@ -52,23 +76,6 @@ async def log_requests(request: Request, call_next):
     duration = _time.time() - start
     _log.info("%s %s → %s (%.0fms)",
               request.method, request.url.path, response.status_code, duration * 1000)
-    return response
-
-
-# ---- Content-Security-Policy (защита от XSS) ----
-@app.middleware("http")
-async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "  # unsafe-inline для JS в шаблонах
-        "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data:; "
-        "connect-src 'self'; "
-        "form-action 'self'"
-    )
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
     return response
 
 
@@ -94,6 +101,7 @@ if _os.getenv("TRACE"):
 # ---- Подключаем роутеры ----
 app.include_router(auth_router)          # /login, /logout, /profile
 app.include_router(journal_router)       # /, /journal, /subscriptions
+app.include_router(signup_router)        # /signup
 app.include_router(clients_router)       # /clients, /clients/*
 app.include_router(schedule_router)      # /schedule, /slot/{id}
 app.include_router(slots_router)         # /slots/*, /slot/{id}/add|remove|complete
