@@ -39,7 +39,9 @@ try:
 except ImportError:
     from jinja2 import Markup
 from app.csrf import get_csrf_token as _get_csrf
-templates.env.globals['csrf_input'] = lambda request: Markup(f'<input type="hidden" name="_csrf_token" value="{_get_csrf(request)}" />')
+templates.env.globals['csrf_input'] = lambda request: Markup(
+    f'<input type="hidden" name="_csrf_token" value="{_get_csrf(request)}" />'
+)
 
 
 # ---- Engine & Session ----

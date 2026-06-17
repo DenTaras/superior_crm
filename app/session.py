@@ -130,7 +130,6 @@ class _SessionProxy:
         браузера со старым cookie продолжит видеть свою сессию.
         Возвращает новый session_id.
         """
-        old_sid = self._sid
         self._sid = _generate_sid()
         self._dirty = True
         return self._sid

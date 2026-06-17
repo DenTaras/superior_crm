@@ -52,7 +52,10 @@ def slot_program(
 
 
 @router.post("/slot/{slot_id}/program/save")
-async def slot_program_save(slot_id: int, request: Request, db: Session = Depends(get_db), _: dict = Depends(require_role("admin", "trainer"))):
+async def slot_program_save(
+    slot_id: int, request: Request, db: Session = Depends(get_db),
+    _: dict = Depends(require_role("admin", "trainer")),
+):
     """Сохранить заметку для клиента в слоте (form / JSON / sendBeacon)."""
     client_id = None
     text = ""

@@ -15,7 +15,10 @@ router = APIRouter()
 
 
 @router.get("/schedule")
-def schedule(request: Request, db: Session = Depends(get_db), week_offset: int = 0, user: dict = Depends(get_current_user)):
+def schedule(
+    request: Request, db: Session = Depends(get_db),
+    week_offset: int = 0, user: dict = Depends(get_current_user),
+):
     """Недельный календарь 08:00–22:00."""
     slots = db.query(Slot).order_by(Slot.start_time).all()
 
@@ -51,16 +54,12 @@ def schedule(request: Request, db: Session = Depends(get_db), week_offset: int =
             }
 
     return templates.TemplateResponse(
-        request=request,
-        name="schedule.html",
+        request=request, name="schedule.html",
         context={
-            "days": days,
-            "hours": hours,
-            "grid": grid,
+            "days": days, "hours": hours, "grid": grid,
             "default_time": default_time,
             "default_end_time": default_end_time,
-            "week_offset": week_offset,
-            "user": user,
+            "week_offset": week_offset, "user": user,
         },
     )
 

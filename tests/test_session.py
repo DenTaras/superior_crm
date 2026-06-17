@@ -55,10 +55,9 @@ def test_session_ids_differ_after_separate_logins(anon_client, tab2):
     """После входа в разных вкладках session_id разные."""
     tab1 = anon_client
     r1 = tab1.post("/login", data={"login": "admin", "password": "admin"}, follow_redirects=False)
-    sid_admin = r1.cookies.get("sid")
-
     r2 = tab2.post("/login", data={"login": "trainer", "password": "trainer"}, follow_redirects=False)
     sid_trainer = r2.cookies.get("sid")
+    sid_admin = r1.cookies.get("sid")
 
     assert sid_admin is not None
     assert sid_trainer is not None
@@ -68,8 +67,7 @@ def test_session_ids_differ_after_separate_logins(anon_client, tab2):
 def test_old_session_survives_new_login(anon_client, tab2):
     """Старый session_id остаётся в БД после логина в другой вкладке."""
     tab1 = anon_client
-    r1 = tab1.post("/login", data={"login": "admin", "password": "admin"}, follow_redirects=False)
-    sid_admin = r1.cookies.get("sid")
+    tab1.post("/login", data={"login": "admin", "password": "admin"}, follow_redirects=False)
 
     # Tab 2 логинится — это создаёт новый sid, но старый не удаляется
     tab2.post("/login", data={"login": "trainer", "password": "trainer"}, follow_redirects=False)

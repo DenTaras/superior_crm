@@ -41,7 +41,7 @@ def test_audit_client_delete(client, db_session, caplog):
 
     r = client.post(f"/clients/delete/{cid}", follow_redirects=False)
     assert r.status_code == 303
-    assert any(f"[DELETE]" in r.message and f"client_id={cid}" in r.message
+    assert any("[DELETE]" in r.message and f"client_id={cid}" in r.message
                for r in caplog.records), "Нет audit-записи DELETE"
 
 

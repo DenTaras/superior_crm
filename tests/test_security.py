@@ -51,7 +51,7 @@ def test_xss_in_client_name_is_escaped(client, db_session):
     db_session.add(c)
     db_session.commit()
 
-    r = client.get(f"/clients")
+    r = client.get("/clients")
     assert r.status_code == 200
     assert payload not in r.text or "&lt;script&gt;" in r.text
 

@@ -115,7 +115,8 @@ def _do_slots_add(form: SlotAddForm, db: Session):
     for s in candidates:
         db.add(Slot(start_time=s, capacity=capacity))
     db.commit()
-    audit_log("superior.audit.slots", "BULK_CREATE", count=len(candidates), start=start.isoformat(), end=end.isoformat())
+    audit_log("superior.audit.slots", "BULK_CREATE",
+              count=len(candidates), start=start.isoformat(), end=end.isoformat())
     return RedirectResponse(f"/schedule?week_offset={form.week_offset}", status_code=303)
 
 
@@ -148,7 +149,10 @@ def slots_edit_post(
 
 
 @router.post("/slots/delete/{slot_id}")
-def slots_delete(slot_id: int, week_offset: int = 0, db: Session = Depends(get_db), _: dict = Depends(require_role("admin", "trainer"))):
+def slots_delete(
+    slot_id: int, week_offset: int = 0, db: Session = Depends(get_db),
+    _: dict = Depends(require_role("admin", "trainer")),
+):
     """Удалить слот, его бронирования и заметки."""
     db.query(Booking).filter(Booking.slot_id == slot_id).delete()
     db.query(TrainingNote).filter(TrainingNote.slot_id == slot_id).delete()
@@ -261,7 +265,10 @@ def remove_booking(
 
 
 @router.post("/slot/{slot_id}/complete")
-def complete_slot(slot_id: int, week_offset: int = 0, db: Session = Depends(get_db), _: dict = Depends(require_role("admin", "trainer"))):
+def complete_slot(
+    slot_id: int, week_offset: int = 0, db: Session = Depends(get_db),
+    _: dict = Depends(require_role("admin", "trainer")),
+):
     """Завершить тренировку: списать занятия, сохранить в журнал, удалить слот."""
     slot = db.get(Slot, slot_id)
     if not slot:

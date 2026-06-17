@@ -82,15 +82,18 @@ def _login(page: Page, url: str, login: str, pw: str):
 
 @pytest.fixture()
 def admin_pg(page: Page, app_url: str):
-    _login(page, app_url, "admin", "admin"); return page
+    _login(page, app_url, "admin", "admin")
+    return page
 
 @pytest.fixture()
 def trainer_pg(page: Page, app_url: str):
-    _login(page, app_url, "trainer", "trainer"); return page
+    _login(page, app_url, "trainer", "trainer")
+    return page
 
 @pytest.fixture()
 def client_pg(page: Page, app_url: str):
-    _login(page, app_url, "client_1", "client_1"); return page
+    _login(page, app_url, "client_1", "client_1")
+    return page
 
 
 class TestAnonymous:
@@ -178,3 +181,73 @@ class TestFlash:
         expect(page.locator("#flash-modal")).to_be_visible()
         page.locator("#flash-close").click()
         expect(page.locator("#flash-modal")).not_to_be_visible()
+
+
+class TestProgram:
+    """Тесты плана тренировки: заметки, сохранение, завершение."""
+
+    def test_full_flow(self, admin_pg: Page, app_url):
+        """Полный цикл: создать слот + клиента → записать → план тренировки → сохранить → завершить → журнал."""
+        from datetime import datetime, timedelta
+
+        # 1. Создаём клиента
+        admin_pg.goto(f"{app_url}/clients/create")
+        admin_pg.fill("input[name='first_name']", "Программный")
+        admin_pg.fill("input[name='last_name']", "Тест")
+        admin_pg.fill("input[name='phone']", "+79990000999")
+        admin_pg.locator("button[type='submit']").last.click()
+        admin_pg.wait_for_load_state("load")
+        expect(admin_pg).to_have_url(f"{app_url}/clients")
+
+        # 2. Создаём слот
+        slot_start = (datetime.now() + timedelta(hours=6)).replace(minute=0, second=0, microsecond=0)
+        admin_pg.goto(f"{app_url}/schedule?week_offset=0")
+        admin_pg.locator("input[name='start_time']").first.fill(slot_start.strftime("%Y-%m-%dT%H:%M"))
+        admin_pg.locator("input[name='end_time']").first.fill((slot_start + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"))
+        admin_pg.get_by_role("button", name="Добавить слоты").click()
+        admin_pg.wait_for_load_state("load")
+
+        # 3. Заходим в слот и записываем клиента
+        slot_link = admin_pg.locator("a[href*='/slot/']").first
+        slot_href = slot_link.get_attribute("href")
+        admin_pg.goto(f"{app_url}{slot_href}")
+        admin_pg.select_option("select[name='client_id']", index=1)
+        admin_pg.get_by_role("button", name="Добавить").click()
+        admin_pg.wait_for_load_state("load")
+        expect(admin_pg.locator(".client-list__item").first).to_be_visible()
+
+        # 4. Открываем план тренировки
+        admin_pg.get_by_role("link", name="План тренировки").click()
+        admin_pg.wait_for_load_state("load")
+        expect(admin_pg.locator("h1")).to_contain_text("Программа")
+        expect(admin_pg.locator(".client-list__item--interactive").first).to_be_visible()
+
+        # 5. Пишем заметку и сохраняем
+        note_text = "Приседания: 3×12\nЖим лёжа: 4×8\nОтжимания: 3×15"
+        admin_pg.fill("textarea#note-text", note_text)
+        # ждём автосохранения (300ms debounce + запрос)
+        admin_pg.wait_for_timeout(1500)
+
+        # 6. Перезагружаем страницу и проверяем, что текст сохранился
+        admin_pg.reload()
+        admin_pg.wait_for_load_state("load")
+        # кликаем на клиента, чтобы загрузить его заметку
+        admin_pg.locator(".client-list__item--interactive").first.click()
+        admin_pg.wait_for_timeout(500)
+        saved_text = admin_pg.locator("textarea#note-text").input_value()
+        assert "Приседания" in saved_text, f"Текст не сохранился: {saved_text}"
+
+        # 7. Завершаем тренировку
+        admin_pg.goto(f"{app_url}{slot_href}")
+        admin_pg.wait_for_load_state("load")
+        # обрабатываем confirm dialog
+        admin_pg.once("dialog", lambda d: d.accept())
+        admin_pg.get_by_role("button", name="Тренировка завершена").click()
+        admin_pg.wait_for_load_state("load")
+
+        # 8. Проверяем, что заметка появилась в журнале
+        expect(admin_pg).to_have_url(f"{app_url}/journal")
+        expect(admin_pg.locator("h1")).to_contain_text("Журнал")
+        # в журнале должна быть запись с нашим текстом
+        expect(admin_pg.get_by_text("Приседания").first).to_be_visible()
+        expect(admin_pg.get_by_text("Жим лёжа").first).to_be_visible()

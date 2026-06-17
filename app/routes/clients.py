@@ -73,15 +73,11 @@ def clients_page(
         client_rows.append({"client": c, "booked_future": booked_future})
 
     return templates.TemplateResponse(
-        request=request,
-        name="clients.html",
+        request=request, name="clients.html",
         context={
-            "client_rows": client_rows,
-            "q_name": q_name,
-            "q_phone": q_phone,
-            "page": page,
-            "total_pages": total_pages,
-            "total": total,
+            "client_rows": client_rows, "q_name": q_name,
+            "q_phone": q_phone, "page": page,
+            "total_pages": total_pages, "total": total,
         },
     )
 
@@ -119,7 +115,10 @@ def add_client_post(
 
 
 @router.get("/clients/edit/{client_id}")
-def clients_edit(request: Request, client_id: int, db: Session = Depends(get_db), _: dict = Depends(require_role("admin", "trainer"))):
+def clients_edit(
+    request: Request, client_id: int, db: Session = Depends(get_db),
+    _: dict = Depends(require_role("admin", "trainer")),
+):
     """Форма редактирования клиента."""
     client = db.get(Client, client_id)
     if client is None:
