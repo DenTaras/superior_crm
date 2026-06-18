@@ -104,7 +104,12 @@ def parse_slot_remove_form(
 
 def parse_subscription_form(
     client_id: int = Form(...),
-    package: int = Form(...),
+    time_slot: str = Form(...),
+    format_name: str = Form(...),
+    package_size: int = Form(...),
 ) -> SubscriptionAddForm:
     """Form → SubscriptionAddForm с валидацией."""
-    return _validate(SubscriptionAddForm, client_id=client_id, package=package)
+    return _validate(SubscriptionAddForm,
+        client_id=client_id, time_slot=time_slot,
+        format_name=format_name, package_size=package_size,
+    )

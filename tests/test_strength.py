@@ -51,7 +51,7 @@ def test_get_rank_zero_bodyweight():
 def test_collect_strength_data_empty(client, db_session):
     """Для нового клиента без лога — все показатели None."""
     from app.models import Client
-    c = Client(first_name="Str", last_name="Test", phone="+79990000110", remaining_sessions=0)
+    c = Client(first_name="Str", last_name="Test", phone="+79990000110")
     db_session.add(c)
     db_session.commit()
 
@@ -66,7 +66,7 @@ def test_collect_strength_data_with_log(anon_client, db_session):
     """Клиент с логом упражнений — 1ПМ рассчитывается."""
     from app.models import Client, Exercise, ClientExerciseLog
 
-    c = Client(first_name="Str2", last_name="Test", phone="+79990000111", remaining_sessions=0)
+    c = Client(first_name="Str2", last_name="Test", phone="+79990000111")
     db_session.add(c)
     db_session.commit()
 
@@ -100,7 +100,7 @@ def test_strength_data_in_profile(anon_client, db_session):
 
     c = Client(first_name="StrengthProfile", last_name="Test", phone="+79990000112",
                login="strength_client2", password_hash=hash_password("pass"),
-               remaining_sessions=5, weight_kg=80)
+               weight_kg=80)
     db_session.add(c)
     db_session.commit()
 
@@ -143,7 +143,7 @@ def test_standards_table_in_profile(anon_client, db_session):
 
     c = Client(first_name="StdProfile", last_name="Test", phone="+79990000113",
                login="std_client", password_hash=hash_password("pass"),
-               remaining_sessions=5, weight_kg=80)
+               weight_kg=80)
     db_session.add(c)
     db_session.commit()
 

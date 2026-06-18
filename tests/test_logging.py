@@ -63,11 +63,14 @@ def test_audit_slot_create(client, db_session, caplog):
 def test_audit_booking_add(client, db_session, caplog):
     """Добавление брони порождает audit-запись."""
     caplog.set_level(10)
-    from app.models import Client, Slot, Booking
+    from app.models import Client, Slot, Booking, SubscriptionPurchase
 
-    c = Client(first_name="Book", last_name="Log", phone="+70000000122", remaining_sessions=5)
-    s = Slot(start_time=datetime.now() + timedelta(hours=12), capacity=4)
+    c = Client(first_name="Book", last_name="Log", phone="+70000000122")
+    s = Slot(start_time=datetime.now().replace(hour=9, minute=0) + timedelta(hours=0), capacity=4)
     db_session.add_all([c, s])
+    db_session.commit()
+    p = SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="Group", package_size=5, price=2500, remaining=5)
+    db_session.add(p)
     db_session.commit()
 
     r = client.post(f"/slot/{s.id}/add", data={"client_id": c.id}, follow_redirects=False)
@@ -81,12 +84,12 @@ def test_audit_subscription_add(client, db_session, caplog):
     caplog.set_level(10)
     from app.models import Client
 
-    c = Client(first_name="SubLog", last_name="Test", phone="+70000000123", remaining_sessions=0)
+    c = Client(first_name="SubLog", last_name="Test", phone="+70000000123")
     db_session.add(c)
     db_session.commit()
 
     r = client.post("/clients/add_subscription", data={
-        "client_id": c.id, "package": "12",
+        "client_id": c.id, "time_slot": "УТРО", "format_name": "VIP", "package_size": "12",
     }, follow_redirects=False)
     assert r.status_code == 303
     assert any("[ADD]" in r.message and f"client_id={c.id}" in r.message

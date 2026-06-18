@@ -36,7 +36,7 @@ def test_client_login(anon_client, db_session):
     from app.models import Client as ClientModel
 
     c = ClientModel(first_name="Auth", last_name="Client", phone="+70000000999",
-                    remaining_sessions=3, login="test_client",
+                    login="test_client",
                     password_hash=hash_password("pass123"))
     db_session.add(c)
     db_session.commit()

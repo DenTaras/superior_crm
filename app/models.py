@@ -19,7 +19,6 @@ class Client(Base):
     birth_place = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     name = Column(String, nullable=True)          # legacy — полное имя одной строкой
-    remaining_sessions = Column(Integer, default=1)
     height_cm = Column(Integer, nullable=True)
     weight_kg = Column(Integer, nullable=True)
     body_fat = Column(Integer, nullable=True)  # % жира
@@ -132,4 +131,17 @@ class TrainingPlanExercise(Base):
     actual_reps = Column(Integer, nullable=True)  # фактическое (заполняет тренер)
     sets = Column(Integer, default=0)             # количество подходов
     sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class SubscriptionPurchase(Base):
+    """Покупка абонемента клиентом."""
+    __tablename__ = "subscription_purchases"
+    id = Column(Integer, primary_key=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    time_slot = Column(String, nullable=False)
+    format_name = Column(String, nullable=False)
+    package_size = Column(Integer, nullable=False)
+    price = Column(Integer, nullable=False)
+    remaining = Column(Integer, default=0)           # осталось занятий по этому пакету
     created_at = Column(DateTime, default=datetime.now)

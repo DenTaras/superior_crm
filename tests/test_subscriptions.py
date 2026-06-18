@@ -25,26 +25,95 @@ def test_subscriptions_page_shows_packages(client):
 
 
 def test_add_subscription_increases_counter(client, db_session):
-    from app.models import Client
+    from app.models import Client, SubscriptionPurchase
 
-    c = Client(first_name="Sub", last_name="User", phone="+70000000010", name="Sub User", remaining_sessions=0)
+    c = Client(first_name="Sub", last_name="User", phone="+70000000010", name="Sub User")
     db_session.add(c)
     db_session.commit()
 
-    r = client.post("/clients/add_subscription", data={"client_id": c.id, "package": "12"}, follow_redirects=False)
+    r = client.post("/clients/add_subscription", data={
+        "client_id": c.id, "time_slot": "УТРО", "format_name": "VIP", "package_size": "12",
+    }, follow_redirects=False)
     assert r.status_code == 303
-    updated = db_session.get(Client, c.id)
-    assert updated.remaining_sessions == 12
+    # Проверяем, что покупка сохранилась с remaining
+    purchase = db_session.query(SubscriptionPurchase).filter_by(client_id=c.id).first()
+    assert purchase is not None
+    assert purchase.remaining == 12
+    assert purchase.price == 39000  # VIP УТРО 12
+
+
+def test_add_subscription_different_combinations(client, db_session):
+    """Разные комбинации абонементов работают."""
+    from app.models import Client, SubscriptionPurchase
+
+    c = Client(first_name="Sub2", last_name="User", phone="+70000000111", name="Sub2 User")
+    db_session.add(c)
+    db_session.commit()
+
+    # Double ДЕНЬ 8
+    r = client.post("/clients/add_subscription", data={
+        "client_id": c.id, "time_slot": "ДЕНЬ", "format_name": "Double", "package_size": "8",
+    }, follow_redirects=False)
+    assert r.status_code == 303
+
+    # Group ВЕЧЕР 4
+    r = client.post("/clients/add_subscription", data={
+        "client_id": c.id, "time_slot": "ВЕЧЕР", "format_name": "Group", "package_size": "4",
+    }, follow_redirects=False)
+    assert r.status_code == 303
+
+    # Обе покупки имеют correct remaining
+    purchases = db_session.query(SubscriptionPurchase).filter_by(client_id=c.id).order_by(SubscriptionPurchase.id).all()
+    assert len(purchases) == 2
+    assert purchases[0].remaining == 8
+    assert purchases[1].remaining == 4
+
+
+def test_subscription_deduct_from_oldest(client, db_session):
+    """При завершении слота списывается из самого старого пакета."""
+    from app.models import Client, Slot, Booking, SubscriptionPurchase
+    from datetime import datetime, timedelta
+
+    c = Client(first_name="SubDeduct", last_name="Test", phone="+70000000222")
+    db_session.add(c)
+    db_session.commit()
+
+    # Покупаем Group УТРО 4 (старый), потом VIP ВЕЧЕР 12 (новый)
+    client.post("/clients/add_subscription", data={
+        "client_id": c.id, "time_slot": "УТРО", "format_name": "Group", "package_size": "4",
+    }, follow_redirects=False)
+    client.post("/clients/add_subscription", data={
+        "client_id": c.id, "time_slot": "ВЕЧЕР", "format_name": "VIP", "package_size": "12",
+    }, follow_redirects=False)
+
+    # Создаём слот и бронь
+    s = Slot(start_time=datetime.now().replace(hour=9, minute=0) + timedelta(hours=1), capacity=1)
+    db_session.add(s)
+    db_session.commit()
+    bk = Booking(client_id=c.id, slot_id=s.id)
+    db_session.add(bk)
+    db_session.commit()
+
+    # Завершаем тренировку
+    r = client.post(f"/slot/{s.id}/complete", follow_redirects=False)
+    assert r.status_code == 303
+
+    # Проверяем: списалось из старшего пакета (Group УТРО 4 → осталось 3)
+    purchases = db_session.query(SubscriptionPurchase).filter_by(client_id=c.id).order_by(SubscriptionPurchase.id).all()
+    assert purchases[0].remaining == 3  # Group УТРО: 4-1
+    assert purchases[1].remaining == 12  # VIP ВЕЧЕР: не тронут
 
 
 def test_booking_respects_remaining_sessions(client, db_session):
-    from app.models import Client, Slot, Booking
-
-    now = datetime.now().replace(second=0, microsecond=0)
-    c = Client(first_name="Limit", last_name="One", phone="+70000000012", name="Limit One", remaining_sessions=1)
-    s1 = Slot(start_time=now + timedelta(hours=4), capacity=2)
-    s2 = Slot(start_time=now + timedelta(hours=5), capacity=2)
+    from app.models import Client, Slot, Booking, SubscriptionPurchase
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
+    c = Client(first_name="Limit", last_name="One", phone="+70000000012", name="Limit One")
+    s1 = Slot(start_time=now + timedelta(days=1, hours=0), capacity=2)
+    s2 = Slot(start_time=now + timedelta(days=1, hours=1), capacity=2)
     db_session.add_all([c, s1, s2])
+    db_session.commit()
+    p = SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="Group", package_size=1, price=500, remaining=1)
+    db_session.add(p)
     db_session.commit()
 
     # first booking should succeed

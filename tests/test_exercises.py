@@ -33,7 +33,7 @@ def test_exercises_api(client):
 def test_exercise_log_not_found(client, db_session):
     """GET /api/exercise-log для нового клиента возвращает found=false."""
     from app.models import Client
-    c = Client(first_name="ExLog", last_name="Test", phone="+70000000123", remaining_sessions=0)
+    c = Client(first_name="ExLog", last_name="Test", phone="+70000000123")
     db_session.add(c)
     db_session.commit()
 
@@ -49,7 +49,7 @@ def test_exercise_log_not_found(client, db_session):
 def test_exercise_log_save_and_read(client, db_session):
     """POST /api/plan-exercises/add сохраняет в план, GET /api/exercise-log читает историю."""
     from app.models import Client
-    c = Client(first_name="ExLog2", last_name="Test", phone="+70000000124", remaining_sessions=0)
+    c = Client(first_name="ExLog2", last_name="Test", phone="+70000000124")
     db_session.add(c)
     db_session.commit()
 

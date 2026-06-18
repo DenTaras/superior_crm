@@ -108,4 +108,6 @@ class SlotRemoveForm(BaseModel):
 class SubscriptionAddForm(BaseModel):
     """Валидация формы добавления абонемента."""
     client_id: int = Field(..., ge=1)
-    package: int = Field(..., description="Пакет занятий")
+    time_slot: str = Field(..., description="УТРО/ДЕНЬ/ВЕЧЕР")
+    format_name: str = Field(..., description="VIP/Double/Group")
+    package_size: int = Field(..., ge=1)

@@ -93,7 +93,7 @@ def ensure_client_columns():
     to_add = [
         ("first_name", "TEXT"), ("last_name", "TEXT"), ("patronymic", "TEXT"),
         ("birth_year", "INTEGER"), ("birth_place", "TEXT"), ("phone", "TEXT"),
-        ("name", "TEXT"), ("remaining_sessions", "INTEGER DEFAULT 1"),
+        ("name", "TEXT"),
         ("height_cm", "INTEGER"), ("weight_kg", "INTEGER"), ("body_fat", "INTEGER"),
     ]
     with engine.connect() as conn:
@@ -125,10 +125,5 @@ def run_startup_migrations():
     ensure_journal_columns()
 
     with engine.connect() as conn:
-        try:
-            conn.execute(
-                text("UPDATE clients SET remaining_sessions = 1 "
-                     "WHERE remaining_sessions IS NULL OR remaining_sessions = 0")
-            )
-        except Exception:
-            pass
+        # remaining_sessions column was removed; no longer need to backfill
+        pass

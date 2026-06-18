@@ -214,7 +214,9 @@ class TestProgram:
         slot_link = admin_pg.locator("a[href*='/slot/']").first
         slot_href = slot_link.get_attribute("href")
         admin_pg.goto(f"{app_url}{slot_href}")
-        admin_pg.select_option("select[name='client_id']", index=1)
+        # выбираем последнего клиента (только что созданного)
+        options = admin_pg.locator("select[name='client_id'] option")
+        admin_pg.select_option("select[name='client_id']", index=options.count() - 1)
         admin_pg.get_by_role("button", name="Добавить").click()
         admin_pg.wait_for_load_state("load")
         expect(admin_pg.locator(".client-list__item").first).to_be_visible()

@@ -9,6 +9,7 @@
 import os
 import hashlib
 import secrets
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Request, Form, Depends, HTTPException
@@ -18,6 +19,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db, templates
 from app.models import Client
 from app.ratelimit import check_rate_limit, clear_rate_limit
+from app.pricing import slot_time_slot
+from app.timezone import now as tz_now
 
 router = APIRouter()
 
@@ -169,9 +172,21 @@ def register_post(
         last_name=last_name.strip(),
         phone=phone.strip(),
         name=f"{last_name.strip()} {first_name.strip()}".strip(),
-        remaining_sessions=1,  # пробное занятие
     )
     db.add(client)
+    db.flush()
+
+    # Пробное занятие как абонемент
+    from app.models import SubscriptionPurchase
+    purchase = SubscriptionPurchase(
+        client_id=client.id,
+        time_slot="-",
+        format_name="Пробный",
+        package_size=1,
+        price=0,
+        remaining=1,
+    )
+    db.add(purchase)
     db.commit()
 
     request.session.regenerate_id()
@@ -203,6 +218,7 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
         bookings = []
         journal_entries = []
         strength_data = []
+        booked_by_ts: dict[str, int] = {}
         if c:
             from app.models import Booking, Slot, JournalEntry
             import json
@@ -242,10 +258,45 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
 
             # Силовые показатели
             from app.strength import collect_strength_data, enrich_with_rank, compute_standards_table
+            from app.models import SubscriptionPurchase
             bw = c.weight_kg or 0
             strength_data = collect_strength_data(db, client_id)
             strength_data = enrich_with_rank(strength_data, "male", bw)
             standards_table = compute_standards_table("male", bw) if bw > 0 else []
+
+            # Будущие брони по time_slot
+            from app.models import Slot as SlotModel
+            future_slots = (
+                db.query(SlotModel)
+                .join(Booking, Booking.slot_id == SlotModel.id)
+                .filter(Booking.client_id == client_id, SlotModel.start_time >= tz_now())
+                .all()
+            )
+            for sl in future_slots:
+                ts = slot_time_slot(sl.start_time)
+                booked_by_ts[ts] = booked_by_ts.get(ts, 0) + 1
+
+            # Активные абонементы (группируем одинаковые format_name+time_slot)
+            active_purchases_raw = (
+                db.query(SubscriptionPurchase)
+                .filter(
+                    SubscriptionPurchase.client_id == client_id,
+                    SubscriptionPurchase.remaining > 0,
+                )
+                .order_by(SubscriptionPurchase.created_at.asc())
+                .all()
+            )
+            grouped: dict[tuple[str, str], int] = {}
+            for p in active_purchases_raw:
+                key = (p.format_name, p.time_slot)
+                grouped[key] = grouped.get(key, 0) + p.remaining
+
+            active_purchases = [
+                {"format_name": k[0], "time_slot": k[1], "remaining": v}
+                for k, v in sorted(grouped.items())
+            ]
+
+        total_remaining = sum(p["remaining"] for p in active_purchases) if c else 0
 
         return templates.TemplateResponse(
             request=request, name="user.html",
@@ -254,11 +305,10 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
                 "bookings": bookings, "journal_entries": journal_entries,
                 "strength_data": strength_data,
                 "standards_table": standards_table,
+                "active_purchases": active_purchases,
+                "booked_by_time_slot": booked_by_ts,
+                "total_remaining": total_remaining,
             },
-        )
-        return templates.TemplateResponse(
-            request=request, name="user.html",
-            context={"user": user, "client": c, "bookings": bookings, "journal_entries": journal_entries},
         )
 
     # admin / trainer

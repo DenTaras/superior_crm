@@ -61,7 +61,7 @@ def test_sql_requires_auth(anon_client):
 def test_sql_shows_row_count(client, db_session):
     """После запроса показывается количество строк."""
     from app.models import Client
-    c = Client(first_name="SQL", last_name="Test", phone="+70000000999", remaining_sessions=0)
+    c = Client(first_name="SQL", last_name="Test", phone="+70000000999")
     db_session.add(c)
     db_session.commit()
 

@@ -34,14 +34,14 @@ def test_edit_slot_conflict(client, db_session):
     # create two slots directly in DB
     from app.models import Slot
 
-    now = datetime.now().replace(second=0, microsecond=0)
-    s1 = Slot(start_time=now + timedelta(hours=5), capacity=2)
-    s2 = Slot(start_time=now + timedelta(hours=7), capacity=2)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
+    s1 = Slot(start_time=now + timedelta(days=1, hours=5), capacity=2)
+    s2 = Slot(start_time=now + timedelta(days=1, hours=7), capacity=2)
     db_session.add_all([s1, s2])
     db_session.commit()
 
     # try to move s2 to time overlapping s1
-    payload = {"start_time": (now + timedelta(hours=5)).strftime("%Y-%m-%dT%H:%M"), "capacity": 2}
+    payload = {"start_time": (now + timedelta(days=1, hours=5)).strftime("%Y-%m-%dT%H:%M"), "capacity": 2}
     r = client.post(f"/slots/edit/{s2.id}", data=payload, follow_redirects=False)
     assert r.status_code == 303
     assert "flash=slot_conflict" in r.headers["location"]

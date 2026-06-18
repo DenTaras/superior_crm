@@ -126,7 +126,7 @@ def test_client_anthropometry_in_profile(anon_client, db_session):
 
     c = Client(first_name="ProfileAnthropo", last_name="Test", phone="+79990000102",
                login="anthropo_client", password_hash=hash_password("pass"),
-               remaining_sessions=5, height_cm=165, weight_kg=60, body_fat=25)
+               height_cm=165, weight_kg=60, body_fat=25)
     db_session.add(c)
     db_session.commit()
 
@@ -147,8 +147,7 @@ def test_client_profile_shows_training_history(anon_client, db_session):
     from app.auth import hash_password
 
     c = Client(first_name="HistoryClient", last_name="Test", phone="+79990000103",
-               login="history_client", password_hash=hash_password("pass"),
-               remaining_sessions=3)
+               login="history_client", password_hash=hash_password("pass"))
     db_session.add(c)
     db_session.commit()
 

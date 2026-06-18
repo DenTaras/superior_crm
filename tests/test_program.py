@@ -27,7 +27,7 @@ def test_program_save_and_persistence(client, db_session):
     db_session.commit()
 
     # create a slot in the future
-    slot = Slot(start_time=datetime.now() + timedelta(days=1, hours=1), capacity=2)
+    slot = Slot(start_time=datetime.now().replace(hour=9, minute=0) + timedelta(days=1, hours=0), capacity=2)
     db_session.add(slot)
     db_session.commit()
 

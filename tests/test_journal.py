@@ -2,13 +2,19 @@ from datetime import datetime, timedelta
 
 
 def test_complete_slot_creates_journal_and_decrements(client, db_session):
-    from app.models import Client, Slot, Booking, JournalEntry
+    from app.models import Client, Slot, Booking, JournalEntry, SubscriptionPurchase
 
-    now = datetime.now().replace(second=0, microsecond=0)
-    c1 = Client(first_name="J1", last_name="One", phone="+70000000020", name="J1", remaining_sessions=2)
-    c2 = Client(first_name="J2", last_name="Two", phone="+70000000021", name="J2", remaining_sessions=1)
-    s = Slot(start_time=now + timedelta(hours=4), capacity=4)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
+    c1 = Client(first_name="J1", last_name="One", phone="+70000000020", name="J1")
+    c2 = Client(first_name="J2", last_name="Two", phone="+70000000021", name="J2")
+    s = Slot(start_time=now + timedelta(days=1, hours=0), capacity=4)
     db_session.add_all([c1, c2, s])
+    db_session.commit()
+
+    # Create subscription purchases for tracking
+    p1 = SubscriptionPurchase(client_id=c1.id, time_slot="УТРО", format_name="Group", package_size=2, price=1000, remaining=2)
+    p2 = SubscriptionPurchase(client_id=c2.id, time_slot="УТРО", format_name="Group", package_size=1, price=500, remaining=1)
+    db_session.add_all([p1, p2])
     db_session.commit()
 
     # create bookings
@@ -29,11 +35,11 @@ def test_complete_slot_creates_journal_and_decrements(client, db_session):
     from app.models import Booking as BookingModel
     assert db_session.query(BookingModel).filter(BookingModel.slot_id == s.id).count() == 0
 
-    # clients remaining_sessions decremented
-    updated1 = db_session.get(Client, c1.id)
-    updated2 = db_session.get(Client, c2.id)
-    assert updated1.remaining_sessions == 1
-    assert updated2.remaining_sessions == 0
+    # SubscriptionPurchase remaining decremented (FIFO)
+    upd1 = db_session.get(SubscriptionPurchase, p1.id)
+    upd2 = db_session.get(SubscriptionPurchase, p2.id)
+    assert upd1.remaining == 1  # c1: 2→1
+    assert upd2.remaining == 0  # c2: 1→0
 
     # journal entry created
     entries = db_session.query(JournalEntry).all()

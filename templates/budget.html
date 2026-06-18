@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page__title"><h1>Бюджет</h1></div>
+
+<div class="stats mb-3">
+    <div class="stats__card">
+        <div class="stats__value">{{ total_revenue }}</div>
+        <div class="stats__label">Общая выручка (руб)</div>
+    </div>
+    <div class="stats__card">
+        <div class="stats__value">{{ purchases_count }}</div>
+        <div class="stats__label">Продано абонементов</div>
+    </div>
+    <div class="stats__card">
+        <div class="stats__value">{{ month_revenue }}</div>
+        <div class="stats__label">За месяц (руб)</div>
+    </div>
+</div>
+
+{% if purchases %}
+<h3>История продаж</h3>
+<div class="table__wrapper mt-1">
+    <table class="table">
+        <thead>
+            <tr>
+                <th class="table__header">Дата</th>
+                <th class="table__header">Клиент</th>
+                <th class="table__header">Абонемент</th>
+                <th class="table__header">Сумма</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in purchases %}
+        <tr class="table__row">
+            <td class="table__cell">{{ p.created_at.strftime('%d.%m.%Y') }}</td>
+            <td class="table__cell">{{ p.client_name }}</td>
+            <td class="table__cell">{{ p.format_name }} {{ p.time_slot }} {{ p.package_size }}</td>
+            <td class="table__cell">{{ p.price }} руб</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-muted">Пока нет продаж.</p>
+{% endif %}
+
+{% endblock %}

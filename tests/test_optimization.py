@@ -22,7 +22,7 @@ def test_schedule_performance_with_many_slots(client, db_session):
     """Страница расписания с ~150 слотами загружается быстро (< 2 сек)."""
     from app.models import Slot
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     week_start = (now - timedelta(days=now.weekday())).replace(hour=8, minute=0, second=0, microsecond=0)
     slots = []
     for i in range(MANY_SLOTS):
@@ -69,8 +69,7 @@ def test_many_clients_page_loads(client, db_session):
         clients.append(Client(
             first_name=f"First{i}", last_name=f"Last{i}",
             phone=f"+7000000{i:04d}", name=f"Client {i}",
-            remaining_sessions=1,
-        ))
+            ))
     db_session.add_all(clients)
     db_session.commit()
 
@@ -84,7 +83,7 @@ def test_many_clients_page_loads(client, db_session):
 
 def test_bulk_slot_creation_performance(client, db_session):
     """Массовое создание 24 слотов (сутки) через bulk-интервал работает быстро (< 3 сек)."""
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     # планируем на завтра, чтобы не было конфликтов
     tomorrow = now + timedelta(days=1)
     start_dt = tomorrow.replace(hour=8, minute=0, second=0, microsecond=0)
@@ -108,7 +107,7 @@ def test_many_program_saves_performance(client, db_session):
     """Многократное сохранение заметок (50 раз) работает стабильно."""
     from app.models import Client, Slot, Booking, TrainingNote
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     c = Client(first_name="Stress", last_name="Save", phone="+70000000999",
                name="Stress Save")
     s = Slot(start_time=now + timedelta(days=2, hours=1), capacity=2)
@@ -143,20 +142,22 @@ def test_concurrent_like_booking_requests(client, db_session):
     Отправляет много запросов подряд — слот должен принять ровно столько,
     сколько позволяет capacity.
     """
-    from app.models import Client, Slot, Booking
+    from app.models import Client, Slot, Booking, SubscriptionPurchase
 
-    now = datetime.now().replace(second=0, microsecond=0)
-    s = Slot(start_time=now + timedelta(days=1, hours=6), capacity=4)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
+    s = Slot(start_time=now + timedelta(days=1, hours=0), capacity=4)
     db_session.add(s)
     db_session.commit()
 
     clients = []
     for i in range(10):
         c = Client(first_name=f"Race{i}", last_name="Client",
-                   phone=f"+7000000{i:04d}", name=f"Race {i}",
-                   remaining_sessions=5)
+                   phone=f"+7000000{i:04d}", name=f"Race {i}")
         clients.append(c)
     db_session.add_all(clients)
+    db_session.commit()
+    for c in clients:
+        db_session.add(SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="Group", package_size=5, price=2500, remaining=5))
     db_session.commit()
 
     # отправляем 10 запросов на запись в слот capacity=4
@@ -171,15 +172,14 @@ def test_slot_page_performance_with_many_clients(client, db_session):
     """Страница слота с 20 записанными клиентами загружается быстро (< 1.5 сек)."""
     from app.models import Client, Slot, Booking
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     s = Slot(start_time=now + timedelta(days=1, hours=7), capacity=20)
     db_session.add(s)
     db_session.commit()
 
     for i in range(20):
         c = Client(first_name=f"SlotPerf{i}", last_name="Client",
-                   phone=f"+7000000{i:04d}", name=f"Perf {i}",
-                   remaining_sessions=5)
+                   phone=f"+7000000{i:04d}", name=f"Perf {i}")
         db_session.add(c)
         db_session.commit()
         b = Booking(client_id=c.id, slot_id=s.id)
@@ -198,15 +198,14 @@ def test_program_page_performance_with_many_clients(client, db_session):
     """Страница программы с 20 клиентами + заметки загружается быстро (< 1.5 сек)."""
     from app.models import Client, Slot, Booking, TrainingNote
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     s = Slot(start_time=now + timedelta(days=1, hours=8), capacity=20)
     db_session.add(s)
     db_session.commit()
 
     for i in range(20):
         c = Client(first_name=f"ProgPerf{i}", last_name="Client",
-                   phone=f"+7000000{i:04d}", name=f"Prog {i}",
-                   remaining_sessions=5)
+                   phone=f"+7000000{i:04d}", name=f"Prog {i}")
         db_session.add(c)
         db_session.commit()
         b = Booking(client_id=c.id, slot_id=s.id)
@@ -227,7 +226,7 @@ def test_mass_slot_deletion_performance(client, db_session):
     """Массовое удаление большого количества слотов работает быстро (< 3 сек)."""
     from app.models import Slot
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     # создаём слоты на завтра
     tomorrow = now + timedelta(days=1)
     slots = []

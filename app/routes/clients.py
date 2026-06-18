@@ -8,12 +8,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from app.database import get_db, templates
-from app.models import Client, Slot, Booking
+from app.models import Client, Slot, Booking, SubscriptionPurchase
 from app.schemas import ClientCreateForm, SubscriptionAddForm
 from app.forms import parse_client_form, parse_subscription_form
 from app.logging_config import audit_log
 from app.timezone import now as tz_now
 from app.auth import require_role
+from app.pricing import slot_time_slot
 
 router = APIRouter()
 
@@ -64,13 +65,43 @@ def clients_page(
     now_dt = tz_now()
     client_rows = []
     for c in clients:
-        booked_future = (
-            db.query(Booking)
-            .join(Slot, Booking.slot_id == Slot.id)
+        # Собираем будущие брони и группируем по time_slot
+        future_bookings = (
+            db.query(Slot)
+            .join(Booking, Booking.slot_id == Slot.id)
             .filter(Booking.client_id == c.id, Slot.start_time >= now_dt)
-            .count()
+            .all()
         )
-        client_rows.append({"client": c, "booked_future": booked_future})
+        booked_by_ts: dict[str, int] = {}
+        for sl in future_bookings:
+            ts = slot_time_slot(sl.start_time)
+            booked_by_ts[ts] = booked_by_ts.get(ts, 0) + 1
+        total_booked = len(future_bookings)
+
+        active_purchases = (
+            db.query(SubscriptionPurchase)
+            .filter(
+                SubscriptionPurchase.client_id == c.id,
+                SubscriptionPurchase.remaining > 0,
+            )
+            .order_by(SubscriptionPurchase.created_at.asc())
+            .all()
+        )
+        # Группируем одинаковые (format_name, time_slot), суммируем remaining
+        grouped: dict[tuple[str, str], int] = {}
+        for p in active_purchases:
+            key = (p.format_name, p.time_slot)
+            grouped[key] = grouped.get(key, 0) + p.remaining
+        purchases_list = [
+            {"format_name": k[0], "time_slot": k[1], "remaining": v}
+            for k, v in sorted(grouped.items())
+        ]
+        client_rows.append({
+            "client": c,
+            "active_purchases": purchases_list,
+            "booked_by_time_slot": booked_by_ts,
+            "total_booked": total_booked,
+        })
 
     return templates.TemplateResponse(
         request=request, name="clients.html",
@@ -98,6 +129,7 @@ def add_client_post(
     if not form.first_name:
         return RedirectResponse("/clients", status_code=303)
 
+    from app.models import SubscriptionPurchase
     client = Client(
         first_name=form.first_name,
         last_name=form.last_name,
@@ -109,9 +141,19 @@ def add_client_post(
         weight_kg=form.weight_kg,
         body_fat=form.body_fat,
         name=f"{form.last_name} {form.first_name}".strip(),
-        remaining_sessions=1,
     )
     db.add(client)
+    db.flush()
+    # Стартовый абонемент на 1 занятие ("Пробный")
+    purchase = SubscriptionPurchase(
+        client_id=client.id,
+        time_slot="-",
+        format_name="Пробный",
+        package_size=1,
+        price=0,
+        remaining=1,
+    )
+    db.add(purchase)
     db.commit()
     audit_log("superior.audit.clients", "CREATE", client_id=client.id, phone=client.phone)
     return RedirectResponse("/clients", status_code=303)
@@ -174,10 +216,28 @@ def clients_add_subscription(
     _: dict = Depends(require_role("admin", "trainer")),
 ):
     """Добавить абонемент клиенту."""
+    from app.models import SubscriptionPurchase
+    from app.pricing import get_price
+
     client = db.get(Client, form.client_id)
-    if client and form.package in (12, 8, 4):
-        client.remaining_sessions = (client.remaining_sessions or 0) + form.package
-        db.add(client)
-        db.commit()
-        audit_log("superior.audit.subscriptions", "ADD", client_id=form.client_id, package=form.package)
+    if not client:
+        return RedirectResponse("/clients", status_code=303)
+
+    price = get_price(form.time_slot, form.format_name, form.package_size)
+    if price is None:
+        return RedirectResponse("/clients", status_code=303)
+
+    purchase = SubscriptionPurchase(
+        client_id=form.client_id,
+        time_slot=form.time_slot,
+        format_name=form.format_name,
+        package_size=form.package_size,
+        price=price,
+        remaining=form.package_size,  # все занятия пока доступны
+    )
+    db.add(purchase)
+    db.commit()
+    audit_log("superior.audit.subscriptions", "ADD",
+              client_id=form.client_id, package=form.package_size,
+              time_slot=form.time_slot, format_name=form.format_name, price=price)
     return RedirectResponse("/clients", status_code=303)

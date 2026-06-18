@@ -20,7 +20,7 @@ def test_xss_in_notes_json_is_sanitized(client, db_session):
     """XSS через заметку тренировки — тег </script> экранирован."""
     from app.models import Client, Slot, Booking, TrainingNote
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     c = Client(first_name="XSS", last_name="Test", phone="+70000000900", name="XSS Test")
     s = Slot(start_time=now + timedelta(days=1, hours=5), capacity=2)
     db_session.add_all([c, s])

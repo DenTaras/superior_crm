@@ -33,7 +33,7 @@ def test_two_tabs_have_independent_sessions(anon_client, tab2, db_session):
     from app.auth import hash_password
 
     c = ClientModel(first_name="Tab2", last_name="Client", phone="+70000000111",
-                    remaining_sessions=3, login="tab2_user",
+                    login="tab2_user",
                     password_hash=hash_password("pass123"))
     db_session.add(c)
     db_session.commit()

@@ -6,13 +6,16 @@ def test_add_and_remove_booking(client, db_session):
 
     Создаёт клиента и слот напрямую в БД, затем добавляет бронь и удаляет её.
     """
-    from app.models import Client, Slot, Booking
+    from app.models import Client, Slot, Booking, SubscriptionPurchase
 
     # create client and slot directly in DB
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     c = Client(first_name="B", last_name="User", phone="+70000000000", name="User B")
-    s = Slot(start_time=now + timedelta(hours=4), capacity=2)
+    s = Slot(start_time=now + timedelta(days=1, hours=0), capacity=2)
     db_session.add_all([c, s])
+    db_session.commit()
+    p = SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="Group", package_size=5, price=2500, remaining=5)
+    db_session.add(p)
     db_session.commit()
 
     # add booking via POST
@@ -31,13 +34,16 @@ def test_add_and_remove_booking(client, db_session):
 
 def test_capacity_enforced(client, db_session):
     """Тест, проверяющий что вместимость слота (`capacity`) соблюдается при добавлении броней."""
-    from app.models import Client, Slot, Booking
+    from app.models import Client, Slot, Booking, SubscriptionPurchase
 
-    now = datetime.now().replace(second=0, microsecond=0)
-    s = Slot(start_time=now + timedelta(hours=6), capacity=1)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
+    s = Slot(start_time=now + timedelta(days=1, hours=0), capacity=1)
     c1 = Client(first_name="A1", last_name="", phone="+70000000001", name="A1")
     c2 = Client(first_name="A2", last_name="", phone="+70000000002", name="A2")
     db_session.add_all([s, c1, c2])
+    db_session.commit()
+    for c in [c1, c2]:
+        db_session.add(SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="Group", package_size=5, price=2500, remaining=5))
     db_session.commit()
 
     # add first booking
@@ -53,12 +59,15 @@ def test_capacity_enforced(client, db_session):
 
 def test_prevent_duplicate_booking(client, db_session):
     """Повторная попытка записать того же клиента в тот же слот не должна создавать дубликат."""
-    from app.models import Client, Slot, Booking
+    from app.models import Client, Slot, Booking, SubscriptionPurchase
 
-    now = datetime.now().replace(second=0, microsecond=0)
-    s = Slot(start_time=now + timedelta(hours=8), capacity=2)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
+    s = Slot(start_time=now + timedelta(days=1, hours=0), capacity=2)
     c = Client(first_name="D", last_name="Up", phone="+70000000003", name="Dup")
     db_session.add_all([s, c])
+    db_session.commit()
+    p = SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="Group", package_size=5, price=2500, remaining=5)
+    db_session.add(p)
     db_session.commit()
 
     r1 = client.post(f"/slot/{s.id}/add", data={"client_id": c.id}, follow_redirects=False)
@@ -75,7 +84,7 @@ def test_db_level_unique_constraint_on_booking(client, db_session):
     from app.models import Client, Slot, Booking
     from sqlalchemy.exc import IntegrityError
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     s = Slot(start_time=now + timedelta(hours=9), capacity=4)
     c = Client(first_name="DB", last_name="Constraint", phone="+70000000006", name="DB Constraint")
     db_session.add_all([s, c])
@@ -102,7 +111,7 @@ def test_training_notes_removed_on_slot_delete_and_bulk_remove(client, db_sessio
     warnings.filterwarnings("ignore", message="Identity map already had an identity")
     from app.models import Client, Slot, TrainingNote
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
 
     # single slot delete
     s1 = Slot(start_time=now + timedelta(hours=10), capacity=2)

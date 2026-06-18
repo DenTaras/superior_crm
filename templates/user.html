@@ -17,7 +17,20 @@
     {% if client %}
     <hr class="mt-2 mb-2" />
     <p><strong>Телефон:</strong> {{ client.phone|format_phone }}</p>
-    <p><strong>Осталось занятий:</strong> {{ client.remaining_sessions or 0 }}</p>
+    <p><strong>Осталось занятий:</strong> {{ total_remaining }}</p>
+    {% if active_purchases %}
+    <div class="mt-1" style="font-size:0.85rem;">
+        {% for p in active_purchases %}
+        {% set booked = booked_by_time_slot.get(p.time_slot, 0) %}
+        <span class="badge badge--success" style="margin-right:4px; margin-bottom:4px;">{{ p.format_name }} {{ p.time_slot }}: {{ p.remaining }}/{{ booked }}</span>
+        {% endfor %}
+    </div>
+    {% elif total_remaining > 0 %}
+    <div class="mt-1" style="font-size:0.85rem;">
+        <span class="badge badge--warning" style="margin-right:4px; margin-bottom:4px;">Ранее выданные: {{ total_remaining }}</span>
+    </div>
+    <div class="text-muted mt-1" style="font-size:0.75rem;">Добавьте абонемент через «Клиенты» → «Добавить абонемент» для детального учёта.</div>
+    {% endif %}
     {% if client.height_cm or client.weight_kg or client.body_fat is not none %}
     <hr class="mt-2 mb-2" />
     <h3>Антропометрия</h3>

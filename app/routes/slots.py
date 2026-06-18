@@ -9,13 +9,15 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 
 from app.database import get_db, templates
-from app.models import Slot, Booking, Client, JournalEntry, TrainingNote, TrainingPlanExercise, ClientExerciseLog
+from app.models import Slot, Booking, Client, JournalEntry, TrainingNote, TrainingPlanExercise, ClientExerciseLog, SubscriptionPurchase
 from app.schemas import SlotAddForm, SlotEditForm, BookingAddForm, SlotRemoveForm
 from app.forms import parse_slot_add_form, parse_slot_edit_form, parse_booking_add_form, parse_slot_remove_form
 from app.logging_config import audit_log
 from app.auth import require_role
+from app.pricing import slot_time_slot
 
 router = APIRouter()
 
@@ -215,15 +217,20 @@ def _do_add_client(slot_id: int, form: BookingAddForm, db: Session):
     if client is None:
         return RedirectResponse(f"/slot/{slot_id}?week_offset={week_off}&flash=limit_reached", status_code=303)
 
-    # проверка remaining_sessions
+    # проверка остатка занятий по абонементам (с учётом временного слота)
     now_dt = tz_now()
+    slot_ts = slot_time_slot(slot.start_time)
     booked_future = (
         db.query(Booking)
         .join(Slot, Booking.slot_id == Slot.id)
         .filter(Booking.client_id == form.client_id, Slot.start_time >= now_dt)
         .count()
     )
-    remaining = int(client.remaining_sessions or 0)
+    # Ищем покупки для этого time_slot или универсальные (time_slot="-")
+    remaining = db.query(func.coalesce(func.sum(SubscriptionPurchase.remaining), 0)).filter(
+        SubscriptionPurchase.client_id == form.client_id,
+        SubscriptionPurchase.time_slot.in_([slot_ts, "-"]),
+    ).scalar() or 0
     if remaining == 0 or booked_future >= remaining:
         return RedirectResponse(f"/slot/{slot_id}?week_offset={week_off}&flash=limit_reached", status_code=303)
 
@@ -281,11 +288,23 @@ def complete_slot(
         c = db.get(Client, b.client_id)
         if c:
             client_names.append(c.fio())
-            try:
-                c.remaining_sessions = max(0, int(c.remaining_sessions or 0) - 1)
-            except Exception:
-                c.remaining_sessions = 0
-            db.add(c)
+
+            # Списание: ищем самый старый активный пакет для этого временного слота
+            # или универсальный (time_slot="-") (FIFO)
+            slot_ts = slot_time_slot(slot.start_time)
+            active_purchase = (
+                db.query(SubscriptionPurchase)
+                .filter(
+                    SubscriptionPurchase.client_id == c.id,
+                    SubscriptionPurchase.time_slot.in_([slot_ts, "-"]),
+                    SubscriptionPurchase.remaining > 0,
+                )
+                .order_by(SubscriptionPurchase.created_at.asc())
+                .first()
+            )
+            if active_purchase:
+                active_purchase.remaining -= 1
+                db.add(active_purchase)
             note = (
                 db.query(TrainingNote)
                 .filter(TrainingNote.slot_id == slot_id, TrainingNote.client_id == c.id)

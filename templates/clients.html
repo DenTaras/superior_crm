@@ -30,19 +30,39 @@
                 <td class="table__cell">{{ client.fio() }}</td>
                 <td class="table__cell">{{ client.phone|format_phone }}</td>
                 <td class="table__cell">
-                    {{ client.remaining_sessions or 0 }} / {{ row.booked_future }}
+                    {% if row.active_purchases %}
+                    <div style="font-size:0.85rem;">
+                        {% for p in row.active_purchases %}
+                        {% set booked = row.booked_by_time_slot.get(p.time_slot, 0) %}
+                        <span class="badge badge--success" style="margin-right:2px;margin-bottom:2px;">{{ p.format_name }} {{ p.time_slot }}: {{ p.remaining }}/{{ booked }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <span class="text-muted">0/{{ row.total_booked }}</span>
+                    {% endif %}
                 </td>
                 <td class="table__cell">
                     <a class="btn btn--small" href="/clients/edit/{{ client.id }}">Редактировать</a>
                     <form method="post" action="/clients/add_subscription" class="form--inline" style="display:inline-flex;margin-left:8px;">
                         {{ csrf_input(request) }}
                         <input type="hidden" name="client_id" value="{{ client.id }}" />
-                        <select name="package" class="form__select" style="width:auto;">
-                            <option value="12">12 занятий</option>
-                            <option value="8">8 занятий</option>
-                            <option value="4">4 занятия</option>
+                        <select name="time_slot" class="form__select" style="width:auto;">
+                            <option value="УТРО">Утро</option>
+                            <option value="ДЕНЬ">День</option>
+                            <option value="ВЕЧЕР">Вечер</option>
                         </select>
-                        <button class="btn btn--small" type="submit">Добавить абонемент</button>
+                        <select name="format_name" class="form__select" style="width:auto;">
+                            <option value="VIP">VIP</option>
+                            <option value="Double">Double</option>
+                            <option value="Group">Group</option>
+                        </select>
+                        <select name="package_size" class="form__select" style="width:auto;">
+                            <option value="1">1 занятие</option>
+                            <option value="4">4 занятия</option>
+                            <option value="8">8 занятий</option>
+                            <option value="12">12 занятий</option>
+                        </select>
+                        <button class="btn btn--small" type="submit">+</button>
                     </form>
                 </td>
             </tr>

@@ -2,7 +2,7 @@
 
 Проверяет:
 - Невалидные/отсутствующие ресурсы (404, редиректы)
-- Граничные значения (remaining_sessions=0, заполненный слот)
+- Граничные значения (заполненный слот)
 - Некорректные данные (пустые поля, неправильный формат)
 - XSS-попытки, SQL-инъекции в поиске
 - Повторные операции (двойное завершение, двойное удаление)
@@ -18,15 +18,16 @@ import pytest
 
 
 def test_booking_with_zero_remaining_sessions_is_blocked(client, db_session):
-    """Клиент с remaining_sessions=0 не может записаться на слот."""
-    from app.models import Client, Slot, Booking
+    """Клиент без активных абонементов не может записаться на слот."""
+    from app.models import Client, Slot, Booking, SubscriptionPurchase
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     c = Client(first_name="Zero", last_name="Sessions", phone="+70000000050",
-               name="Zero", remaining_sessions=0)
-    s = Slot(start_time=now + timedelta(hours=4), capacity=4)
+               name="Zero")
+    s = Slot(start_time=now + timedelta(days=1, hours=0), capacity=4)
     db_session.add_all([c, s])
     db_session.commit()
+    # нет SubscriptionPurchase — 0 занятий
 
     r = client.post(f"/slot/{s.id}/add", data={"client_id": c.id}, follow_redirects=False)
     assert r.status_code == 303
@@ -38,22 +39,26 @@ def test_booking_with_zero_remaining_sessions_is_blocked(client, db_session):
 
 
 def test_booking_blocked_when_future_bookings_equal_remaining(client, db_session):
-    """Клиент не может записаться, если число будущих броней == remaining_sessions."""
-    from app.models import Client, Slot, Booking
+    """Клиент не может записаться, если число будущих броней == доступным занятиям."""
+    from app.models import Client, Slot, Booking, SubscriptionPurchase
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     c = Client(first_name="Exact", last_name="Limit", phone="+70000000051",
-               name="Exact Limit", remaining_sessions=1)
-    s1 = Slot(start_time=now + timedelta(hours=6), capacity=4)
-    s2 = Slot(start_time=now + timedelta(hours=7), capacity=4)
+               name="Exact Limit")
+    s1 = Slot(start_time=now + timedelta(days=1, hours=0), capacity=4)
+    s2 = Slot(start_time=now + timedelta(days=1, hours=1), capacity=4)
     db_session.add_all([c, s1, s2])
+    db_session.commit()
+    # 1 занятие в абонементе
+    p = SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="Group", package_size=1, price=500, remaining=1)
+    db_session.add(p)
     db_session.commit()
 
     # первая запись успешна
     r1 = client.post(f"/slot/{s1.id}/add", data={"client_id": c.id}, follow_redirects=False)
     assert r1.status_code == 303
 
-    # вторая — blocked (уже 1 будущая бронь, а remaining_sessions=1)
+    # вторая — blocked (уже 1 будущая бронь, а доступно только 1 занятие)
     r2 = client.post(f"/slot/{s2.id}/add", data={"client_id": c.id}, follow_redirects=False)
     assert r2.status_code == 303
     assert "flash=limit_reached" in r2.headers["location"]
@@ -61,13 +66,16 @@ def test_booking_blocked_when_future_bookings_equal_remaining(client, db_session
 
 def test_add_client_to_full_slot_fails(client, db_session):
     """Попытка записать клиента в уже заполненный слот отклоняется."""
-    from app.models import Client, Slot, Booking
+    from app.models import Client, Slot, Booking, SubscriptionPurchase
 
-    now = datetime.now().replace(second=0, microsecond=0)
-    s = Slot(start_time=now + timedelta(hours=3), capacity=1)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
+    s = Slot(start_time=now + timedelta(days=1, hours=0), capacity=1)
     c1 = Client(first_name="First", last_name="Client", phone="+70000000052", name="C1")
     c2 = Client(first_name="Second", last_name="Client", phone="+70000000053", name="C2")
     db_session.add_all([s, c1, c2])
+    db_session.commit()
+    for c in [c1, c2]:
+        db_session.add(SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="Group", package_size=5, price=2500, remaining=5))
     db_session.commit()
 
     r1 = client.post(f"/slot/{s.id}/add", data={"client_id": c1.id}, follow_redirects=False)
@@ -83,7 +91,7 @@ def test_remove_nonexistent_booking_does_not_crash(client, db_session):
     """Удаление несуществующей брони не должно вызывать ошибку."""
     from app.models import Client, Slot
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     c = Client(first_name="Ghost", last_name="Booking", phone="+70000000054", name="Ghost")
     s = Slot(start_time=now + timedelta(hours=5), capacity=2)
     db_session.add_all([c, s])
@@ -98,7 +106,7 @@ def test_double_booking_removal_does_not_crash(client, db_session):
     """Повторное удаление одной и той же брони не вызывает ошибку."""
     from app.models import Client, Slot, Booking
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     c = Client(first_name="Double", last_name="Remove", phone="+70000000055", name="Double")
     s = Slot(start_time=now + timedelta(hours=6), capacity=2)
     db_session.add_all([c, s])
@@ -126,7 +134,7 @@ def test_delete_nonexistent_slot_redirects(client):
 
 def test_edit_nonexistent_slot_redirects(client):
     """Редактирование несуществующего слота перенаправляет на /schedule."""
-    now = datetime.now() + timedelta(hours=2)
+    now = datetime.now().replace(hour=9, minute=0) + timedelta(hours=2)
     r = client.post("/slots/edit/99999", data={
         "start_time": now.strftime("%Y-%m-%dT%H:%M"), "capacity": 2
     }, follow_redirects=False)
@@ -156,8 +164,8 @@ def test_create_slot_with_empty_start_time(client, db_session):
 
 def test_bulk_create_with_end_before_start(client):
     """Массовое создание слотов с end_time < start_time не создаёт слоты."""
-    future = (datetime.now() + timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M")
-    past = (datetime.now() + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M")
+    future = (datetime.now().replace(hour=9, minute=0) + timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M")
+    past = (datetime.now().replace(hour=9, minute=0) + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M")
     r = client.post("/slots/add", data={
         "start_time": future, "end_time": past, "capacity": 2
     }, follow_redirects=False)
@@ -244,7 +252,7 @@ def test_save_empty_note(client, db_session):
     """Сохранение пустой заметки не вызывает ошибку."""
     from app.models import Client, Slot, Booking, TrainingNote
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     c = Client(first_name="Empty", last_name="Note", phone="+70000000070", name="Empty Note")
     s = Slot(start_time=now + timedelta(days=1, hours=2), capacity=2)
     db_session.add_all([c, s])
@@ -286,7 +294,7 @@ def test_program_save_nonexistent_client_still_saves(client, db_session):
     """
     from app.models import Slot, TrainingNote
 
-    s = Slot(start_time=datetime.now() + timedelta(days=1, hours=3), capacity=2)
+    s = Slot(start_time=datetime.now().replace(hour=9, minute=0) + timedelta(days=1, hours=0), capacity=2)
     db_session.add(s)
     db_session.commit()
 
@@ -333,7 +341,7 @@ def test_xss_in_program_note_is_escaped(client, db_session, payload):
     """XSS-попытки в заметке тренировки не должны быть в неэкранированном виде."""
     from app.models import Client, Slot, Booking
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     c = Client(first_name="Safe", last_name="Note", phone="+70000000081", name="Safe Note")
     s = Slot(start_time=now + timedelta(days=1, hours=4), capacity=2)
     db_session.add_all([c, s])
@@ -433,13 +441,10 @@ def test_mass_assignment_on_client_edit(client, db_session):
         "birth_year": "",
         "birth_place": "",
         "phone": "",
-        "remaining_sessions": "99999",  # лишнее поле
     }, follow_redirects=False)
     assert r.status_code == 303
     updated = db_session.get(Client, c.id)
     assert updated.first_name == "Updated"
-    # remaining_sessions не должно измениться через эту форму
-    assert updated.remaining_sessions != 99999
 
 
 # ===== ДОПОЛНИТЕЛЬНЫЕ КРАЕВЫЕ СЛУЧАИ =====
@@ -447,13 +452,16 @@ def test_mass_assignment_on_client_edit(client, db_session):
 
 def test_double_complete_slot_is_safe(client, db_session):
     """Повторное завершение уже завершённого слота не вызывает 500."""
-    from app.models import Client, Slot, Booking
+    from app.models import Client, Slot, Booking, SubscriptionPurchase
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     c = Client(first_name="Double", last_name="Complete", phone="+70000000100",
-               name="Double Complete", remaining_sessions=2)
+               name="Double Complete")
     s = Slot(start_time=now + timedelta(hours=8), capacity=2)
     db_session.add_all([c, s])
+    db_session.commit()
+    p = SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="Group", package_size=2, price=1000, remaining=2)
+    db_session.add(p)
     db_session.commit()
     b = Booking(client_id=c.id, slot_id=s.id)
     db_session.add(b)
@@ -497,7 +505,7 @@ def test_very_long_comment_in_program_note(client, db_session):
     """Очень длинный текст заметки (50k символов) сохраняется без ошибки."""
     from app.models import Client, Slot, Booking, TrainingNote
 
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     c = Client(first_name="Long", last_name="Comment", phone="+70000000110",
                name="Long Comment")
     s = Slot(start_time=now + timedelta(days=1, hours=5), capacity=2)
