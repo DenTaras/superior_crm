@@ -21,10 +21,35 @@
 
     <div class="program__editor">
         <h3>Описание тренировки</h3>
-        <textarea id="note-text" class="form__textarea" style="height:320px;"></textarea>
+        <textarea id="note-text" class="form__textarea" style="height:260px;"></textarea>
+
+        <!-- ====== ТАБЛИЦА УПРАЖНЕНИЙ ====== -->
+        <div id="plan-exercises-section" class="mt-2" style="display:none;">
+            <h4>Упражнения</h4>
+            <div class="plan-exercises-wrapper">
+                <table id="plan-exercises-table" class="plan-table">
+                    <thead>
+                        <tr>
+                            <th class="plan-table__num">#</th>
+                            <th class="plan-table__header">Упражнение</th>
+                            <th class="plan-table__header">Вес (кг)</th>
+                            <th class="plan-table__header">Цель</th>
+                            <th class="plan-table__header">Факт</th>
+
+                            <th class="plan-table__header"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="plan-exercises-body"></tbody>
+                </table>
+            </div>
+        </div>
+
         <div class="flex-row mt-1" style="justify-content:space-between;">
             <span id="save-status" class="text-muted">Автосохранение включено</span>
-            <button type="button" id="btn-constructor" class="btn btn--primary btn--small">Конструктор тренировки</button>
+            <div class="flex-row">
+                <button type="button" id="btn-from-table" class="btn btn--secondary btn--small">Перенести из таблицы</button>
+                <button type="button" id="btn-constructor" class="btn btn--primary btn--small">Конструктор тренировки</button>
+            </div>
         </div>
     </div>
 </div>
@@ -112,6 +137,7 @@
         selected = el.getAttribute('data-client-id');
         textarea.value = notes[selected] || '';
         textarea.focus();
+        loadPlanExercises();
     }
 
     var timeout = null;
@@ -274,41 +300,154 @@
             return;
         }
 
-        // Сохраняем в лог
-        fetch('/api/exercise-log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                client_id: parseInt(selected),
-                exercise_id: currentExerciseId,
-                weight: weight,
-                reps: reps,
-                sets: sets
-            })
+        // Сохраняем каждый подход как отдельную строку
+        var promises = [];
+        for(var s = 1; s <= sets; s++){
+            var p = fetch('/api/plan-exercises/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    slot_id: parseInt(slotId),
+                    client_id: parseInt(selected),
+                    exercise_id: currentExerciseId,
+                    weight: weight,
+                    target_reps: reps,
+                    sets: 1  // один подход на строку
+                })
+            });
+            promises.push(p);
+        }
+
+        // Ждём все записи, потом обновляем таблицу
+        Promise.all(promises).then(function(){
+            loadPlanExercises();
         });
 
-        // Формируем текст
-        var lines = [];
-        lines.push('');
-        lines.push(selectedGroupName.textContent + ':');
-        lines.push(currentExerciseName + ':');
-        var hasWeight = weight > 0;
-        for(var i = 1; i <= sets; i++){
-            var wPart = hasWeight ? weight + ' кг' : 'свой вес';
-            var part = '  подход ' + i + ': вес (' + wPart + '), цель ' + reps + ' раз, факт ___ раз';
-            lines.push(part);
-        }
-        lines.push('');
-
-        // Вставляем в textarea перед последним знаком или в конец
-        textarea.value = (textarea.value || '') + lines.join('\n');
-
-        // Сохраняем
-        doSave(selected);
-
-        // Закрываем модалку
         modal.style.display = 'none';
     });
+
+    // ---------- ПЕРЕНЕСТИ ИЗ ТАБЛИЦЫ В ОПИСАНИЕ ----------
+    document.getElementById('btn-from-table').addEventListener('click', function(){
+        if(!selected){ return; }
+        fetch('/api/plan-exercises?slot_id=' + slotId + '&client_id=' + selected)
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                if(!data || data.length === 0){
+                    alert('Нет упражнений в таблице.');
+                    return;
+                }
+                // Группируем по exercise_name, сохраняя порядок
+                var groups = [];
+                var currentGroup = null;
+                data.forEach(function(ex){
+                    if(!currentGroup || currentGroup.name !== ex.exercise_name){
+                        currentGroup = { name: ex.exercise_name, sets: [] };
+                        groups.push(currentGroup);
+                    }
+                    currentGroup.sets.push(ex);
+                });
+
+                var lines = [];
+                groups.forEach(function(group){
+                    lines.push('');
+                    lines.push(group.name + ':');
+                    group.sets.forEach(function(ex, i){
+                        var wPart = ex.weight ? ex.weight + ' кг' : 'свой вес';
+                        var actual = ex.actual_reps !== null && ex.actual_reps !== undefined ? ex.actual_reps + ' раз' : '___ раз';
+                        var target = ex.target_reps ? ex.target_reps + ' раз' : '';
+                        lines.push('  подход ' + (i + 1) + ': вес (' + wPart + '), цель ' + target + ', факт ' + actual);
+                    });
+                });
+                lines.push('');
+
+                textarea.value = (textarea.value || '') + lines.join('\n');
+                doSave(selected);
+            });
+    });
+
+    // ---------- ЗАГРУЗКА ТАБЛИЦЫ УПРАЖНЕНИЙ ----------
+    function loadPlanExercises(){
+        var section = document.getElementById('plan-exercises-section');
+        var tbody = document.getElementById('plan-exercises-body');
+        if(!selected){ section.style.display = 'none'; return; }
+
+        fetch('/api/plan-exercises?slot_id=' + slotId + '&client_id=' + selected)
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                if(!data || data.length === 0){
+                    section.style.display = 'none';
+                    return;
+                }
+                section.style.display = '';
+                tbody.innerHTML = '';
+                data.forEach(function(ex, idx){
+                    var tr = document.createElement('tr');
+
+                    // Номер подхода
+                    var tdNum = document.createElement('td');
+                    tdNum.className = 'plan-table__cell';
+                    tdNum.textContent = idx + 1;
+                    tr.appendChild(tdNum);
+
+                    // Упражнение
+                    var tdName = document.createElement('td');
+                    tdName.className = 'plan-table__cell';
+                    tdName.textContent = ex.exercise_name;
+                    tr.appendChild(tdName);
+
+                    // Вес
+                    var tdWeight = document.createElement('td');
+                    tdWeight.className = 'plan-table__cell';
+                    tdWeight.textContent = ex.weight || '—';
+                    tr.appendChild(tdWeight);
+
+                    // Цель (повторов)
+                    var tdTarget = document.createElement('td');
+                    tdTarget.className = 'plan-table__cell';
+                    tdTarget.textContent = ex.target_reps || '—';
+                    tr.appendChild(tdTarget);
+
+                    // Факт (редактируемый)
+                    var tdActual = document.createElement('td');
+                    tdActual.className = 'plan-table__cell';
+                    var input = document.createElement('input');
+                    input.type = 'number';
+                    input.className = 'plan-table__input';
+                    input.min = '0';
+                    input.value = ex.actual_reps !== null && ex.actual_reps !== undefined ? ex.actual_reps : '';
+                    input.placeholder = '—';
+                    input.addEventListener('change', function(){
+                        var val = this.value !== '' ? parseInt(this.value) : null;
+                        fetch('/api/plan-exercises/update', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: ex.id, actual_reps: val })
+                        });
+                    });
+                    tdActual.appendChild(input);
+                    tr.appendChild(tdActual);
+
+                    // Удалить
+                    var tdDel = document.createElement('td');
+                    var delBtn = document.createElement('button');
+                    delBtn.className = 'btn btn--ghost btn--small';
+                    delBtn.textContent = '✕';
+                    delBtn.title = 'Удалить';
+                    delBtn.addEventListener('click', function(){
+                        var csrf = (document.querySelector('input[name="_csrf_token"]') || {}).value || '';
+                        fetch('/api/plan-exercises/delete/' + ex.id, {
+                            method: 'POST',
+                            headers: { 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' },
+                        }).then(function(){ loadPlanExercises(); });
+                    });
+                    tdDel.appendChild(delBtn);
+                    tr.appendChild(tdDel);
+
+                    tbody.appendChild(tr);
+                });
+            });
+    }
+
 })();
 </script>
 

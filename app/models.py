@@ -115,6 +115,21 @@ class ClientExerciseLog(Base):
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False)
     weight = Column(Integer, default=0)           # вес отягощения в кг
-    reps = Column(Integer, default=0)             # цель по повторениям
+    reps = Column(Integer, default=0)             # фактическое количество повторений
     sets = Column(Integer, default=0)             # количество подходов
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class TrainingPlanExercise(Base):
+    """Упражнение в плане тренировки для клиента в рамках слота."""
+    __tablename__ = "training_plan_exercises"
+    id = Column(Integer, primary_key=True)
+    slot_id = Column(Integer, ForeignKey("slots.id"), nullable=False, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False)
+    weight = Column(Integer, default=0)           # вес отягощения в кг
+    target_reps = Column(Integer, default=0)      # целевое количество повторений
+    actual_reps = Column(Integer, nullable=True)  # фактическое (заполняет тренер)
+    sets = Column(Integer, default=0)             # количество подходов
+    sort_order = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.now)

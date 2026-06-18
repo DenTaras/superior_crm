@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db, templates
-from app.models import Slot, Booking, Client, JournalEntry, TrainingNote
+from app.models import Slot, Booking, Client, JournalEntry, TrainingNote, TrainingPlanExercise, ClientExerciseLog
 from app.schemas import SlotAddForm, SlotEditForm, BookingAddForm, SlotRemoveForm
 from app.forms import parse_slot_add_form, parse_slot_edit_form, parse_booking_add_form, parse_slot_remove_form
 from app.logging_config import audit_log
@@ -293,6 +293,26 @@ def complete_slot(
             )
             comments_map[str(c.id)] = note.text if note and note.text else ""
 
+            # Переносим фактические повторения из плана в лог упражнений
+            plan_exercises = (
+                db.query(TrainingPlanExercise)
+                .filter(
+                    TrainingPlanExercise.slot_id == slot_id,
+                    TrainingPlanExercise.client_id == c.id,
+                    TrainingPlanExercise.actual_reps.isnot(None),
+                )
+                .all()
+            )
+            for pe in plan_exercises:
+                log_entry = ClientExerciseLog(
+                    client_id=c.id,
+                    exercise_id=pe.exercise_id,
+                    weight=pe.weight,
+                    reps=pe.actual_reps,
+                    sets=pe.sets,
+                )
+                db.add(log_entry)
+
     entry = JournalEntry(
         slot_time=slot.start_time,
         clients=", ".join(client_names),
@@ -300,6 +320,7 @@ def complete_slot(
     )
     db.add(entry)
     db.query(Booking).filter(Booking.slot_id == slot_id).delete()
+    db.query(TrainingPlanExercise).filter(TrainingPlanExercise.slot_id == slot_id).delete()
     db.query(TrainingNote).filter(TrainingNote.slot_id == slot_id).delete()
     db.query(Slot).filter(Slot.id == slot_id).delete()
     db.commit()

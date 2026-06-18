@@ -141,6 +141,10 @@ if "alembic" not in __import__("sys").modules:
                        birth_year=1988, birth_place="Казань",
                        phone="+79990000003", name="Сидоров Алексей", remaining_sessions=1,
                        login="client_3", password_hash=hash_password("client_3")),
+                Client(first_name="Денис", last_name="Тарасов",
+                       birth_year=1994, birth_place="Омск",
+                       phone="+79990000004", name="Тарасов Денис", remaining_sessions=1,
+                       login="client_4", password_hash=hash_password("client_4")),
             ])
             db.commit()
 

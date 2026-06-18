@@ -47,7 +47,7 @@ def test_exercise_log_not_found(client, db_session):
 
 
 def test_exercise_log_save_and_read(client, db_session):
-    """POST /api/exercise-log сохраняет, затем GET читает с прогрессией."""
+    """POST /api/plan-exercises/add сохраняет в план, GET /api/exercise-log читает историю."""
     from app.models import Client
     c = Client(first_name="ExLog2", last_name="Test", phone="+70000000124", remaining_sessions=0)
     db_session.add(c)
@@ -56,14 +56,32 @@ def test_exercise_log_save_and_read(client, db_session):
     exercises = client.get("/api/exercises?group_id=1").json()
     ex_id = exercises[0]["id"]
 
-    # сохраняем
-    r = client.post("/api/exercise-log", json={
-        "client_id": c.id, "exercise_id": ex_id, "weight": 40, "reps": 10, "sets": 3,
+    # Сохраняем через plan-exercises (новый способ)
+    from app.models import Slot
+    s = Slot(start_time=__import__("datetime").datetime.now(), capacity=1)
+    db_session.add(s)
+    db_session.commit()
+
+    r = client.post("/api/plan-exercises/add", json={
+        "slot_id": s.id, "client_id": c.id, "exercise_id": ex_id, "weight": 40, "target_reps": 10, "sets": 3,
     })
     assert r.status_code == 200
     assert r.json()["ok"] == True
 
-    # читаем
+    # Симулируем завершение: переносим фактические повторения в лог
+    from app.models import TrainingPlanExercise, ClientExerciseLog
+    tpe = db_session.query(TrainingPlanExercise).first()
+    tpe.actual_reps = 10
+    db_session.commit()
+
+    # ручной перенос
+    log_entry = ClientExerciseLog(
+        client_id=c.id, exercise_id=ex_id, weight=40, reps=10, sets=3,
+    )
+    db_session.add(log_entry)
+    db_session.commit()
+
+    # читаем лог
     r = client.get(f"/api/exercise-log?client_id={c.id}&exercise_id={ex_id}")
     assert r.status_code == 200
     data = r.json()

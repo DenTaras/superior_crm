@@ -75,7 +75,8 @@
 	{% endfor %}
 </ul>
 
-<form method="post" action="/slot/{{ slot.id }}/add" class="form--row">
+<br>
+<form method="post" action="/slot/{{ slot.id }}/add" class="flex-row mt-1">
 	{{ csrf_input(request) }}
 	<select name="client_id" class="form__select">
 		{% for client in all_clients %}
