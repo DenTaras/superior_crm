@@ -37,6 +37,7 @@
             <a href="/clients" class="header__nav-link">Клиенты</a>
             <a href="/subscriptions" class="header__nav-link">Абонементы</a>
             <a href="/journal" class="header__nav-link">Журнал</a>
+            <a href="/sql" class="header__nav-link">SQL</a>
             {% elif _user and _user.role == 'client' %}
             <a href="/schedule" class="header__nav-link">Расписание</a>
             {% else %}
@@ -65,5 +66,9 @@
     {% endblock %}
 
 </main>
+
+{% block scripts %}
+{% endblock %}
+
 </body>
 </html>

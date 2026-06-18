@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page__title"><h1>SQL-консоль</h1></div>
+
+<!-- ====== ВЫВОД (всегда виден) ====== -->
+<div class="sql-output {% if not error and columns is none and rows is none %}sql-output--empty{% endif %}">
+    {% if error %}
+    <div class="sql-output__error">
+        <p style="color:var(--danger); font-weight:600; margin-bottom:6px;">Ошибка:</p>
+        <pre>{{ error }}</pre>
+    </div>
+    {% elif columns %}
+    <p class="sql-output__count">Результат: {{ row_count }} строк{{ "а" if row_count == 1 else "и" if row_count in (2,3,4) else "" }}</p>
+    <div class="sql-results">
+        <table class="sql-table">
+            <thead>
+                <tr>
+                    <th class="sql-table__num">#</th>
+                    {% for col in columns %}
+                    <th class="sql-table__header">{{ col }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td class="sql-table__num">{{ loop.index }}</td>
+                    {% for cell in row %}
+                    <td class="sql-table__cell">{{ cell if cell is not none else "<em>NULL</em>" }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% elif affected is not none %}
+    <p class="sql-output__hint">Запрос выполнен. Затронуто строк: {{ affected }}.</p>
+    {% elif row_count is none and error is none %}
+    <p class="sql-output__hint">Запрос выполнен (не-SELECT). Строк нет.</p>
+    {% else %}
+    <p class="sql-output__hint">Напишите SQL-запрос ниже и нажмите «Выполнить».</p>
+    {% endif %}
+</div>
+
+<!-- ====== ВВОД + ЗАМЕТКИ ====== -->
+<div class="sql-bottom mt-3">
+    <div class="sql-bottom__form">
+        <form method="post" action="/sql" class="form" style="max-width:100%;">
+            {{ csrf_input(request) }}
+
+            <div class="form__group">
+                <label class="form__label">SQL-запрос</label>
+                <textarea class="form__textarea form__textarea--mono" name="query" rows="6" placeholder="SELECT * FROM clients LIMIT 10;">{{ query }}</textarea>
+            </div>
+
+            <button class="btn btn--primary" type="submit">Выполнить</button>
+        </form>
+    </div>
+
+    <div class="sql-bottom__notes">
+        <div class="form__group">
+            <label class="form__label">Заметки (частые запросы)</label>
+            <textarea id="sql-notes" class="form__textarea form__textarea--mono" rows="10" placeholder="Сюда можно записывать часто используемые SQL-запросы...&#10;&#10;Сохранение автоматическое (localStorage)."></textarea>
+            <span id="notes-status" class="sql-notes__status">Автосохранение</span>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+    var ta = document.getElementById('sql-notes');
+    var status = document.getElementById('notes-status');
+    var STORAGE_KEY = 'superior_sql_notes';
+
+    try {
+        var saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) ta.value = saved;
+    } catch(e) {}
+
+    var timeout = null;
+    ta.addEventListener('input', function(){
+        status.textContent = 'Сохранение...';
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(function(){
+            timeout = null;
+            try {
+                localStorage.setItem(STORAGE_KEY, ta.value);
+                status.textContent = 'Сохранено';
+            } catch(e) {
+                status.textContent = 'Ошибка сохранения';
+            }
+            setTimeout(function(){ status.textContent = 'Автосохранение'; }, 1500);
+        }, 300);
+    });
+
+    window.addEventListener('beforeunload', function(){
+        try { localStorage.setItem(STORAGE_KEY, ta.value); } catch(e) {}
+    });
+})();
+</script>
+{% endblock %}

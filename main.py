@@ -23,6 +23,7 @@ from app.routes.slots import router as slots_router
 from app.routes.program import router as program_router
 from app.routes.journal import router as journal_router
 from app.routes.signup import router as signup_router
+from app.routes.sql_console import router as sql_router
 from app.auth import router as auth_router
 from app.auth import get_current_user
 from app.timezone import now as tz_now
@@ -102,6 +103,7 @@ if _os.getenv("TRACE"):
 app.include_router(auth_router)          # /login, /logout, /profile
 app.include_router(journal_router)       # /, /journal, /subscriptions
 app.include_router(signup_router)        # /signup
+app.include_router(sql_router)           # /sql
 app.include_router(clients_router)       # /clients, /clients/*
 app.include_router(schedule_router)      # /schedule, /slot/{id}
 app.include_router(slots_router)         # /slots/*, /slot/{id}/add|remove|complete
