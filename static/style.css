@@ -95,8 +95,9 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter:invert(
 .calendar__slot--yellow { background:linear-gradient(135deg,#e8b830,#c99a1a); color:#111; }
 .calendar__slot--green { background:linear-gradient(135deg,#1a8a3a,#11662a); }
 .calendar__slot--gray { background:var(--bg-elevated); border:1px solid var(--border); }
-.calendar__slot-time { font-size:16px; font-weight:700; margin-bottom:4px; }
-.calendar__slot-capacity { font-size:12px; opacity:0.8; }
+.calendar__slot-header { display:flex; align-items:center; gap:8px; }
+.calendar__slot-time { font-size:16px; font-weight:700; }
+.calendar__slot-capacity { font-size:12px; opacity:0.8; margin-left:auto; }
 .calendar__slot--yellow .calendar__slot-capacity { color:#111; }
 .calendar__slot--yellow .calendar__slot-clients li { color:#111; opacity:0.8; }
 .calendar__slot-clients { list-style:none; margin-top:6px; }
@@ -106,11 +107,12 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter:invert(
 .slot__header { margin-bottom:24px; }
 .slot__header-title { font-size:1.6rem; font-weight:700; margin-bottom:4px; }
 .slot__header-meta { color:var(--text-muted); font-size:0.9rem; }
+.slot-columns { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
 
 /* ---- CLIENT LIST ---- */
 .client-list { list-style:none; display:flex; flex-direction:column; gap:6px; }
 .client-list__item { background:var(--bg-elevated); padding:1px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
-.client-list__item--interactive { cursor:pointer; transition:var(--transition); }
+.client-list__item--interactive { cursor:pointer; transition:var(--transition); padding:7px 12px;}
 .client-list__item--interactive:hover { color:var(--accent); border-color:rgba(217,4,41,.2); }
 .client-list__item--selected { border-color:rgba(217,4,41,.3); background:linear-gradient(90deg,rgba(217,4,41,.06),transparent); }
 .client-list__item--spaced { line-height:1.8; }
@@ -278,5 +280,5 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter:invert(
 .standards-table tbody tr:hover { background:rgba(217,4,41,.04); }
 
 /* ---- RESPONSIVE ---- */
-@media (max-width:992px) { .profile { grid-template-columns:1fr; } .grid-4 { grid-template-columns:repeat(2,1fr); } .program__layout { flex-direction:column; } .program__sidebar { width:100%; } .sql-bottom { grid-template-columns:1fr; } }
+@media (max-width:992px) { .profile { grid-template-columns:1fr; } .grid-4 { grid-template-columns:repeat(2,1fr); } .program__layout { flex-direction:column; } .program__sidebar { width:100%; } .sql-bottom { grid-template-columns:1fr; } .slot-columns { grid-template-columns:1fr; } }
 @media (max-width:768px) { .grid-4,.grid-3,.grid-2 { grid-template-columns:1fr; } .header__nav { display:none; } .header__user-name { display:none; } .calendar__time { display:none; } .stats { grid-template-columns:1fr; } }

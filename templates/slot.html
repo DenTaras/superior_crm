@@ -60,83 +60,106 @@
 {% endif %}
 
 {% if user and user.role in ('admin', 'trainer') %}
-<h3>Записаны:</h3>
-<ul class="client-list">
-	{% for client in clients %}
-	<li class="client-list__item">
-	{{ client.fio() }}
-		<form method="post" action="/slot/{{ slot.id }}/remove" class="form--inline">
-			{{ csrf_input(request) }}
-			<input type="hidden" name="client_id" value="{{ client.id }}" />
-			<input type="hidden" name="week_offset" value="{{ week_offset }}" />
-			<button class="btn btn--small">Удалить из слота</button>
-		</form>
-	</li>
-	{% endfor %}
-</ul>
 
-<br>
-<form method="post" action="/slot/{{ slot.id }}/add" class="flex-row mt-1">
-	{{ csrf_input(request) }}
-	<select name="client_id" class="form__select">
-		{% for client in all_clients %}
-		<option value="{{ client.id }}">{{ client.name }}</option>
-		{% endfor %}
-	</select>
-	<input type="hidden" name="week_offset" value="{{ week_offset }}" />
-	<button class="btn btn--primary">Добавить</button>
-</form>
-
-<hr class="mt-2 mb-2" />
-<div class="flex-row">
-	<a class="btn btn--primary" href="/slot/{{ slot.id }}/program?week_offset={{ week_offset }}">План тренировки</a>
-	{% if clients and clients|length > 0 %}
-	<form method="post" action="/slot/{{ slot.id }}/complete"
-		onsubmit="return confirm('Подтвердить проведение занятия и списать 1 занятие у всех записанных?');">
-		{{ csrf_input(request) }}
-		<input type="hidden" name="week_offset" value="{{ week_offset }}" />
-		<button class="btn btn--success" type="submit">Тренировка завершена</button>
-	</form>
-	{% endif %}
+<!-- ====== БЛОК 1: План тренировки + Завершить ====== -->
+<div class="panel mb-3">
+	<div class="flex-row" style="justify-content:space-between;">
+		<div>
+			<h3>Программа тренировки</h3>
+			<p class="text-muted" style="font-size:0.85rem;">Просмотр и редактирование плана упражнений</p>
+		</div>
+		<div class="flex-row">
+			<a class="btn btn--primary" href="/slot/{{ slot.id }}/program?week_offset={{ week_offset }}">План тренировки</a>
+			{% if clients and clients|length > 0 %}
+			<form method="post" action="/slot/{{ slot.id }}/complete"
+				onsubmit="return confirm('Подтвердить проведение занятия и списать 1 занятие у всех записанных?');">
+				{{ csrf_input(request) }}
+				<input type="hidden" name="week_offset" value="{{ week_offset }}" />
+				<button class="btn btn--success" type="submit">Тренировка завершена</button>
+			</form>
+			{% endif %}
+		</div>
+	</div>
 </div>
 
-<hr class="mt-2 mb-2" />
-<h3>Настройки слота</h3>
-<form method="post" action="/slots/edit/{{ slot.id }}" class="form" id="edit-slot-form">
-	{{ csrf_input(request) }}
-	<input type="hidden" name="week_offset" value="{{ week_offset }}" />
-	<div class="form__group">
-		<label class="form__label">Время</label>
-		<input class="form__input" type="text" name="start_time" value="{{ slot.start_time.strftime('%Y-%m-%d %H:%M') }}" required />
+<!-- ====== БЛОК 2: Записанные + Настройки ====== -->
+<div class="slot-columns">
+	<div class="slot-columns__left">
+		<div class="panel">
+			<h3>Записаны</h3>
+			<ul class="client-list mt-1">
+				{% for client in clients %}
+				<li class="client-list__item">
+					<span>{{ client.fio() }}</span>
+					<form method="post" action="/slot/{{ slot.id }}/remove" class="form--inline">
+						{{ csrf_input(request) }}
+						<input type="hidden" name="client_id" value="{{ client.id }}" />
+						<input type="hidden" name="week_offset" value="{{ week_offset }}" />
+						<button class="btn btn--small">Удалить</button>
+					</form>
+				</li>
+				{% else %}
+				<p class="text-muted">Нет записанных клиентов</p>
+				{% endfor %}
+			</ul>
+			<form method="post" action="/slot/{{ slot.id }}/add" class="flex-row mt-2">
+				{{ csrf_input(request) }}
+				<select name="client_id" class="form__select">
+					{% for client in all_clients %}
+					<option value="{{ client.id }}">{{ client.name }}</option>
+					{% endfor %}
+				</select>
+				<input type="hidden" name="week_offset" value="{{ week_offset }}" />
+				<button class="btn btn--primary">Добавить</button>
+			</form>
+		</div>
 	</div>
-	<div class="form__group">
-		<label class="form__label">Вместимость</label>
-		<select name="capacity" class="form__select">
-			<option value="1" {% if slot.capacity == 1 %}selected{% endif %}>1</option>
-			<option value="2" {% if slot.capacity == 2 %}selected{% endif %}>2</option>
-			<option value="3" {% if slot.capacity == 3 %}selected{% endif %}>3</option>
-			<option value="4" {% if slot.capacity == 4 %}selected{% endif %}>4</option>
-		</select>
-	</div>
-</form>
 
-<div class="flex-row mt-1">
-	<button class="btn btn--primary" type="submit" form="edit-slot-form">Сохранить</button>
-	<form method="post" action="/slots/delete/{{ slot.id }}" class="form--inline"
-		onsubmit="return confirm('Удалить слот? Это удалит все бронирования.');">
-		{{ csrf_input(request) }}
-		<input type="hidden" name="week_offset" value="{{ week_offset }}" />
-		<button class="btn btn--secondary" type="submit">Удалить слот</button>
-	</form>
+	<div class="slot-columns__right">
+		<div class="panel">
+			<h3>Настройки слота</h3>
+			<form method="post" action="/slots/edit/{{ slot.id }}" class="form mt-1" id="edit-slot-form">
+				{{ csrf_input(request) }}
+				<input type="hidden" name="week_offset" value="{{ week_offset }}" />
+				<div class="flex-row mt-1">
+					<label class="form__label">Время</label>
+					<input class="form__input" type="text" name="start_time" value="{{ slot.start_time.strftime('%Y-%m-%d %H:%M') }}" required />
+				</div>
+				<div class="flex-row mt-1">
+					<label class="form__label">Вместимость</label>
+					<select name="capacity" class="form__select">
+						<option value="1" {% if slot.capacity == 1 %}selected{% endif %}>1</option>
+						<option value="2" {% if slot.capacity == 2 %}selected{% endif %}>2</option>
+						<option value="3" {% if slot.capacity == 3 %}selected{% endif %}>3</option>
+						<option value="4" {% if slot.capacity == 4 %}selected{% endif %}>4</option>
+					</select>
+				</div>
+				<div class="flex-row mt-1">
+					<button class="btn btn--primary" type="submit" form="edit-slot-form">Сохранить</button>
+					<form method="post" action="/slots/delete/{{ slot.id }}" class="form--inline"
+						onsubmit="return confirm('Удалить слот? Это удалит все бронирования.');">
+						{{ csrf_input(request) }}
+						<input type="hidden" name="week_offset" value="{{ week_offset }}" />
+						<button class="btn btn--secondary" type="submit">Удалить слот</button>
+					</form>
+				</div>
+			</form>
+		</div>
+	</div>
 </div>
+
 {% else %}
-<h3>Записаны:</h3>
-<ul class="client-list">
-	{% for client in clients %}
-	<li class="client-list__item">{{ client.fio() }}</li>
-	{% endfor %}
-</ul>
-{% endif %}
+<!-- ====== ПРОСМОТР ДЛЯ КЛИЕНТА ====== -->
+<div class="panel">
+	<h3>Записаны</h3>
+	<ul class="client-list mt-1">
+		{% for client in clients %}
+		<li class="client-list__item">{{ client.fio() }}</li>
+		{% else %}
+		<p class="text-muted">Нет записанных клиентов</p>
+		{% endfor %}
+	</ul>
 </div>
+{% endif %}
 
 {% endblock %}

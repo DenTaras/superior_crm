@@ -116,8 +116,10 @@
                         {%- endif -%}
                     {%- endif -%}
                     <a class="calendar__slot {{ color_class }}" href="/slot/{{ cell.slot.id }}?week_offset={{ week_offset }}">
-                        <div class="calendar__slot-time">{{ cell.slot.start_time.strftime('%H:%M') }}</div>
-                        <div class="calendar__slot-capacity">{{ cell.booked }}/{{ cell.slot.capacity }}</div>
+                        <div class="calendar__slot-header">
+                            <div class="calendar__slot-time">{{ cell.slot.start_time.strftime('%H:%M') }}</div>
+                            <div class="calendar__slot-capacity">{{ cell.booked }}/{{ cell.slot.capacity }}</div>
+                        </div>
                         {% if cell.clients %}
                         <ul class="calendar__slot-clients">
                             {% for c in cell.clients %}
