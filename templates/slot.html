@@ -20,7 +20,7 @@
 	{% endif %}
 
 	{% set flash_seconds = request.query_params.get('flash_seconds', '5') %}
-	<div id="flash-modal" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="flash-title" data-seconds="{{ flash_seconds }}">
+	<div id="flash-modal" role="alertdialog" aria-modal="true" aria-labelledby="flash-title" data-seconds="{{ flash_seconds }}" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);">
 		<div class="modal__content">
 			<div class="modal__header">
 				<h3 class="modal__title" id="flash-title">Внимание</h3>
@@ -136,13 +136,13 @@
 				</div>
 				<div class="flex-row mt-1">
 					<button class="btn btn--primary" type="submit" form="edit-slot-form">Сохранить</button>
-					<form method="post" action="/slots/delete/{{ slot.id }}" class="form--inline"
-						onsubmit="return confirm('Удалить слот? Это удалит все бронирования.');">
-						{{ csrf_input(request) }}
-						<input type="hidden" name="week_offset" value="{{ week_offset }}" />
-						<button class="btn btn--secondary" type="submit">Удалить слот</button>
-					</form>
+					<button class="btn btn--secondary" type="submit" form="delete-slot-form"
+						onclick="return confirm('Удалить слот? Это удалит все бронирования.');">Удалить слот</button>
 				</div>
+			</form>
+			<form id="delete-slot-form" method="post" action="/slots/delete/{{ slot.id }}" class="form--inline">
+				{{ csrf_input(request) }}
+				<input type="hidden" name="week_offset" value="{{ week_offset }}" />
 			</form>
 		</div>
 	</div>

@@ -75,7 +75,7 @@ def test_add_client_to_full_slot_fails(client, db_session):
     db_session.add_all([s, c1, c2])
     db_session.commit()
     for c in [c1, c2]:
-        db_session.add(SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="Group", package_size=5, price=2500, remaining=5))
+        db_session.add(SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="VIP", package_size=5, price=2500, remaining=5))
     db_session.commit()
 
     r1 = client.post(f"/slot/{s.id}/add", data={"client_id": c1.id}, follow_redirects=False)
@@ -499,6 +499,13 @@ def test_home_page(client):
     """Главная страница доступна."""
     r = client.get("/")
     assert r.status_code == 200
+
+
+def test_dashboard_page_accessible(client):
+    """Дашборд доступен для admin/trainer."""
+    r = client.get("/dashboard")
+    assert r.status_code == 200
+    assert "Дашборд" in r.text
 
 
 def test_very_long_comment_in_program_note(client, db_session):

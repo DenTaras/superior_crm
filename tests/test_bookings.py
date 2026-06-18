@@ -11,7 +11,7 @@ def test_add_and_remove_booking(client, db_session):
     # create client and slot directly in DB
     now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     c = Client(first_name="B", last_name="User", phone="+70000000000", name="User B")
-    s = Slot(start_time=now + timedelta(days=1, hours=0), capacity=2)
+    s = Slot(start_time=now + timedelta(days=1, hours=0), capacity=4)
     db_session.add_all([c, s])
     db_session.commit()
     p = SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="Group", package_size=5, price=2500, remaining=5)
@@ -19,8 +19,32 @@ def test_add_and_remove_booking(client, db_session):
     db_session.commit()
 
     # add booking via POST
+    from app.pricing import slot_time_slot, format_from_capacity
+    from sqlalchemy import func, Integer
+    from app.timezone import now as tz_now
+    slot_ts = slot_time_slot(s.start_time)
+    slot_fmt = format_from_capacity(s.capacity)
+    ts_hour_map = {"УТРО": (8, 12), "ДЕНЬ": (12, 17), "ВЕЧЕР": (17, 24)}
+    h_start, h_end = ts_hour_map.get(slot_ts, (0, 24))
+    cap = s.capacity
+    cap_filter = Slot.capacity <= 1 if cap <= 1 else (Slot.capacity == 2 if cap == 2 else Slot.capacity >= 3)
+    now_dt = tz_now()
+    bf = db_session.query(Booking).join(Slot, Booking.slot_id == Slot.id).filter(
+        Booking.client_id == c.id, Slot.start_time >= now_dt,
+        func.cast(func.strftime("%H", Slot.start_time), Integer).between(h_start, h_end - 1),
+        cap_filter,
+    ).count()
+    rem = db_session.query(func.coalesce(func.sum(SubscriptionPurchase.remaining), 0)).filter(
+        SubscriptionPurchase.client_id == c.id,
+        SubscriptionPurchase.time_slot.in_([slot_ts, "-"]),
+        SubscriptionPurchase.format_name == slot_fmt,
+    ).scalar() or 0
     r = client.post(f"/slot/{s.id}/add", data={"client_id": c.id}, follow_redirects=False)
     assert r.status_code == 303
+    assert "flash" not in r.headers.get("location", ""), (
+        f"Booking rejected: {r.headers.get('location', '')}. "
+        f"slot_ts={slot_ts} slot_fmt={slot_fmt} booked_future={bf} remaining={rem}"
+    )
 
     b = db_session.query(Booking).filter(Booking.client_id == c.id, Booking.slot_id == s.id).first()
     assert b is not None
@@ -43,7 +67,7 @@ def test_capacity_enforced(client, db_session):
     db_session.add_all([s, c1, c2])
     db_session.commit()
     for c in [c1, c2]:
-        db_session.add(SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="Group", package_size=5, price=2500, remaining=5))
+        db_session.add(SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="VIP", package_size=5, price=2500, remaining=5))
     db_session.commit()
 
     # add first booking
@@ -62,7 +86,7 @@ def test_prevent_duplicate_booking(client, db_session):
     from app.models import Client, Slot, Booking, SubscriptionPurchase
 
     now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
-    s = Slot(start_time=now + timedelta(days=1, hours=0), capacity=2)
+    s = Slot(start_time=now + timedelta(days=1, hours=0), capacity=4)
     c = Client(first_name="D", last_name="Up", phone="+70000000003", name="Dup")
     db_session.add_all([s, c])
     db_session.commit()

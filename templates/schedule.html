@@ -14,12 +14,14 @@
         {% set msg = 'У клиента нет доступных занятий для бронирования.' %}
     {% elif flash == 'slot_past' %}
         {% set msg = 'Нельзя создать или переместить слот в прошлое.' %}
+    {% elif flash == 'slot_cleared' %}
+        {% set msg = 'Время/вместимость изменены. Брони и заметки очищены.' %}
     {% else %}
         {% set msg = flash %}
     {% endif %}
 
     {% set flash_seconds = request.query_params.get('flash_seconds', '5') %}
-    <div id="flash-modal" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="flash-title" data-seconds="{{ flash_seconds }}">
+    <div id="flash-modal" role="alertdialog" aria-modal="true" aria-labelledby="flash-title" data-seconds="{{ flash_seconds }}" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);">
         <div class="modal__content">
             <div class="modal__header">
                 <h3 class="modal__title" id="flash-title">Внимание</h3>
@@ -97,10 +99,12 @@
         </thead>
         <tbody>
             {% for hour in hours %}
-            <tr>
-                <td class="calendar__time">{{ '%02d:00' % hour }}</td>
+            <tr class="{% if now_in_week and hour == now_hour %}calendar__row--now{% endif %}">
+                <td class="calendar__time">{{ '%02d:00' % hour }}
+                    {%- if now_in_week and hour == now_hour %} <span class="calendar__now-marker">▲ Сейчас</span>{% endif %}
+                </td>
                 {% for d_idx in range(0,7) %}
-                <td class="calendar__cell">
+                <td class="calendar__cell{% if now_in_week and d_idx == now_col and hour == now_hour %} calendar__cell--now{% endif %}">
                     {% set cell = grid.get((d_idx, hour)) %}
                     {% if cell %}
                     {%- set color_class = '' -%}

@@ -39,6 +39,20 @@ def slot_time_slot(dt) -> str:
     return "ВЕЧЕР"
 
 
+def format_from_capacity(capacity: int) -> str:
+    """Определить формат (VIP/Double/Group) по вместимости слота.
+
+    capacity=1 → VIP (персональная тренировка)
+    capacity=2 → Double (парная)
+    capacity>=3 → Group (групповая)
+    """
+    if capacity <= 1:
+        return "VIP"
+    if capacity == 2:
+        return "Double"
+    return "Group"
+
+
 def get_all_options() -> list[dict]:
     """Все возможные комбинации для формы."""
     options = []

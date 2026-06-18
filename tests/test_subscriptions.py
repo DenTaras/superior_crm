@@ -86,8 +86,8 @@ def test_subscription_deduct_from_oldest(client, db_session):
         "client_id": c.id, "time_slot": "ВЕЧЕР", "format_name": "VIP", "package_size": "12",
     }, follow_redirects=False)
 
-    # Создаём слот и бронь
-    s = Slot(start_time=datetime.now().replace(hour=9, minute=0) + timedelta(hours=1), capacity=1)
+    # Создаём слот и бронь (УТРО, capacity=4 → Group — совпадает с первой покупкой)
+    s = Slot(start_time=datetime.now().replace(hour=9, minute=0) + timedelta(hours=1), capacity=4)
     db_session.add(s)
     db_session.commit()
     bk = Booking(client_id=c.id, slot_id=s.id)
@@ -108,8 +108,8 @@ def test_booking_respects_remaining_sessions(client, db_session):
     from app.models import Client, Slot, Booking, SubscriptionPurchase
     now = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
     c = Client(first_name="Limit", last_name="One", phone="+70000000012", name="Limit One")
-    s1 = Slot(start_time=now + timedelta(days=1, hours=0), capacity=2)
-    s2 = Slot(start_time=now + timedelta(days=1, hours=1), capacity=2)
+    s1 = Slot(start_time=now + timedelta(days=1, hours=0), capacity=4)
+    s2 = Slot(start_time=now + timedelta(days=1, hours=1), capacity=4)
     db_session.add_all([c, s1, s2])
     db_session.commit()
     p = SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="Group", package_size=1, price=500, remaining=1)

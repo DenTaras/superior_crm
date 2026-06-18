@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page__title"><h1>Дашборд</h1></div>
+
+<!-- Крупные метрики -->
+<div class="stats mt-2">
+    <div class="stats__card">
+        <div class="stats__value">{{ "%.0f"|format(total_clients) }}</div>
+        <div class="stats__label">Всего клиентов</div>
+    </div>
+    <div class="stats__card">
+        <div class="stats__value">{{ active_clients }}</div>
+        <div class="stats__label">С абонементом</div>
+    </div>
+    <div class="stats__card">
+        <div class="stats__value">{{ month_trainings }}</div>
+        <div class="stats__label">Тренировок за месяц</div>
+    </div>
+</div>
+
+<!-- Переключатель агрегации -->
+<div class="mt-2 mb-2">
+    <form method="get" action="/dashboard" class="form--inline">
+        <label class="mr-1" style="font-weight:600;">Агрегация:</label>
+        {% for key, label in [('month', 'По месяцам'), ('day', 'По дням'), ('hour', 'По часам')] %}
+        <button type="submit" name="agg" value="{{ key }}"
+                class="btn btn--small {% if current_agg == key %}btn--primary{% else %}btn--ghost{% endif %}"
+                style="margin-right:4px;">{{ label }}</button>
+        {% endfor %}
+    </form>
+</div>
+
+{% if labels %}
+<!-- Выручка по времени -->
+<div class="card mt-2">
+    <h3>Выручка ({{ axis_label }})</h3>
+    <canvas id="revenueChart" height="100"></canvas>
+</div>
+
+<div class="row mt-3" style="display:flex; gap:1rem;">
+    <!-- По временным слотам -->
+    <div class="card" style="flex:1;">
+        <h3>По временным слотам</h3>
+        <canvas id="slotChart" height="120"></canvas>
+    </div>
+    <!-- По форматам -->
+    <div class="card" style="flex:1;">
+        <h3>По форматам</h3>
+        <canvas id="formatChart" height="120"></canvas>
+    </div>
+</div>
+{% else %}
+<p class="text-muted mt-2">Нет данных о продажах за выбранный период.</p>
+{% endif %}
+
+<!-- Последние продажи -->
+<div class="card mt-3">
+    <h3>Последние 10 продаж</h3>
+    <div class="table__wrapper">
+    <table class="table">
+        <thead>
+            <tr>
+                <th class="table__header">Дата</th>
+                <th class="table__header">Клиент</th>
+                <th class="table__header">Абонемент</th>
+                <th class="table__header">Сумма</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in recent_purchases %}
+        <tr class="table__row">
+            <td class="table__cell">{{ p.date.strftime('%d.%m.%Y') if p.date else '—' }}</td>
+            <td class="table__cell">{{ p.client_name }}</td>
+            <td class="table__cell">{{ p.label }}</td>
+            <td class="table__cell">{{ p.price }} ₽</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function() {
+    var colors = ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ac'];
+
+    // Выручка
+    var ctx = document.getElementById('revenueChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {{ labels | tojson }},
+                datasets: [{
+                    label: 'Выручка, ₽',
+                    data: {{ revenues | tojson }},
+                    backgroundColor: colors[0],
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // По временным слотам
+    var sCtx = document.getElementById('slotChart');
+    if (sCtx) {
+        new Chart(sCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ slot_labels | tojson }},
+                datasets: [{
+                    data: {{ slot_data | tojson }},
+                    backgroundColor: colors.slice(0, {{ slot_labels | length }}),
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+
+    // По форматам
+    var fCtx = document.getElementById('formatChart');
+    if (fCtx) {
+        new Chart(fCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ fmt_labels | tojson }},
+                datasets: [{
+                    data: {{ fmt_data | tojson }},
+                    backgroundColor: colors.slice(0, {{ fmt_labels | length }}),
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+})();
+</script>
+
+{% endblock %}

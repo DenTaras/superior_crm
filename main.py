@@ -26,6 +26,7 @@ from app.routes.signup import router as signup_router
 from app.routes.sql_console import router as sql_router
 from app.routes.exercises_api import router as exercises_api_router
 from app.routes.budget import router as budget_router
+from app.routes.dashboard import router as dashboard_router
 from app.auth import router as auth_router
 from app.auth import get_current_user
 from app.timezone import now as tz_now
@@ -60,7 +61,7 @@ async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data:; "
         "connect-src 'self'; "
@@ -108,6 +109,7 @@ app.include_router(signup_router)        # /signup
 app.include_router(sql_router)           # /sql
 app.include_router(exercises_api_router) # /api/exercise-*
 app.include_router(budget_router)        # /budget
+app.include_router(dashboard_router)     # /dashboard
 app.include_router(clients_router)       # /clients, /clients/*
 app.include_router(schedule_router)      # /schedule, /slot/{id}
 app.include_router(slots_router)         # /slots/*, /slot/{id}/add|remove|complete
@@ -130,24 +132,33 @@ if "alembic" not in __import__("sys").modules:
         seed_exercises(db)
 
         if db.query(Client).count() == 0:
-            db.add_all([
-                Client(first_name="Иван", last_name="Петров",
+            from app.models import SubscriptionPurchase
+            clients_data = [
+                Client(first_name="Иван", last_name="Pетров",
                        birth_year=1985, birth_place="Москва",
-                       phone="+79990000001", name="Петров Иван", remaining_sessions=1,
+                       phone="+79990000001", name="Петров Иван",
                        login="client_1", password_hash=hash_password("client_1")),
                 Client(first_name="Мария", last_name="Иванова",
                        birth_year=1990, birth_place="Санкт-Петербург",
-                       phone="+79990000002", name="Иванова Мария", remaining_sessions=1,
+                       phone="+79990000002", name="Иванова Мария",
                        login="client_2", password_hash=hash_password("client_2")),
                 Client(first_name="Алексей", last_name="Сидоров",
                        birth_year=1988, birth_place="Казань",
-                       phone="+79990000003", name="Сидоров Алексей", remaining_sessions=1,
+                       phone="+79990000003", name="Сидоров Алексей",
                        login="client_3", password_hash=hash_password("client_3")),
                 Client(first_name="Денис", last_name="Тарасов",
                        birth_year=1994, birth_place="Омск",
-                       phone="+79990000004", name="Тарасов Денис", remaining_sessions=1,
+                       phone="+79990000004", name="Тарасов Денис",
                        login="client_4", password_hash=hash_password("client_4")),
-            ])
+            ]
+            db.add_all(clients_data)
+            db.flush()
+            # Пробные занятия для каждого seed-клиента
+            for cl in clients_data:
+                db.add(SubscriptionPurchase(
+                    client_id=cl.id, time_slot="-", format_name="-",
+                    package_size=1, price=0, remaining=1,
+                ))
             db.commit()
 
         if db.query(Slot).count() == 0:

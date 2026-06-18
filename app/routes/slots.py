@@ -9,7 +9,7 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func
+from sqlalchemy import func, Integer
 
 from app.database import get_db, templates
 from app.models import Slot, Booking, Client, JournalEntry, TrainingNote, TrainingPlanExercise, ClientExerciseLog, SubscriptionPurchase
@@ -17,7 +17,7 @@ from app.schemas import SlotAddForm, SlotEditForm, BookingAddForm, SlotRemoveFor
 from app.forms import parse_slot_add_form, parse_slot_edit_form, parse_booking_add_form, parse_slot_remove_form
 from app.logging_config import audit_log
 from app.auth import require_role
-from app.pricing import slot_time_slot
+from app.pricing import slot_time_slot, format_from_capacity
 
 router = APIRouter()
 
@@ -142,11 +142,25 @@ def slots_edit_post(
         new_end = new_start + timedelta(hours=1)
         if _has_overlap(db, new_start, new_end, exclude_id=slot_id):
             return RedirectResponse(f"/schedule?week_offset={form.week_offset}&flash=slot_conflict", status_code=303)
+
+        # Если время или вместимость изменились — очищаем брони и заметки
+        time_changed = slot.start_time != new_start
+        cap_changed = slot.capacity != _normalize_capacity(form.capacity)
+        flash_param = ""
+        if time_changed or cap_changed:
+            deleted_bookings = db.query(Booking).filter(Booking.slot_id == slot_id).delete()
+            db.query(TrainingNote).filter(TrainingNote.slot_id == slot_id).delete()
+            if deleted_bookings > 0:
+                audit_log("superior.audit.slots", "CLEAR_BOOKINGS",
+                          slot_id=slot_id, count=deleted_bookings)
+                flash_param = "&flash=slot_cleared"
+
         slot.start_time = new_start
         slot.capacity = _normalize_capacity(form.capacity)
         db.add(slot)
         db.commit()
         audit_log("superior.audit.slots", "UPDATE", slot_id=slot_id, time=new_start.isoformat())
+        return RedirectResponse(f"/schedule?week_offset={form.week_offset}{flash_param}", status_code=303)
     return RedirectResponse(f"/schedule?week_offset={form.week_offset}", status_code=303)
 
 
@@ -217,19 +231,36 @@ def _do_add_client(slot_id: int, form: BookingAddForm, db: Session):
     if client is None:
         return RedirectResponse(f"/slot/{slot_id}?week_offset={week_off}&flash=limit_reached", status_code=303)
 
-    # проверка остатка занятий по абонементам (с учётом временного слота)
+    # проверка остатка занятий по абонементам (с учётом time_slot и формата)
     now_dt = tz_now()
     slot_ts = slot_time_slot(slot.start_time)
+    slot_fmt = format_from_capacity(slot.capacity)
+    # Будущие брони клиента в том же time_slot и формате
+    ts_hour_map = {"УТРО": (8, 12), "ДЕНЬ": (12, 17), "ВЕЧЕР": (17, 24)}
+    h_start, h_end = ts_hour_map.get(slot_ts, (0, 24))
+    cap = slot.capacity
+    if cap <= 1:
+        cap_filter = Slot.capacity <= 1
+    elif cap == 2:
+        cap_filter = Slot.capacity == 2
+    else:
+        cap_filter = Slot.capacity >= 3
     booked_future = (
         db.query(Booking)
         .join(Slot, Booking.slot_id == Slot.id)
-        .filter(Booking.client_id == form.client_id, Slot.start_time >= now_dt)
+        .filter(
+            Booking.client_id == form.client_id,
+            Slot.start_time >= now_dt,
+            func.cast(func.strftime("%H", Slot.start_time), Integer).between(h_start, h_end - 1),
+            cap_filter,
+        )
         .count()
     )
-    # Ищем покупки для этого time_slot или универсальные (time_slot="-")
+    # Ищем покупки для этого time_slot, формата или универсальные (time_slot="-" / format_name="-")
     remaining = db.query(func.coalesce(func.sum(SubscriptionPurchase.remaining), 0)).filter(
         SubscriptionPurchase.client_id == form.client_id,
         SubscriptionPurchase.time_slot.in_([slot_ts, "-"]),
+        SubscriptionPurchase.format_name.in_([slot_fmt, "-"]),
     ).scalar() or 0
     if remaining == 0 or booked_future >= remaining:
         return RedirectResponse(f"/slot/{slot_id}?week_offset={week_off}&flash=limit_reached", status_code=303)
@@ -289,14 +320,15 @@ def complete_slot(
         if c:
             client_names.append(c.fio())
 
-            # Списание: ищем самый старый активный пакет для этого временного слота
-            # или универсальный (time_slot="-") (FIFO)
+            # Списание: ищем самый старый активный пакет для этого time_slot и формата (FIFO)
             slot_ts = slot_time_slot(slot.start_time)
+            slot_fmt = format_from_capacity(slot.capacity)
             active_purchase = (
                 db.query(SubscriptionPurchase)
                 .filter(
                     SubscriptionPurchase.client_id == c.id,
                     SubscriptionPurchase.time_slot.in_([slot_ts, "-"]),
+                    SubscriptionPurchase.format_name.in_([slot_fmt, "-"]),
                     SubscriptionPurchase.remaining > 0,
                 )
                 .order_by(SubscriptionPurchase.created_at.asc())

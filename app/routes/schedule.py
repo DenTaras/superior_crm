@@ -30,6 +30,18 @@ def schedule(
     days = [week_start + timedelta(days=i) for i in range(7)]
     hours = list(range(8, 23))
 
+    # Для индикатора «сейчас»
+    now_hour = now.hour
+    now_day_index = now.weekday()  # 0=Пн
+    # Смещение относительно показываемой недели
+    week_start_monday = week_start.date()
+    today = now.date()
+    days_offset = (today - week_start_monday).days
+    if 0 <= days_offset < 7:
+        now_col = days_offset
+    else:
+        now_col = -1  # текущий день вне показанной недели
+
     default_time = tz_now().strftime("%Y-%m-%dT%H:%M")
     default_end_time = (tz_now() + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M")
 
@@ -60,6 +72,9 @@ def schedule(
             "default_time": default_time,
             "default_end_time": default_end_time,
             "week_offset": week_offset, "user": user,
+            "now_in_week": now_col >= 0,
+            "now_col": now_col,
+            "now_hour": now_hour,
         },
     )
 

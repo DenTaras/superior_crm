@@ -148,7 +148,7 @@ def add_client_post(
     purchase = SubscriptionPurchase(
         client_id=client.id,
         time_slot="-",
-        format_name="Пробный",
+        format_name="-",
         package_size=1,
         price=0,
         remaining=1,

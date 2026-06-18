@@ -20,6 +20,7 @@ except ImportError:
 pytestmark = pytest.mark.e2e
 
 
+
 @pytest.fixture(scope="session")
 def app_url():
     """Запустить uvicorn на свободном порту, дождаться готовности, вернуть URL."""
@@ -29,13 +30,22 @@ def app_url():
         yield env_url
         return
 
-    # находим свободный порт
+    # находим свободный порт и временную БД
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
 
+    import tempfile
+    import uuid
+    tmp_db_name = f"test_e2e_{uuid.uuid4().hex[:8]}.db"
+    tmp_db_path = os.path.join(os.path.dirname(__file__), "..", tmp_db_name)
+
     url = f"http://127.0.0.1:{port}"
-    env = {**os.environ, "CSRF_DISABLE": "1"}
+    env = {
+        **os.environ,
+        "CSRF_DISABLE": "1",
+        "DATABASE_URL": f"sqlite:///{tmp_db_name}",
+    }
 
     proc = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "main:app", "--port", str(port)],
@@ -62,6 +72,11 @@ def app_url():
 
     proc.kill()
     proc.wait()
+    # удаляем временную БД
+    try:
+        os.unlink(os.path.join(os.path.dirname(__file__), "..", tmp_db_name))
+    except Exception:
+        pass
 
 
 @pytest.fixture(autouse=True)
@@ -202,8 +217,13 @@ class TestProgram:
         admin_pg.wait_for_load_state("load")
         expect(admin_pg).to_have_url(f"{app_url}/clients")
 
-        # 2. Создаём слот
-        slot_start = (datetime.now() + timedelta(hours=6)).replace(minute=0, second=0, microsecond=0)
+        # 2. Создаём слот с capacity=4 (Group, чтобы подходил под "Пробный")
+        slot_start = (datetime.now().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=1))
+        admin_pg.goto(f"{app_url}/schedule?week_offset=0")
+        admin_pg.locator("input[name='start_time']").first.fill(slot_start.strftime("%Y-%m-%dT%H:%M"))
+        admin_pg.locator("input[name='end_time']").first.fill((slot_start + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"))
+        admin_pg.select_option("select[name='capacity']", "4")
+        admin_pg.get_by_role("button", name="Добавить слоты").click()
         admin_pg.goto(f"{app_url}/schedule?week_offset=0")
         admin_pg.locator("input[name='start_time']").first.fill(slot_start.strftime("%Y-%m-%dT%H:%M"))
         admin_pg.locator("input[name='end_time']").first.fill((slot_start + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"))
