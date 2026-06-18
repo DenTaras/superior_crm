@@ -304,3 +304,23 @@ class TestSignup:
         admin_pg.goto(app_url)
         nav_link = admin_pg.locator("nav a.header__nav-link", has_text="Записаться")
         expect(nav_link).not_to_be_visible()
+
+
+class TestProfile:
+    """Тесты личного кабинета."""
+
+    def test_client_profile_shows_info(self, client_pg: Page, app_url):
+        """Клиент видит свои данные в профиле."""
+        client_pg.goto(f"{app_url}/profile")
+        expect(client_pg.locator("h1")).to_contain_text("Личный кабинет")
+        expect(client_pg.get_by_text("Телефон")).to_be_visible()
+        expect(client_pg.get_by_text("Осталось занятий")).to_be_visible()
+        expect(client_pg.get_by_text("История тренировок")).to_be_visible()
+
+    def test_admin_profile_shows_stats(self, admin_pg: Page, app_url):
+        """Админ видит статистику в профиле."""
+        admin_pg.goto(f"{app_url}/profile")
+        expect(admin_pg.locator("h1")).to_contain_text("Личный кабинет")
+        expect(admin_pg.get_by_text("Клиентов")).to_be_visible()
+        expect(admin_pg.get_by_text("Слотов")).to_be_visible()
+        expect(admin_pg.get_by_text("Записей в журнале")).to_be_visible()

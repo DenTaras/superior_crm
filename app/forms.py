@@ -35,6 +35,9 @@ def parse_client_form(
     birth_year: Optional[int] = Form(None),
     birth_place: str = Form(""),
     phone: str = Form(""),
+    height_cm: Optional[int] = Form(None),
+    weight_kg: Optional[int] = Form(None),
+    body_fat: Optional[int] = Form(None),
 ) -> ClientCreateForm:
     """Form → ClientCreateForm с валидацией."""
     return _validate(ClientCreateForm,
@@ -44,6 +47,9 @@ def parse_client_form(
         birth_year=birth_year if birth_year not in (None, "") else None,
         birth_place=birth_place,
         phone=phone,
+        height_cm=height_cm if height_cm not in (None, "") else None,
+        weight_kg=weight_kg if weight_kg not in (None, "") else None,
+        body_fat=body_fat if body_fat not in (None, "") else None,
     )
 
 

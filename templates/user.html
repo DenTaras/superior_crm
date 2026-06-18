@@ -18,19 +18,98 @@
     <hr class="mt-2 mb-2" />
     <p><strong>Телефон:</strong> {{ client.phone|format_phone }}</p>
     <p><strong>Осталось занятий:</strong> {{ client.remaining_sessions or 0 }}</p>
+    {% if client.height_cm or client.weight_kg or client.body_fat is not none %}
+    <hr class="mt-2 mb-2" />
+    <h3>Антропометрия</h3>
+    <div class="stats mt-1">
+        {% if client.height_cm %}<div class="stats__card"><div class="stats__value">{{ client.height_cm }}</div><div class="stats__label">Рост (см)</div></div>{% endif %}
+        {% if client.weight_kg %}<div class="stats__card"><div class="stats__value">{{ client.weight_kg }}</div><div class="stats__label">Вес (кг)</div></div>{% endif %}
+        {% if client.body_fat is not none %}<div class="stats__card"><div class="stats__value">{{ client.body_fat }}%</div><div class="stats__label">Жир</div></div>{% endif %}
+    </div>
+    {% endif %}
 
-    {% if bookings %}
-    <h3 class="mt-3">Мои записи</h3>
-    <table class="table mt-1">
-        <thead><tr><th class="table__header">Дата и время</th></tr></thead>
-        <tbody>
-        {% for b in bookings %}
-        <tr class="table__row"><td class="table__cell">{{ b.slot_time.strftime('%d.%m.%Y %H:%M') if b.slot_time else '' }}</td></tr>
+    {% if strength_data %}
+    <h3 class="mt-3">Силовые показатели</h3>
+    <div class="strength">
+        {% for s in strength_data %}
+        <div class="strength__card">
+            <div class="strength__name">{{ s.name }}</div>
+            <div class="strength__value">
+                {% if s.one_rm %}
+                {{ s.one_rm }} кг
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
+            </div>
+            {% if s.source %}
+            <div class="strength__source">{{ s.source }}</div>
+            {% endif %}
+            {% if s.rank %}
+            <div class="strength__rank">{{ s.rank }}</div>
+            {% endif %}
+        </div>
         {% endfor %}
-        </tbody>
-    </table>
+    </div>
+
+    {% if client.weight_kg and standards_table %}
+    <details class="mt-3" style="cursor:pointer;">
+        <summary style="color:var(--text-secondary); font-weight:600; font-size:0.9rem;">Таблица нормативов для веса {{ client.weight_kg }} кг</summary>
+        <div class="standards-wrapper mt-2">
+            <table class="standards-table">
+                <thead>
+                    <tr>
+                        <th class="standards__header">Упражнение</th>
+                        <th class="standards__header">МСМК</th>
+                        <th class="standards__header">МС</th>
+                        <th class="standards__header">КМС</th>
+                        <th class="standards__header">1 разряд</th>
+                        <th class="standards__header">2 разряд</th>
+                        <th class="standards__header">3 разряд</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in standards_table %}
+                    <tr>
+                        <td class="standards__cell standards__cell--name">{{ row.name }}</td>
+                        <td class="standards__cell">{{ row.МСМК }}</td>
+                        <td class="standards__cell">{{ row.МС }}</td>
+                        <td class="standards__cell">{{ row.КМС }}</td>
+                        <td class="standards__cell">{{ row.get("1 разряд", "") }}</td>
+                        <td class="standards__cell">{{ row.get("2 разряд", "") }}</td>
+                        <td class="standards__cell">{{ row.get("3 разряд", "") }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </details>
+    {% endif %}
+    {% endif %}
+
+    <h3 class="mt-3">История тренировок</h3>
+    {% set has_history = bookings or journal_entries %}
+    {% if has_history %}
+    {% for b in bookings %}
+    <div class="card mt-2">
+        <div class="flex-row" style="justify-content:space-between;">
+            <span><strong>{{ b.slot_time.strftime('%d.%m.%Y %H:%M') if b.slot_time else '' }}</strong></span>
+            <span class="badge badge--success">Запланировано</span>
+        </div>
+    </div>
+    {% endfor %}
+    {% for je in journal_entries %}
+    <div class="card mt-2">
+        <div class="flex-row" style="justify-content:space-between;">
+            <span><strong>{{ je.entry.created_at.strftime('%d.%m.%Y %H:%M') if je.entry.created_at else '' }}</strong></span>
+            <span class="badge badge--success">Проведено</span>
+        </div>
+        {% if je.plan %}
+        <pre class="mt-1" style="color:var(--text-secondary); font-size:0.85rem; white-space:pre-wrap; font-family:monospace; margin-top:8px;">{{ je.plan }}</pre>
+        {% endif %}
+    </div>
+    {% endfor %}
     {% else %}
-    <p class="text-muted mt-2">У вас нет активных записей.</p>
+    <p class="text-muted mt-2">Пока нет записей. Запишитесь на тренировку через <a href="/schedule">расписание</a>.</p>
     {% endif %}
     {% endif %}
 

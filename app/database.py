@@ -94,6 +94,7 @@ def ensure_client_columns():
         ("first_name", "TEXT"), ("last_name", "TEXT"), ("patronymic", "TEXT"),
         ("birth_year", "INTEGER"), ("birth_place", "TEXT"), ("phone", "TEXT"),
         ("name", "TEXT"), ("remaining_sessions", "INTEGER DEFAULT 1"),
+        ("height_cm", "INTEGER"), ("weight_kg", "INTEGER"), ("body_fat", "INTEGER"),
     ]
     with engine.connect() as conn:
         for col, coltype in to_add:

@@ -42,6 +42,14 @@ def engine(tmp_db_path):
     Base.metadata.create_all(engine)
     # перенаправляем сессии в ту же БД
     set_session_engine(engine)
+    # заполняем упражнения
+    from app.seed_exercises import seed_exercises
+    from sqlalchemy.orm import sessionmaker
+    _s = sessionmaker(bind=engine)()
+    try:
+        seed_exercises(_s)
+    finally:
+        _s.close()
     return engine
 
 

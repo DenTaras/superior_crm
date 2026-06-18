@@ -20,6 +20,9 @@ class Client(Base):
     phone = Column(String, nullable=True)
     name = Column(String, nullable=True)          # legacy — полное имя одной строкой
     remaining_sessions = Column(Integer, default=1)
+    height_cm = Column(Integer, nullable=True)
+    weight_kg = Column(Integer, nullable=True)
+    body_fat = Column(Integer, nullable=True)  # % жира
     login = Column(String, unique=True, nullable=True)
     password_hash = Column(String, nullable=True)
 
@@ -85,4 +88,33 @@ class TrainingRequest(Base):
     phone = Column(String, default="")
     goal = Column(String, default="")              # цель тренировок
     preferred_time = Column(String, default="")    # предпочитаемое время
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class ExerciseGroup(Base):
+    """Группа упражнений (СПИНА, ГРУДЬ, НОГИ и т.д.)."""
+    __tablename__ = "exercise_groups"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)
+    sort_order = Column(Integer, default=0)
+
+
+class Exercise(Base):
+    """Конкретное упражнение."""
+    __tablename__ = "exercises"
+    id = Column(Integer, primary_key=True)
+    group_id = Column(Integer, ForeignKey("exercise_groups.id"), nullable=False)
+    name = Column(String, nullable=False)
+    sort_order = Column(Integer, default=0)
+
+
+class ClientExerciseLog(Base):
+    """Лог выполнения упражнения клиентом (история для прогрессии)."""
+    __tablename__ = "client_exercise_log"
+    id = Column(Integer, primary_key=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False)
+    weight = Column(Integer, default=0)           # вес отягощения в кг
+    reps = Column(Integer, default=0)             # цель по повторениям
+    sets = Column(Integer, default=0)             # количество подходов
     created_at = Column(DateTime, default=datetime.now)

@@ -105,6 +105,9 @@ def add_client_post(
         birth_year=form.birth_year,
         birth_place=form.birth_place,
         phone=form.phone,
+        height_cm=form.height_cm,
+        weight_kg=form.weight_kg,
+        body_fat=form.body_fat,
         name=f"{form.last_name} {form.first_name}".strip(),
         remaining_sessions=1,
     )
@@ -144,6 +147,9 @@ def clients_edit_post(
         client.birth_year = form.birth_year
         client.birth_place = form.birth_place
         client.phone = form.phone
+        client.height_cm = form.height_cm
+        client.weight_kg = form.weight_kg
+        client.body_fat = form.body_fat
         client.name = f"{form.last_name} {form.first_name}".strip()
         db.add(client)
         db.commit()

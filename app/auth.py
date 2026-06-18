@@ -201,8 +201,13 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
         client_id = user.get("client_id")
         c = db.get(Client, client_id)
         bookings = []
+        journal_entries = []
+        strength_data = []
         if c:
-            from app.models import Booking, Slot
+            from app.models import Booking, Slot, JournalEntry
+            import json
+
+            # Будущие и активные бронирования
             rows = (
                 db.query(Booking, Slot)
                 .join(Slot, Booking.slot_id == Slot.id)
@@ -211,9 +216,49 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
                 .all()
             )
             bookings = [{"slot_time": s.start_time} for b, s in rows]
+
+            # История завершённых тренировок из журнала
+            cid_str = str(client_id)
+            c_name = c.fio()
+            raw_entries = (
+                db.query(JournalEntry)
+                .filter(JournalEntry.clients.contains(c_name))
+                .order_by(JournalEntry.created_at.desc())
+                .limit(50)
+                .all()
+            )
+            for je in raw_entries:
+                plan = ""
+                if je.comments:
+                    try:
+                        cmap = json.loads(je.comments)
+                        plan = cmap.get(cid_str, "")
+                    except Exception:
+                        pass
+                journal_entries.append({
+                    "entry": je,
+                    "plan": plan,
+                })
+
+            # Силовые показатели
+            from app.strength import collect_strength_data, enrich_with_rank, compute_standards_table
+            bw = c.weight_kg or 0
+            strength_data = collect_strength_data(db, client_id)
+            strength_data = enrich_with_rank(strength_data, "male", bw)
+            standards_table = compute_standards_table("male", bw) if bw > 0 else []
+
         return templates.TemplateResponse(
             request=request, name="user.html",
-            context={"user": user, "client": c, "bookings": bookings},
+            context={
+                "user": user, "client": c,
+                "bookings": bookings, "journal_entries": journal_entries,
+                "strength_data": strength_data,
+                "standards_table": standards_table,
+            },
+        )
+        return templates.TemplateResponse(
+            request=request, name="user.html",
+            context={"user": user, "client": c, "bookings": bookings, "journal_entries": journal_entries},
         )
 
     # admin / trainer

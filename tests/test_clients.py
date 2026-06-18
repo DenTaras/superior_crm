@@ -73,3 +73,101 @@ def test_create_edit_delete_client(client, db_session):
     assert r3.status_code == 303
     deleted = db_session.get(Client, created.id)
     assert deleted is None
+
+
+def test_create_client_with_anthropometry(client, db_session):
+    """Создание клиента с ростом, весом и % жира."""
+    r = client.post("/clients/create", data={
+        "first_name": "Антропо",
+        "last_name": "Тест",
+        "phone": "+79990000100",
+        "height_cm": "175",
+        "weight_kg": "80",
+        "body_fat": "15",
+    }, follow_redirects=False)
+    assert r.status_code == 303
+
+    created = db_session.query(Client).filter(Client.first_name == "Антропо").first()
+    assert created is not None
+    assert created.height_cm == 175
+    assert created.weight_kg == 80
+    assert created.body_fat == 15
+
+
+def test_edit_client_anthropometry(client, db_session):
+    """Редактирование роста/веса клиента."""
+    from app.models import Client
+
+    c = Client(first_name="EditAnthropo", last_name="Test", phone="+79990000101",
+               height_cm=170, weight_kg=70, body_fat=20)
+    db_session.add(c)
+    db_session.commit()
+
+    r = client.post(f"/clients/edit/{c.id}", data={
+        "first_name": "EditAnthropo",
+        "last_name": "Test",
+        "phone": "+79990000101",
+        "height_cm": "180",
+        "weight_kg": "85",
+        "body_fat": "18",
+    }, follow_redirects=False)
+    assert r.status_code == 303
+
+    updated = db_session.get(Client, c.id)
+    assert updated.height_cm == 180
+    assert updated.weight_kg == 85
+    assert updated.body_fat == 18
+
+
+def test_client_anthropometry_in_profile(anon_client, db_session):
+    """Антропометрия отображается в профиле клиента."""
+    from app.models import Client
+    from app.auth import hash_password
+
+    c = Client(first_name="ProfileAnthropo", last_name="Test", phone="+79990000102",
+               login="anthropo_client", password_hash=hash_password("pass"),
+               remaining_sessions=5, height_cm=165, weight_kg=60, body_fat=25)
+    db_session.add(c)
+    db_session.commit()
+
+    # логинимся
+    anon_client.post("/login", data={"login": "anthropo_client", "password": "pass"}, follow_redirects=False)
+
+    r = anon_client.get("/profile")
+    assert r.status_code == 200
+    assert "165" in r.text
+    assert "60" in r.text
+    assert "25" in r.text or "25%" in r.text
+
+
+def test_client_profile_shows_training_history(anon_client, db_session):
+    """В профиле клиента отображается история тренировок."""
+    from app.models import Client, JournalEntry
+    from datetime import datetime
+    from app.auth import hash_password
+
+    c = Client(first_name="HistoryClient", last_name="Test", phone="+79990000103",
+               login="history_client", password_hash=hash_password("pass"),
+               remaining_sessions=3)
+    db_session.add(c)
+    db_session.commit()
+
+    # добавляем запись в журнал о тренировке этого клиента
+    je = JournalEntry(
+        created_at=datetime(2026, 6, 15, 10, 0),
+        slot_time=datetime(2026, 6, 15, 10, 0),
+        clients=c.fio(),  # "Test HistoryClient" — соответствует fio()
+        comments='{"' + str(c.id) + '": "Подтягивания: 3×10\\nЖим: 4×8"}',
+    )
+    db_session.add(je)
+    db_session.commit()
+
+    # логинимся как этот клиент
+    anon_client.post("/login", data={"login": "history_client", "password": "pass"}, follow_redirects=False)
+
+    r = anon_client.get("/profile")
+    assert r.status_code == 200
+    assert "История тренировок" in r.text
+    assert "Проведено" in r.text
+    assert "Подтягивания" in r.text
+    assert "Жим" in r.text

@@ -54,6 +54,9 @@ class ClientCreateForm(BaseModel):
     birth_year: Optional[int] = Field(None, ge=1900, le=2100, description="Год рождения")
     birth_place: str = Field("", description="Место рождения")
     phone: str = Field("", description="Телефон")
+    height_cm: Optional[int] = Field(None, ge=50, le=250, description="Рост (см)")
+    weight_kg: Optional[int] = Field(None, ge=20, le=300, description="Вес (кг)")
+    body_fat: Optional[int] = Field(None, ge=0, le=99, description="% жира")
 
     @field_validator('first_name')
     @classmethod

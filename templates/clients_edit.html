@@ -12,6 +12,9 @@
     <div class="form__group"><label class="form__label">Год рождения</label><input class="form__input" type="number" name="birth_year" value="{{ client.birth_year or '' }}" /></div>
     <div class="form__group"><label class="form__label">Место рождения</label><input class="form__input" type="text" name="birth_place" value="{{ client.birth_place or '' }}" /></div>
     <div class="form__group"><label class="form__label">Телефон</label><input class="form__input" type="text" name="phone" value="{{ client.phone or '' }}" /></div>
+    <div class="form__group"><label class="form__label">Рост (см)</label><input class="form__input" type="number" name="height_cm" value="{{ client.height_cm or '' }}" min="50" max="250" /></div>
+    <div class="form__group"><label class="form__label">Вес (кг)</label><input class="form__input" type="number" name="weight_kg" value="{{ client.weight_kg or '' }}" min="20" max="300" /></div>
+    <div class="form__group"><label class="form__label">% жира</label><input class="form__input" type="number" name="body_fat" value="{{ client.body_fat or '' }}" min="0" max="99" /></div>
     <div class="form__actions">
         <button class="btn btn--primary" type="submit">Сохранить</button>
     </div>
