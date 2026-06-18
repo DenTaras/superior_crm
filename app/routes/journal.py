@@ -46,6 +46,12 @@ def journal_page(request: Request, db: Session = Depends(get_db), _: dict = Depe
 
 
 @router.get("/subscriptions")
-def subscriptions_page(request: Request, _: dict = Depends(require_role("admin", "trainer"))):
-    """Страница с перечнем абонементов."""
+def subscriptions_page(request: Request):
+    """Публичная страница с информацией об абонементах и ценах."""
     return templates.TemplateResponse(request=request, name="subscriptions.html", context={})
+
+
+@router.get("/contacts")
+def contacts_page(request: Request):
+    """Публичная страница с контактами студии."""
+    return templates.TemplateResponse(request=request, name="contacts.html", context={})

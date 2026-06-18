@@ -185,6 +185,30 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter:invert(
 .flex-row { display:flex; flex-direction:row; gap:12px; align-items:center; }
 .flex-col { display:flex; flex-direction:column; gap:12px; }
 
+/* ---- PRICING TABLE ---- */
+.pricing-wrapper { overflow-x:auto; margin-top:16px; }
+.pricing-table { width:100%; min-width:720px; border-collapse:collapse; font-size:0.9rem; }
+.pricing-table th,
+.pricing-table td { padding:10px 14px; text-align:center; border-bottom:1px solid var(--border); }
+.pricing-table thead { position:sticky; top:0; z-index:2; }
+.pricing__corner { background:var(--bg-secondary); font-weight:700; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.5px; line-height:1.6; }
+.pricing__corner span { display:block; }
+.pricing__type-header { background:var(--bg-secondary); font-weight:700; font-size:0.95rem; padding:14px 10px 6px !important; line-height:1.4; }
+.pricing__type-header--vip { color:var(--accent); }
+.pricing__type-header--double { color:var(--warning); }
+.pricing__type-header--group { color:var(--success); }
+.pricing__sub { display:block; font-weight:400; font-size:0.75rem; color:var(--text-muted); margin-top:2px; }
+.pricing__sub-header { background:var(--bg-elevated); font-weight:500; font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.3px; padding:6px 10px !important; }
+.pricing__time-row { border-top:2px solid var(--text-secondary); }
+.pricing__time-label { font-weight:700; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.3px; color:var(--text-primary); vertical-align:middle; line-height:1.5; }
+.pricing__time-label .pricing__sub { color:var(--text-muted); font-weight:400; text-transform:none; }
+.pricing__count { font-weight:600; color:var(--text-secondary); font-size:0.85rem; }
+.pricing__price { font-weight:700; color:var(--text-primary); }
+.pricing__unit { font-weight:400; color:var(--text-muted); font-size:0.82rem; }
+
+.pricing-table tbody tr:hover { background:rgba(217,4,41,.04); }
+.pricing-table tbody tr:hover .pricing__price { color:var(--text-primary); }
+
 /* ---- RESPONSIVE ---- */
 @media (max-width:992px) { .profile { grid-template-columns:1fr; } .grid-4 { grid-template-columns:repeat(2,1fr); } .program__layout { flex-direction:column; } .program__sidebar { width:100%; } }
 @media (max-width:768px) { .grid-4,.grid-3,.grid-2 { grid-template-columns:1fr; } .header__nav { display:none; } .header__user-name { display:none; } .calendar__time { display:none; } .stats { grid-template-columns:1fr; } }

@@ -2,13 +2,26 @@ from datetime import datetime, timedelta
 
 
 def test_subscriptions_page_shows_packages(client):
-    """Страница /subscriptions содержит список пакетов и цены."""
+    """Страница /subscriptions содержит матрицу цен."""
     r = client.get("/subscriptions")
     assert r.status_code == 200
     body = r.text
-    assert "12 занятий" in body
-    assert "8 занятий" in body
-    assert "4 занятия" in body
+    # Заголовки
+    assert "VIP" in body
+    assert "Double" in body
+    assert "Group" in body
+    # Временные слоты
+    assert "УТРО" in body
+    assert "ДЕНЬ" in body
+    assert "ВЕЧЕР" in body
+    # Размеры пакетов
+    assert "5200" in body or "5 200" in body
+    assert "15 600" in body
+    assert "28 600" in body
+    assert "39 000" in body
+    # Цены за занятие
+    assert "занятие" in body
+    assert "пакет" in body
 
 
 def test_add_subscription_increases_counter(client, db_session):

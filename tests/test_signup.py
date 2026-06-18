@@ -1,4 +1,4 @@
-"""Тесты заявки на пробную тренировку (/signup).
+"""Тесты публичных страниц: заявка на тренировку, контакты.
 
 Внимание: тесты используют db_session, который разделяется между тестами
 через engine (session-scoped). Поэтому каждый тест проверяет ТОЛЬКО
@@ -6,6 +6,28 @@
 """
 
 import re
+
+
+def test_contacts_page_available(anon_client):
+    """GET /contacts — страница доступна без авторизации."""
+    r = anon_client.get("/contacts")
+    assert r.status_code == 200
+    assert "Контакты" in r.text
+    assert "Адрес" in r.text or "адрес" in r.text
+    assert "+7" in r.text
+    assert "Instagram" in r.text or "instagram" in r.text
+    assert "Telegram" in r.text or "telegram" in r.text
+    assert "Режим работы" in r.text
+    assert "2ГИС" in r.text or "2gis" in r.text
+    assert 'href="/"' in r.text  # ссылка на главную через base.html
+
+
+def test_contacts_nav_link_exists(anon_client):
+    """На главной странице есть ссылка 'Контакты' для анонима."""
+    r = anon_client.get("/")
+    assert r.status_code == 200
+    assert '/contacts"' in r.text
+    assert "Контакты" in r.text
 
 
 def test_signup_page_available(anon_client):

@@ -11,7 +11,7 @@ CRM для студии персонального тренинга SUPERIOR. С
 - **Pydantic v2** — валидация форм
 - **Playwright** — E2E-тесты
 - **ruff** — линтинг (line-length=120)
-- **pytest** — 129 тестов (114 unit + 15 E2E)
+- **pytest** — 144 теста (123 unit + 21 E2E)
 - **GitHub Actions** — CI (lint + test + migrations)
 
 ## Быстрый запуск (SQLite)
