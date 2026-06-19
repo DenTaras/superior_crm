@@ -221,7 +221,8 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
         strength_data = []
         booked_by_ts: dict[str, int] = {}
         if c:
-            from app.models import Booking, Slot, JournalEntry
+            from app.models import Booking, Slot, JournalEntry, SubscriptionPurchase
+            from app.pricing import format_from_capacity
             import json
 
             # Будущие и активные бронирования
@@ -232,7 +233,71 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
                 .order_by(Slot.start_time.desc())
                 .all()
             )
-            bookings = [{"slot_time": s.start_time} for b, s in rows]
+            bookings = [{"slot_time": s.start_time, "slot_id": s.id, "slot": s} for b, s in rows]
+
+            # Доступные для бронирования слоты (будущие, не заполненные, с подходящим пакетом)
+            from sqlalchemy import func, Integer, case
+            from app.pricing import slot_time_slot, format_from_capacity
+            ts_hour_map = {"УТРО": (8, 12), "ДЕНЬ": (12, 17), "ВЕЧЕР": (17, 24)}
+            now = tz_now()
+            # Все будущие слоты
+            all_future_slots = db.query(Slot).filter(Slot.start_time >= now).order_by(Slot.start_time).all()
+            # ID слотов, где клиент уже забронирован
+            booked_slot_ids = {b.slot_id for b, _ in rows}
+
+            available_slots = []
+            client_bookings_list = []
+            for sl in all_future_slots:
+                slot_ts = slot_time_slot(sl.start_time)
+                slot_fmt = format_from_capacity(sl.capacity)
+                # Количество броней в слоте
+                booked_count = db.query(Booking).filter(Booking.slot_id == sl.id).count()
+                is_booked = sl.id in booked_slot_ids
+                if is_booked:
+                    client_bookings_list.append({
+                        "slot_id": sl.id,
+                        "start_time": sl.start_time,
+                        "capacity": sl.capacity,
+                        "format": slot_fmt,
+                        "time_slot": slot_ts,
+                        "booked": booked_count,
+                    })
+                    continue
+                # Слот полон?
+                if booked_count >= sl.capacity:
+                    continue
+                # Есть ли у клиента подходящий пакет?
+                remaining = db.query(func.coalesce(func.sum(SubscriptionPurchase.remaining), 0)).filter(
+                    SubscriptionPurchase.client_id == client_id,
+                    SubscriptionPurchase.time_slot.in_([slot_ts, "-"]),
+                    SubscriptionPurchase.format_name.in_([slot_fmt, "-"]),
+                ).scalar() or 0
+                if remaining == 0:
+                    continue
+                # Учитываем будущие брони клиента в том же time_slot+format
+                h_start, h_end = ts_hour_map.get(slot_ts, (0, 24))
+                slot_fmt_filter = case(
+                    (Slot.capacity == 1, "VIP"),
+                    (Slot.capacity == 2, "Double"),
+                    else_="Group"
+                )
+                fut = db.query(Booking).join(Slot, Booking.slot_id == Slot.id).filter(
+                    Booking.client_id == client_id,
+                    Slot.start_time >= now,
+                    func.cast(func.strftime("%H", Slot.start_time), Integer).between(h_start, h_end - 1),
+                    slot_fmt_filter == slot_fmt,
+                ).count()
+                if fut >= remaining:
+                    continue
+                available_slots.append({
+                    "slot_id": sl.id,
+                    "start_time": sl.start_time,
+                    "capacity": sl.capacity,
+                    "format": slot_fmt,
+                    "time_slot": slot_ts,
+                    "booked": booked_count,
+                    "label": f"{sl.start_time.strftime('%d.%m %H:%M')} — {slot_fmt} {slot_ts} ({booked_count}/{sl.capacity})",
+                })
 
             # История завершённых тренировок из журнала
             cid_str = str(client_id)
@@ -259,7 +324,6 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
 
             # Силовые показатели
             from app.strength import collect_strength_data, enrich_with_rank, compute_standards_table
-            from app.models import SubscriptionPurchase
             bw = c.weight_kg or 0
             strength_data = collect_strength_data(db, client_id)
             strength_data = enrich_with_rank(strength_data, "male", bw)
@@ -270,14 +334,14 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
             future_slots = (
                 db.query(SlotModel)
                 .join(Booking, Booking.slot_id == SlotModel.id)
-                .filter(Booking.client_id == client_id, SlotModel.start_time >= tz_now())
+                .filter(Booking.client_id == client_id, SlotModel.start_time >= now)
                 .all()
             )
             for sl in future_slots:
                 ts = slot_time_slot(sl.start_time)
                 booked_by_ts[ts] = booked_by_ts.get(ts, 0) + 1
 
-            # Активные абонементы (группируем одинаковые format_name+time_slot)
+            # Активные абонементы
             active_purchases_raw = (
                 db.query(SubscriptionPurchase)
                 .filter(
@@ -309,6 +373,8 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
                 "active_purchases": active_purchases,
                 "booked_by_time_slot": booked_by_ts,
                 "total_remaining": total_remaining,
+                "available_slots": available_slots,
+                "client_bookings": client_bookings_list,
             },
         )
 
@@ -327,3 +393,91 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
             "total_journal": total_journal,
         },
     )
+
+
+@router.post("/profile/book")
+def profile_book(request: Request, db: Session = Depends(get_db), slot_id: int = Form(0)):
+    """Клиент бронирует слот из личного кабинета."""
+    from app.models import Booking, Slot, SubscriptionPurchase
+    from app.pricing import slot_time_slot, format_from_capacity
+    from sqlalchemy import func, Integer, case
+    from app.logging_config import audit_log
+
+    user = get_current_user(request)
+    if not user or user["role"] != "client":
+        return RedirectResponse("/login", status_code=303)
+
+    client_id = user.get("client_id")
+    if not slot_id:
+        return RedirectResponse("/profile", status_code=303)
+
+    slot = db.get(Slot, slot_id)
+    if not slot:
+        return RedirectResponse("/profile", status_code=303)
+
+    now = tz_now()
+    if slot.start_time < now:
+        return RedirectResponse("/profile", status_code=303)
+
+    # Проверка: не забронирован ли уже
+    existing = db.query(Booking).filter(Booking.slot_id == slot_id, Booking.client_id == client_id).first()
+    if existing:
+        return RedirectResponse("/profile", status_code=303)
+
+    # Проверка вместимости
+    booked_count = db.query(Booking).filter(Booking.slot_id == slot_id).count()
+    if booked_count >= slot.capacity:
+        return RedirectResponse("/profile?flash=limit_reached", status_code=303)
+
+    # Проверка пакета
+    slot_ts = slot_time_slot(slot.start_time)
+    slot_fmt = format_from_capacity(slot.capacity)
+    remaining = db.query(func.coalesce(func.sum(SubscriptionPurchase.remaining), 0)).filter(
+        SubscriptionPurchase.client_id == client_id,
+        SubscriptionPurchase.time_slot.in_([slot_ts, "-"]),
+        SubscriptionPurchase.format_name.in_([slot_fmt, "-"]),
+    ).scalar() or 0
+    if remaining == 0:
+        return RedirectResponse("/profile?flash=limit_reached", status_code=303)
+
+    # Проверка booked_future для этого time_slot+format
+    ts_hour_map = {"УТРО": (8, 12), "ДЕНЬ": (12, 17), "ВЕЧЕР": (17, 24)}
+    h_start, h_end = ts_hour_map.get(slot_ts, (0, 24))
+    slot_fmt_filter = case(
+        (Slot.capacity == 1, "VIP"),
+        (Slot.capacity == 2, "Double"),
+        else_="Group"
+    )
+    fut = db.query(Booking).join(Slot, Booking.slot_id == Slot.id).filter(
+        Booking.client_id == client_id,
+        Slot.start_time >= now,
+        func.cast(func.strftime("%H", Slot.start_time), Integer).between(h_start, h_end - 1),
+        slot_fmt_filter == slot_fmt,
+    ).count()
+    if fut >= remaining:
+        return RedirectResponse("/profile?flash=limit_reached", status_code=303)
+
+    db.add(Booking(client_id=client_id, slot_id=slot_id))
+    db.commit()
+    audit_log("superior.audit.bookings", "ADD", client_id=client_id, slot_id=slot_id)
+    return RedirectResponse("/profile", status_code=303)
+
+
+@router.post("/profile/cancel")
+def profile_cancel(request: Request, db: Session = Depends(get_db), slot_id: int = Form(0)):
+    """Клиент отменяет свою бронь."""
+    from app.models import Booking
+    from app.logging_config import audit_log
+
+    user = get_current_user(request)
+    if not user or user["role"] != "client":
+        return RedirectResponse("/login", status_code=303)
+
+    if not slot_id:
+        return RedirectResponse("/profile", status_code=303)
+
+    client_id = user.get("client_id")
+    db.query(Booking).filter(Booking.slot_id == slot_id, Booking.client_id == client_id).delete()
+    db.commit()
+    audit_log("superior.audit.bookings", "REMOVE", client_id=client_id, slot_id=slot_id)
+    return RedirectResponse("/profile", status_code=303)

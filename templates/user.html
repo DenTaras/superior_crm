@@ -31,6 +31,41 @@
     </div>
     <div class="text-muted mt-1" style="font-size:0.75rem;">Добавьте абонемент через «Клиенты» → «Добавить абонемент» для детального учёта.</div>
     {% endif %}
+
+    {% if available_slots is defined %}
+    <hr class="mt-2 mb-2" />
+    <h3>Запись на тренировку</h3>
+    {% if client_bookings %}
+    <div class="mt-1">
+        <p class="text-muted" style="font-size:0.85rem;">Вы записаны на:</p>
+        {% for b in client_bookings %}
+        <div class="flex-row mt-1" style="justify-content:space-between;">
+            <span>{{ b.start_time.strftime('%d.%m.%Y %H:%M') }} — {{ b.format }} {{ b.time_slot }}</span>
+            <form method="post" action="/profile/cancel" class="form--inline">
+                {{ csrf_input(request) }}
+                <input type="hidden" name="slot_id" value="{{ b.slot_id }}" />
+                <button class="btn btn--small" type="submit" style="color:var(--accent);">Отменить бронь</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% if available_slots %}
+    <form method="post" action="/profile/book" class="form--row mt-1">
+        {{ csrf_input(request) }}
+        <select name="slot_id" class="form__select" style="width:auto;min-width:300px;">
+            <option value="">— выберите слот —</option>
+            {% for s in available_slots %}
+            <option value="{{ s.slot_id }}">{{ s.label }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn btn--primary btn--small" type="submit">Забронировать</button>
+    </form>
+    {% elif not client_bookings %}
+    <p class="text-muted mt-1" style="font-size:0.85rem;">Нет доступных слотов для бронирования.</p>
+    {% endif %}
+    {% endif %}
+
     {% if client.height_cm or client.weight_kg or client.body_fat is not none %}
     <hr class="mt-2 mb-2" />
     <h3>Антропометрия</h3>

@@ -34,7 +34,7 @@
         <tbody>
         {% for p in purchases %}
         <tr class="table__row">
-            <td class="table__cell">{{ p.created_at.strftime('%d.%m.%Y') }}</td>
+            <td class="table__cell">{{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
             <td class="table__cell">{{ p.client_name }}</td>
             <td class="table__cell">{{ p.format_name }} {{ p.time_slot }} {{ p.package_size }}</td>
             <td class="table__cell">{{ p.price }} руб</td>
