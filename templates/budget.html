@@ -7,7 +7,15 @@
 <div class="stats mb-3">
     <div class="stats__card">
         <div class="stats__value">{{ total_revenue }}</div>
-        <div class="stats__label">Общая выручка (руб)</div>
+        <div class="stats__label">Всего продано (руб)</div>
+    </div>
+    <div class="stats__card">
+        <div class="stats__value">{{ total_earned }}</div>
+        <div class="stats__label">Фиксированная выручка (руб)</div>
+    </div>
+    <div class="stats__card">
+        <div class="stats__value">{{ total_unearned }}</div>
+        <div class="stats__label">Незафиксированная (руб)</div>
     </div>
     <div class="stats__card">
         <div class="stats__value">{{ purchases_count }}</div>
@@ -17,7 +25,18 @@
         <div class="stats__value">{{ month_revenue }}</div>
         <div class="stats__label">За месяц (руб)</div>
     </div>
+    {% if total_refunded > 0 %}
+    <div class="stats__card" style="color:var(--danger);">
+        <div class="stats__value">{{ total_refunded }}</div>
+        <div class="stats__label">Возвращено (руб)</div>
+    </div>
+    {% endif %}
 </div>
+
+<p class="text-muted" style="font-size:0.85rem;">
+    Фиксированная — за уже проведённые занятия (возврат невозможен).<br>
+    Незафиксированная — за ещё не проведённые (потенциальные возвраты).
+</p>
 
 {% if purchases %}
 <h3>История продаж</h3>
@@ -28,7 +47,10 @@
                 <th class="table__header">Дата</th>
                 <th class="table__header">Клиент</th>
                 <th class="table__header">Абонемент</th>
-                <th class="table__header">Сумма</th>
+                <th class="table__header">Цена</th>
+                <th class="table__header">Осталось</th>
+                <th class="table__header">Фикс.</th>
+                <th class="table__header">Ожид.</th>
             </tr>
         </thead>
         <tbody>
@@ -36,8 +58,11 @@
         <tr class="table__row">
             <td class="table__cell">{{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
             <td class="table__cell">{{ p.client_name }}</td>
-            <td class="table__cell">{{ p.format_name }} {{ p.time_slot }} {{ p.package_size }}</td>
+            <td class="table__cell">{{ p.format_name }} {{ p.time_slot }} {{ p.package_size }}шт</td>
             <td class="table__cell">{{ p.price }} руб</td>
+            <td class="table__cell">{{ p.remaining }}/{{ p.package_size }}</td>
+            <td class="table__cell">{{ p.earned }} руб</td>
+            <td class="table__cell">{{ p.unearned }} руб</td>
         </tr>
         {% endfor %}
         </tbody>
@@ -45,6 +70,33 @@
 </div>
 {% else %}
 <p class="text-muted">Пока нет продаж.</p>
+{% endif %}
+
+{% if consumptions %}
+<h3 class="mt-3">История списаний</h3>
+<div class="table__wrapper mt-1">
+    <table class="table">
+        <thead>
+            <tr>
+                <th class="table__header">Когда списано</th>
+                <th class="table__header">Тренировка</th>
+                <th class="table__header">Клиент</th>
+                <th class="table__header">Абонемент</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for c in consumptions %}
+        <tr class="table__row">
+            <td class="table__cell">{{ c.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td class="table__cell">{{ c.slot_time.strftime('%d.%m %H:%M') if c.slot_time else '?' }}</td>
+            <td class="table__cell">{{ c.client_name }}</td>
+            <td class="table__cell">{{ c.format_name }} {{ c.time_slot }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="text-muted mt-1" style="font-size:0.85rem;">Последние 50 списаний.</p>
 {% endif %}
 
 {% endblock %}

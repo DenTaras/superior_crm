@@ -221,7 +221,7 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
         strength_data = []
         booked_by_ts: dict[str, int] = {}
         if c:
-            from app.models import Booking, Slot, JournalEntry, SubscriptionPurchase
+            from app.models import Booking, Slot, JournalEntry, SubscriptionPurchase, ClientExerciseLog
             from app.pricing import format_from_capacity
             import json
 
@@ -323,11 +323,52 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
                 })
 
             # Силовые показатели
-            from app.strength import collect_strength_data, enrich_with_rank, compute_standards_table
+            from app.strength import collect_strength_data, enrich_with_rank, compute_standards_table, epley_1rm
             bw = c.weight_kg or 0
             strength_data = collect_strength_data(db, client_id)
             strength_data = enrich_with_rank(strength_data, "male", bw)
             standards_table = compute_standards_table("male", bw) if bw > 0 else []
+
+            # Данные для графика прогресса (все упражнения клиента)
+            from app.models import Exercise as ExModel
+            progress_chart = {}
+            # Находим все ID упражнений, по которым есть логи
+            logged_ex_ids = (
+                db.query(ClientExerciseLog.exercise_id)
+                .filter(ClientExerciseLog.client_id == client_id)
+                .distinct()
+                .all()
+            )
+            logged_ex_ids = [r[0] for r in logged_ex_ids]
+            exercises_with_logs = (
+                db.query(ExModel)
+                .filter(ExModel.id.in_(logged_ex_ids))
+                .order_by(ExModel.name)
+                .all()
+            )
+            for ex in exercises_with_logs:
+                logs = (
+                    db.query(ClientExerciseLog)
+                    .filter(
+                        ClientExerciseLog.client_id == client_id,
+                        ClientExerciseLog.exercise_id == ex.id,
+                    )
+                    .order_by(ClientExerciseLog.created_at.asc())
+                    .all()
+                )
+                points = []
+                for log in logs:
+                    rm = epley_1rm(log.weight, log.reps)
+                    if rm:
+                        points.append({
+                            "x": log.created_at.strftime("%d.%m"),
+                            "y": rm,
+                        })
+                if len(points) >= 1:
+                    progress_chart[ex.name] = points
+            import json
+            progress_chart_json = json.dumps(progress_chart, ensure_ascii=False)
+            progress_chart_names = list(progress_chart.keys())
 
             # Будущие брони по time_slot
             from app.models import Slot as SlotModel
@@ -375,6 +416,8 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
                 "total_remaining": total_remaining,
                 "available_slots": available_slots,
                 "client_bookings": client_bookings_list,
+                "progress_chart_json": progress_chart_json,
+                "progress_chart_names": progress_chart_names,
             },
         )
 

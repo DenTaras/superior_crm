@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, UniqueConstraint, create_engine
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean, UniqueConstraint, create_engine
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -144,4 +144,17 @@ class SubscriptionPurchase(Base):
     package_size = Column(Integer, nullable=False)
     price = Column(Integer, nullable=False)
     remaining = Column(Integer, default=0)           # осталось занятий по этому пакету
+    refunded = Column(Boolean, default=False)        # полный возврат
+    refunded_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class SubscriptionConsumption(Base):
+    """Списание одного занятия по абонементу."""
+    __tablename__ = "subscription_consumptions"
+    id = Column(Integer, primary_key=True)
+    purchase_id = Column(Integer, ForeignKey("subscription_purchases.id"), nullable=False, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    slot_id = Column(Integer, ForeignKey("slots.id"), nullable=True)
+    slot_time = Column(DateTime, nullable=True)       # когда прошла тренировка
     created_at = Column(DateTime, default=datetime.now)

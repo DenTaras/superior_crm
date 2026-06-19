@@ -87,3 +87,22 @@ def seed_exercises(db):
             db.add(Exercise(group_id=group.id, name=ex_name, sort_order=eo))
 
     db.commit()
+
+
+def ensure_exercises(db):
+    """Добавить отсутствующие группы/упражнения в существующую БД."""
+    sort_order = db.query(ExerciseGroup).count()
+    for group_name, exercise_names in EXERCISES.items():
+        g = db.query(ExerciseGroup).filter(ExerciseGroup.name == group_name).first()
+        if not g:
+            sort_order += 1
+            g = ExerciseGroup(name=group_name, sort_order=sort_order)
+            db.add(g)
+            db.flush()
+        existing_names = {e.name for e in db.query(Exercise).filter(Exercise.group_id == g.id).all()}
+        max_sort = db.query(Exercise).filter(Exercise.group_id == g.id).count()
+        for ex_name in exercise_names:
+            if ex_name not in existing_names:
+                max_sort += 1
+                db.add(Exercise(group_id=g.id, name=ex_name, sort_order=max_sort))
+    db.commit()

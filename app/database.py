@@ -118,12 +118,36 @@ def ensure_journal_columns():
                 pass
 
 
+def ensure_subscription_purchase_columns():
+    """Добавить колонки refunded/refunded_at в subscription_purchases."""
+    existing = _get_table_columns("subscription_purchases")
+    if not existing:
+        return
+    with engine.connect() as conn:
+        if 'refunded' not in existing:
+            try:
+                conn.execute(text("ALTER TABLE subscription_purchases ADD COLUMN refunded BOOLEAN DEFAULT 0"))
+            except Exception:
+                pass
+        if 'refunded_at' not in existing:
+            try:
+                conn.execute(text("ALTER TABLE subscription_purchases ADD COLUMN refunded_at TIMESTAMP"))
+            except Exception:
+                pass
+
+
 def run_startup_migrations():
     """Создать таблицы и выполнить runtime-миграции (только для прямого запуска)."""
     Base.metadata.create_all(engine)
     ensure_client_columns()
     ensure_journal_columns()
+    ensure_subscription_purchase_columns()
 
-    with engine.connect() as conn:
-        # remaining_sessions column was removed; no longer need to backfill
-        pass
+    # Добавить недостающие упражнения из seed
+    from app.seed_exercises import ensure_exercises
+    from sqlalchemy.orm import sessionmaker
+    _s = sessionmaker(bind=engine)()
+    try:
+        ensure_exercises(_s)
+    finally:
+        _s.close()

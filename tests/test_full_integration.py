@@ -8,6 +8,78 @@
 from datetime import datetime, timedelta
 
 
+def test_budget_shows_earned_and_unearned_revenue(client, db_session):
+    """Бюджет показывает фиксированную и незафиксированную выручку."""
+    from app.models import Client, SubscriptionPurchase, SubscriptionConsumption
+    from app.auth import hash_password
+
+    c = Client(first_name="Budget", last_name="Test", phone="+79990000998",
+               login="budget_test", password_hash=hash_password("pass"))
+    db_session.add(c)
+    db_session.commit()
+
+    # Покупаем абонемент на 4 занятия за 8000 руб
+    p = SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="Group",
+                             package_size=4, price=8000, remaining=4)
+    db_session.add(p)
+    db_session.commit()
+
+    # Логинимся админом на бюджет
+    r = client.get("/budget")
+    assert r.status_code == 200
+    assert "Фиксированная" in r.text
+    assert "Незафиксированная" in r.text
+    # 0 проведено → earned=0, unearned=8000
+    assert "0 руб" in r.text or "0" in r.text
+    assert "8000" in r.text
+
+    # Сп writing... создаём consumption вручную (имитируем проведённое занятие)
+    db_session.add(SubscriptionConsumption(
+        purchase_id=p.id, client_id=c.id, slot_time=datetime.now(),
+    ))
+    p.remaining = 3
+    db_session.commit()
+
+    r = client.get("/budget")
+    assert r.status_code == 200
+    # 1 из 4 проведено → earned=2000 (8000/4), unearned=6000
+    assert "2000" in r.text
+    assert "6000" in r.text
+
+
+def test_subscription_consumption_is_logged_on_complete(client, db_session):
+    """При завершении тренировки создаётся запись списания."""
+    from app.models import Client, Slot, Booking, SubscriptionPurchase, SubscriptionConsumption
+
+    now = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    c = Client(first_name="Consume", last_name="Log", phone="+79990000997")
+    db_session.add(c)
+    db_session.commit()
+
+    p = SubscriptionPurchase(client_id=c.id, time_slot="УТРО", format_name="Group",
+                             package_size=2, price=6400, remaining=2)
+    db_session.add(p)
+    db_session.commit()
+
+    s = Slot(start_time=now + timedelta(days=1, hours=9), capacity=4)
+    db_session.add(s)
+    db_session.commit()
+
+    db_session.add(Booking(client_id=c.id, slot_id=s.id))
+    db_session.commit()
+
+    client.post(f"/slot/{s.id}/complete", data={"week_offset": 0}, follow_redirects=False)
+
+    consumptions = db_session.query(SubscriptionConsumption).filter(
+        SubscriptionConsumption.client_id == c.id,
+    ).all()
+    assert len(consumptions) == 1, f"Expected 1 consumption, got {len(consumptions)}"
+    cns = consumptions[0]
+    assert cns.purchase_id == p.id
+    assert cns.slot_id == s.id
+    assert cns.slot_time == s.start_time
+
+
 def test_full_cycle_all_combos_with_progression(client, anon_client, db_session):
     """Полный цикл: покупка → бронь → тренировка → прогресс в профиле."""
     from app.models import Client, Slot, Booking, SubscriptionPurchase, Exercise, TrainingPlanExercise, ClientExerciseLog
