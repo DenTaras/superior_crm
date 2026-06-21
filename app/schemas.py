@@ -57,6 +57,18 @@ class ClientCreateForm(BaseModel):
     height_cm: Optional[int] = Field(None, ge=50, le=250, description="Рост (см)")
     weight_kg: Optional[int] = Field(None, ge=20, le=300, description="Вес (кг)")
     body_fat: Optional[int] = Field(None, ge=0, le=99, description="% жира")
+    hip_cm: Optional[int] = Field(None, ge=0, le=200, description="Бедро (см)")
+    waist_cm: Optional[int] = Field(None, ge=0, le=200, description="Талия (см)")
+    chest_cm: Optional[int] = Field(None, ge=0, le=200, description="Грудь (см)")
+    shoulders_cm: Optional[int] = Field(None, ge=0, le=200, description="Плечи (см)")
+    biceps_cm: Optional[int] = Field(None, ge=0, le=100, description="Бицепс (см)")
+    neck_cm: Optional[int] = Field(None, ge=0, le=100, description="Шея (см)")
+    wrist_cm: Optional[int] = Field(None, ge=0, le=50, description="Запястье (см)")
+    skinfold_chest: Optional[int] = Field(None, ge=0, le=100, description="Кож.складка грудь (мм)")
+    skinfold_abdominal: Optional[int] = Field(None, ge=0, le=100, description="Кож.складка живот (мм)")
+    skinfold_thigh: Optional[int] = Field(None, ge=0, le=100, description="Кож.складка бедро (мм)")
+    skinfold_triceps: Optional[int] = Field(None, ge=0, le=100, description="Кож.складка трицепс (мм)")
+    skinfold_subscapular: Optional[int] = Field(None, ge=0, le=100, description="Кож.складка под лопаткой (мм)")
 
     @field_validator('first_name')
     @classmethod

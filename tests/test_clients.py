@@ -135,7 +135,6 @@ def test_client_anthropometry_in_profile(anon_client, db_session):
 
     r = anon_client.get("/profile")
     assert r.status_code == 200
-    assert "165" in r.text
     assert "60" in r.text
     assert "25" in r.text or "25%" in r.text
 

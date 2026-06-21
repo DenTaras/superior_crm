@@ -329,6 +329,32 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
             strength_data = enrich_with_rank(strength_data, "male", bw)
             standards_table = compute_standards_table("male", bw) if bw > 0 else []
 
+            # Расчёт типа телосложения по обхвату запястья
+            body_type = None
+            if c.wrist_cm:
+                w = c.wrist_cm
+                if w < 18:
+                    body_type = "Эктоморф"
+                elif w <= 20:
+                    body_type = "Мезоморф"
+                else:
+                    body_type = "Эндоморф"
+
+            # Navy Method: %жира по обхватам (только для мужчин)
+            navy_bf_pct = None
+            if c.neck_cm and c.waist_cm and c.height_cm:
+                import math
+                h_inch = c.height_cm / 2.54
+                neck_inch = c.neck_cm / 2.54
+                waist_inch = c.waist_cm / 2.54
+                navy_bf_pct = round(
+                    86.010 * math.log10(waist_inch - neck_inch)
+                    - 70.041 * math.log10(h_inch)
+                    + 36.76,
+                    1,
+                )
+                navy_bf_pct = max(3, min(navy_bf_pct, 50))
+
             # Данные для графика прогресса (все упражнения клиента)
             from app.models import Exercise as ExModel
             progress_chart = {}
@@ -369,6 +395,37 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
             import json
             progress_chart_json = json.dumps(progress_chart, ensure_ascii=False)
             progress_chart_names = list(progress_chart.keys())
+
+            # Данные для графика антропометрии
+            from app.models import AnthropometryLog
+            anthro_logs = (
+                db.query(AnthropometryLog)
+                .filter(AnthropometryLog.client_id == client_id)
+                .order_by(AnthropometryLog.created_at.asc())
+                .all()
+            )
+            anthro_chart = {}
+            if anthro_logs:
+                fields = [
+                    ("weight_kg", "Вес"),
+                    ("body_fat", "Жир"),
+                    ("hip_cm", "Бедро"),
+                    ("waist_cm", "Талия"), ("chest_cm", "Грудь"),
+                    ("shoulders_cm", "Плечи"), ("biceps_cm", "Бицепс"),
+                ]
+                for col, label in fields:
+                    points = []
+                    for log in anthro_logs:
+                        val = getattr(log, col, None)
+                        if val is not None:
+                            points.append({
+                                "x": log.created_at.strftime("%d.%m"),
+                                "y": val,
+                            })
+                    if len(points) >= 2:
+                        anthro_chart[label] = points
+            anthro_chart_json = json.dumps(anthro_chart, ensure_ascii=False)
+            anthro_chart_names = list(anthro_chart.keys())
 
             # Будущие брони по time_slot
             from app.models import Slot as SlotModel
@@ -418,6 +475,10 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
                 "client_bookings": client_bookings_list,
                 "progress_chart_json": progress_chart_json,
                 "progress_chart_names": progress_chart_names,
+                "anthro_chart_json": anthro_chart_json,
+                "anthro_chart_names": anthro_chart_names,
+                "navy_bf_pct": navy_bf_pct,
+                "body_type": body_type,
             },
         )
 

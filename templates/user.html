@@ -16,6 +16,18 @@
 
     {% if client %}
     <hr class="mt-2 mb-2" />
+    <div class="flex-row" style="gap:16px;align-items:flex-start;flex-wrap:wrap;">
+        <div style="flex-shrink:0;">
+            {% if client.photo_path %}
+            <img src="/static/{{ client.photo_path }}" alt="Фото"
+                 style="width:90px;height:120px;object-fit:cover;border-radius:8px;border:2px solid var(--border);">
+            {% else %}
+            <div style="width:90px;height:120px;border-radius:8px;border:2px solid var(--border);
+                        display:flex;align-items:center;justify-content:center;
+                        background:var(--bg-card);color:var(--text-muted);font-size:2.5rem;">?</div>
+            {% endif %}
+        </div>
+        <div style="flex:1;min-width:200px;">
     <p><strong>Телефон:</strong> {{ client.phone|format_phone }}</p>
     <p><strong>Осталось занятий:</strong> {{ total_remaining }}</p>
     {% if active_purchases %}
@@ -31,6 +43,8 @@
     </div>
     <div class="text-muted mt-1" style="font-size:0.75rem;">Добавьте абонемент через «Клиенты» → «Добавить абонемент» для детального учёта.</div>
     {% endif %}
+    </div>
+    </div>
 
     {% if available_slots is defined %}
     <hr class="mt-2 mb-2" />
@@ -66,14 +80,44 @@
     {% endif %}
     {% endif %}
 
-    {% if client.height_cm or client.weight_kg or client.body_fat is not none %}
     <hr class="mt-2 mb-2" />
-    <h3>Антропометрия</h3>
-    <div class="stats mt-1">
-        {% if client.height_cm %}<div class="stats__card"><div class="stats__value">{{ client.height_cm }}</div><div class="stats__label">Рост (см)</div></div>{% endif %}
-        {% if client.weight_kg %}<div class="stats__card"><div class="stats__value">{{ client.weight_kg }}</div><div class="stats__label">Вес (кг)</div></div>{% endif %}
-        {% if client.body_fat is not none %}<div class="stats__card"><div class="stats__value">{{ client.body_fat }}%</div><div class="stats__label">Жир</div></div>{% endif %}
+    <div style="display:flex;flex-wrap:wrap;gap:24px;">
+        <div style="flex:1;min-width:200px;">
+            <h3>Антропометрия</h3>
+            <div class="stats mt-1" style="flex-wrap:wrap;">
+                <div class="stats__card stats__card--highlight" style="border:2px solid var(--accent);">
+                    <div class="stats__value" style="color:var(--text-primary);">{{ client.body_fat if client.body_fat is not none else (navy_bf_pct|string + '%') if navy_bf_pct is not none else '—' }}</div>
+                    <div class="stats__label">% жира</div>
+                </div>
+                <div class="stats__card"><div class="stats__value" style="color:var(--text-primary);">{{ client.weight_kg if client.weight_kg else '—' }}</div><div class="stats__label">Вес (кг)</div></div>
+            </div>
+        </div>
+        <div style="flex:2;min-width:280px;">
+            <p class="text-muted" style="font-size:0.85rem;font-weight:600;margin-bottom:4px;">Обхваты (см)</p>
+            <div class="stats mt-1" style="flex-wrap:wrap;gap:6px;">
+                <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.hip_cm if client.hip_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Бедро</div></div>
+                <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.waist_cm if client.waist_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Талия</div></div>
+                <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.chest_cm if client.chest_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Грудь</div></div>
+                <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.shoulders_cm if client.shoulders_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Плечи</div></div>
+                <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.biceps_cm if client.biceps_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Бицепс</div></div>
+                <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.neck_cm if client.neck_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Шея</div></div>
+                <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.wrist_cm if client.wrist_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Запястье</div></div>
+            </div>
+        </div>
     </div>
+    {% if body_type %}
+    <p class="mt-1" style="font-size:0.9rem;color:var(--text-secondary);">
+        Телосложение: <strong>{{ body_type }}</strong>
+    </p>
+    {% endif %}
+
+    {% if anthro_chart_json and anthro_chart_json != '{}' %}
+    <details class="mt-2" style="cursor:pointer;">
+        <summary style="color:var(--text-secondary); font-weight:600; font-size:0.9rem;">Прогресс антропометрии</summary>
+        <div class="mt-2">
+            <canvas id="anthroChart" height="90"></canvas>
+        </div>
+    </details>
     {% endif %}
 
     {% if strength_data %}
@@ -102,6 +146,9 @@
     {% if client.weight_kg and standards_table %}
     <details class="mt-3" style="cursor:pointer;">
         <summary style="color:var(--text-secondary); font-weight:600; font-size:0.9rem;">Таблица нормативов для веса {{ client.weight_kg }} кг</summary>
+        <p class="text-muted mt-1" style="font-size:0.75rem;max-width:600px;">
+            Вес отягощения (в кг) для одноповторного максимума (1ПМ), необходимый для выполнения разряда при текущем весе тела.
+        </p>
         <div class="standards-wrapper mt-2">
             <table class="standards-table">
                 <thead>
@@ -250,6 +297,88 @@ if (sel) {
     buildChart(sel.value);
     sel.addEventListener('change', function(){ buildChart(this.value); });
 }
+})();
+</script>
+{% endif %}
+{% if anthro_chart_json and anthro_chart_json != '{}' %}
+<script>
+(function(){
+var allData = {{ anthro_chart_json|safe }};
+var weightPoints = allData['Вес'] || [];
+var fatPoints = allData['Жир'] || [];
+
+// Собираем все даты
+var labelSet = new Set();
+weightPoints.forEach(function(p){ labelSet.add(p.x); });
+fatPoints.forEach(function(p){ labelSet.add(p.x); });
+var labels = Array.from(labelSet).sort(function(a,b){
+    var da=a.split('.'), db=b.split('.');
+    return parseInt(da[1])-parseInt(db[1])||parseInt(da[0])-parseInt(db[0]);
+});
+
+function buildDict(points) {
+    var d = {};
+    points.forEach(function(p){ d[p.x] = p.y; });
+    return d;
+}
+var wd = buildDict(weightPoints);
+var fd = buildDict(fatPoints);
+
+new Chart(document.getElementById('anthroChart'), {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [
+            {
+                label: 'Вес (кг)',
+                data: labels.map(function(l){ return wd[l] !== undefined ? wd[l] : null; }),
+                borderColor: '#3498db',
+                backgroundColor: 'transparent',
+                yAxisID: 'y',
+                tension: 0.3,
+                spanGaps: true,
+                pointRadius: 4,
+            },
+            {
+                label: 'Жир (%)',
+                data: labels.map(function(l){ return fd[l] !== undefined ? fd[l] : null; }),
+                borderColor: '#e74c3c',
+                backgroundColor: 'transparent',
+                yAxisID: 'y1',
+                tension: 0.3,
+                spanGaps: true,
+                pointRadius: 4,
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { labels: { color: '#ccc', boxWidth: 12, padding: 8 } }
+        },
+        scales: {
+            x: { ticks: { color: '#999' }, grid: { color: '#333' } },
+            y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                ticks: { color: '#3498db' },
+                grid: { color: '#333' },
+                beginAtZero: false,
+                title: { display: true, text: 'Вес (кг)', color: '#3498db' }
+            },
+            y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                ticks: { color: '#e74c3c' },
+                grid: { drawOnChartArea: false },
+                beginAtZero: false,
+                title: { display: true, text: 'Жир (%)', color: '#e74c3c' }
+            }
+        }
+    }
+});
 })();
 </script>
 {% endif %}

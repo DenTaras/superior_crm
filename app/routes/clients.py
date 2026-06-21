@@ -1,8 +1,9 @@
 """Маршруты: управление клиентами и абонементами."""
 
+import os
 from datetime import datetime
 
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, UploadFile, File
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
@@ -183,6 +184,15 @@ def clients_edit_post(
     """Обновить данные клиента."""
     client = db.get(Client, client_id)
     if client:
+        # Проверяем, изменилась ли антропометрия
+        old_vals = (client.height_cm, client.weight_kg, client.body_fat,
+                    client.hip_cm, client.waist_cm, client.chest_cm,
+                    client.shoulders_cm, client.biceps_cm,
+                    client.neck_cm, client.wrist_cm,
+                    client.skinfold_chest, client.skinfold_abdominal,
+                    client.skinfold_thigh, client.skinfold_triceps,
+                    client.skinfold_subscapular)
+
         client.first_name = form.first_name
         client.last_name = form.last_name
         client.patronymic = form.patronymic
@@ -192,7 +202,50 @@ def clients_edit_post(
         client.height_cm = form.height_cm
         client.weight_kg = form.weight_kg
         client.body_fat = form.body_fat
+        client.hip_cm = form.hip_cm
+        client.waist_cm = form.waist_cm
+        client.chest_cm = form.chest_cm
+        client.shoulders_cm = form.shoulders_cm
+        client.biceps_cm = form.biceps_cm
+        client.neck_cm = form.neck_cm
+        client.wrist_cm = form.wrist_cm
+        client.skinfold_chest = form.skinfold_chest
+        client.skinfold_abdominal = form.skinfold_abdominal
+        client.skinfold_thigh = form.skinfold_thigh
+        client.skinfold_triceps = form.skinfold_triceps
+        client.skinfold_subscapular = form.skinfold_subscapular
         client.name = f"{form.last_name} {form.first_name}".strip()
+
+        new_vals = (client.height_cm, client.weight_kg, client.body_fat,
+                    client.hip_cm, client.waist_cm, client.chest_cm,
+                    client.shoulders_cm, client.biceps_cm,
+                    client.neck_cm, client.wrist_cm,
+                    client.skinfold_chest, client.skinfold_abdominal,
+                    client.skinfold_thigh, client.skinfold_triceps,
+                    client.skinfold_subscapular)
+
+        # Логируем, если антропометрия изменилась
+        if old_vals != new_vals:
+            from app.models import AnthropometryLog
+            db.add(AnthropometryLog(
+                client_id=client.id,
+                height_cm=client.height_cm,
+                weight_kg=client.weight_kg,
+                body_fat=client.body_fat,
+                hip_cm=client.hip_cm,
+                waist_cm=client.waist_cm,
+                chest_cm=client.chest_cm,
+                shoulders_cm=client.shoulders_cm,
+                biceps_cm=client.biceps_cm,
+                neck_cm=client.neck_cm,
+                wrist_cm=client.wrist_cm,
+                skinfold_chest=client.skinfold_chest,
+                skinfold_abdominal=client.skinfold_abdominal,
+                skinfold_thigh=client.skinfold_thigh,
+                skinfold_triceps=client.skinfold_triceps,
+                skinfold_subscapular=client.skinfold_subscapular,
+            ))
+
         db.add(client)
         db.commit()
         audit_log("superior.audit.clients", "UPDATE", client_id=client.id)
@@ -241,3 +294,36 @@ def clients_add_subscription(
               client_id=form.client_id, package=form.package_size,
               time_slot=form.time_slot, format_name=form.format_name, price=price)
     return RedirectResponse("/clients", status_code=303)
+
+
+@router.post("/clients/photo/{client_id}")
+def clients_upload_photo(
+    client_id: int,
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_role("admin", "trainer")),
+):
+    """Загрузить фото клиента."""
+    client = db.get(Client, client_id)
+    if not client:
+        return RedirectResponse("/clients", status_code=303)
+
+    # Создаём директорию для фото, если нет
+    photos_dir = os.path.join(os.path.dirname(__file__), "..", "static", "photos")
+    os.makedirs(photos_dir, exist_ok=True)
+
+    # Сохраняем как client_{id}.jpg, перезаписываем старое
+    ext = os.path.splitext(file.filename or ".jpg")[1] or ".jpg"
+    filename = f"client_{client_id}{ext}"
+    filepath = os.path.join(photos_dir, filename)
+
+    content = file.file.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    client.photo_path = f"photos/{filename}"
+    db.add(client)
+    db.commit()
+    audit_log("superior.audit.clients", "PHOTO", client_id=client_id)
+    return RedirectResponse(f"/clients/edit/{client_id}", status_code=303)

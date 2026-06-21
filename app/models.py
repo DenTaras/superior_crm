@@ -22,8 +22,22 @@ class Client(Base):
     height_cm = Column(Integer, nullable=True)
     weight_kg = Column(Integer, nullable=True)
     body_fat = Column(Integer, nullable=True)  # % жира
+    hip_cm = Column(Integer, nullable=True)       # обхват бедра
+    waist_cm = Column(Integer, nullable=True)     # обхват талии
+    chest_cm = Column(Integer, nullable=True)     # обхват груди
+    shoulders_cm = Column(Integer, nullable=True) # обхват плеч
+    biceps_cm = Column(Integer, nullable=True)    # обхват бицепса
+    neck_cm = Column(Integer, nullable=True)       # обхват шеи
+    wrist_cm = Column(Integer, nullable=True)      # обхват запястья (для типа телосложения)
+    skinfold_chest = Column(Integer, nullable=True)     # калипер: грудь (мм)
+    skinfold_abdominal = Column(Integer, nullable=True) # калипер: живот (мм)
+    skinfold_thigh = Column(Integer, nullable=True)     # калипер: бедро (мм)
+    skinfold_triceps = Column(Integer, nullable=True)   # калипер: трицепс (мм)
+    skinfold_subscapular = Column(Integer, nullable=True) # калипер: под лопаткой (мм)
     login = Column(String, unique=True, nullable=True)
     password_hash = Column(String, nullable=True)
+    photo_path = Column(String, nullable=True)   # путь к фото относительно static/
+    sex = Column(String, nullable=True)            # m/f
 
     def fio(self) -> str:
         """Краткое ФИО: «Фамилия Имя» или fallback на `name`."""
@@ -132,6 +146,29 @@ class TrainingPlanExercise(Base):
     sets = Column(Integer, default=0)             # количество подходов
     sort_order = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.now)
+
+
+class AnthropometryLog(Base):
+    """Лог изменения антропометрии клиента (для графика прогресса)."""
+    __tablename__ = "anthropometry_log"
+    id = Column(Integer, primary_key=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.now)
+    height_cm = Column(Integer, nullable=True)
+    weight_kg = Column(Integer, nullable=True)
+    body_fat = Column(Integer, nullable=True)
+    hip_cm = Column(Integer, nullable=True)
+    waist_cm = Column(Integer, nullable=True)
+    chest_cm = Column(Integer, nullable=True)
+    shoulders_cm = Column(Integer, nullable=True)
+    biceps_cm = Column(Integer, nullable=True)
+    neck_cm = Column(Integer, nullable=True)
+    wrist_cm = Column(Integer, nullable=True)
+    skinfold_chest = Column(Integer, nullable=True)
+    skinfold_abdominal = Column(Integer, nullable=True)
+    skinfold_thigh = Column(Integer, nullable=True)
+    skinfold_triceps = Column(Integer, nullable=True)
+    skinfold_subscapular = Column(Integer, nullable=True)
 
 
 class SubscriptionPurchase(Base):

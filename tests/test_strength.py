@@ -56,7 +56,7 @@ def test_collect_strength_data_empty(client, db_session):
     db_session.commit()
 
     data = collect_strength_data(db_session, c.id)
-    assert len(data) == 5
+    assert len(data) == 6
     for d in data:
         assert d["one_rm"] is None
         assert d["source"] is None
@@ -123,7 +123,7 @@ def test_standards_table():
     """Таблица нормативов для веса 80 кг."""
     from app.strength import compute_standards_table
     table = compute_standards_table("male", 80)
-    assert len(table) == 5
+    assert len(table) == 6
     deadlift_row = next(row for row in table if row["name"] == "Становая тяга")
     assert deadlift_row["МСМК"] == 200   # 2.50 × 80
     assert deadlift_row["МС"] == 176     # 2.20 × 80

@@ -4,27 +4,68 @@
 
 <h1>Редактировать клиента</h1>
 
-<form method="post" action="/clients/edit/{{ client.id }}" class="form">
-    {{ csrf_input(request) }}
-    <div class="form__group"><label class="form__label">Имя</label><input class="form__input" type="text" name="first_name" value="{{ client.first_name or '' }}" required /></div>
-    <div class="form__group"><label class="form__label">Фамилия</label><input class="form__input" type="text" name="last_name" value="{{ client.last_name or '' }}" /></div>
-    <div class="form__group"><label class="form__label">Отчество</label><input class="form__input" type="text" name="patronymic" value="{{ client.patronymic or '' }}" /></div>
-    <div class="form__group"><label class="form__label">Год рождения</label><input class="form__input" type="number" name="birth_year" value="{{ client.birth_year or '' }}" /></div>
-    <div class="form__group"><label class="form__label">Место рождения</label><input class="form__input" type="text" name="birth_place" value="{{ client.birth_place or '' }}" /></div>
-    <div class="form__group"><label class="form__label">Телефон</label><input class="form__input" type="text" name="phone" value="{{ client.phone or '' }}" /></div>
-    <div class="form__group"><label class="form__label">Рост (см)</label><input class="form__input" type="number" name="height_cm" value="{{ client.height_cm or '' }}" min="50" max="250" /></div>
-    <div class="form__group"><label class="form__label">Вес (кг)</label><input class="form__input" type="number" name="weight_kg" value="{{ client.weight_kg or '' }}" min="20" max="300" /></div>
-    <div class="form__group"><label class="form__label">% жира</label><input class="form__input" type="number" name="body_fat" value="{{ client.body_fat or '' }}" min="0" max="99" /></div>
-    <div class="form__actions">
-        <button class="btn btn--primary" type="submit">Сохранить</button>
+<div class="flex-row" style="gap:24px;align-items:flex-start;flex-wrap:wrap;">
+    <div style="flex-shrink:0;text-align:center;">
+        {% if client.photo_path %}
+        <img src="/static/{{ client.photo_path }}" alt="Фото"
+             style="width:120px;height:160px;object-fit:cover;border-radius:8px;border:2px solid var(--border);">
+        {% else %}
+        <div style="width:120px;height:160px;border-radius:8px;border:2px solid var(--border);
+                    display:flex;align-items:center;justify-content:center;
+                    background:var(--bg-card);color:var(--text-muted);font-size:3rem;">?</div>
+        {% endif %}
+        <form method="post" action="/clients/photo/{{ client.id }}" enctype="multipart/form-data" class="mt-1">
+            {{ csrf_input(request) }}
+            <input type="file" name="file" accept="image/*" required style="font-size:0.8rem;max-width:120px;">
+            <button class="btn btn--small btn--primary mt-1" type="submit">Загрузить</button>
+        </form>
     </div>
-</form>
 
-<div class="form__actions">
-    <form method="post" action="/clients/delete/{{ client.id }}" onsubmit="return confirm('Удалить клиента?');" class="form--inline">
+    <div style="flex:1;min-width:300px;">
+    <form method="post" action="/clients/edit/{{ client.id }}" class="form">
         {{ csrf_input(request) }}
-        <button class="btn btn--secondary">Удалить</button>
+        <div class="form__group"><label class="form__label">Имя</label><input class="form__input" type="text" name="first_name" value="{{ client.first_name or '' }}" required /></div>
+        <div class="form__group"><label class="form__label">Фамилия</label><input class="form__input" type="text" name="last_name" value="{{ client.last_name or '' }}" /></div>
+        <div class="form__group"><label class="form__label">Отчество</label><input class="form__input" type="text" name="patronymic" value="{{ client.patronymic or '' }}" /></div>
+        <div class="form__group"><label class="form__label">Год рождения</label><input class="form__input" type="number" name="birth_year" value="{{ client.birth_year or '' }}" /></div>
+        <div class="form__group"><label class="form__label">Место рождения</label><input class="form__input" type="text" name="birth_place" value="{{ client.birth_place or '' }}" /></div>
+        <div class="form__group"><label class="form__label">Телефон</label><input class="form__input" type="text" name="phone" value="{{ client.phone or '' }}" /></div>
+        <div class="form__group"><label class="form__label">Рост (см)</label><input class="form__input" type="number" name="height_cm" value="{{ client.height_cm or '' }}" min="50" max="250" /></div>
+        <div class="form__group"><label class="form__label">Вес (кг)</label><input class="form__input" type="number" name="weight_kg" value="{{ client.weight_kg or '' }}" min="20" max="300" /></div>
+        <fieldset class="mt-2" style="border:1px solid var(--border);border-radius:8px;padding:12px;">
+            <legend style="color:var(--text-secondary);font-size:0.9rem;font-weight:600;">Доп. обмеры (см)</legend>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="form__group"><label class="form__label">Шея</label><input class="form__input" type="number" name="neck_cm" value="{{ client.neck_cm or '' }}" min="0" max="100" /></div>
+            <div class="form__group"><label class="form__label">Запястье</label><input class="form__input" type="number" name="wrist_cm" value="{{ client.wrist_cm or '' }}" min="0" max="50" /></div>
+            <div class="form__group"><label class="form__label">Бедро</label><input class="form__input" type="number" name="hip_cm" value="{{ client.hip_cm or '' }}" min="0" max="200" /></div>
+            <div class="form__group"><label class="form__label">Талия</label><input class="form__input" type="number" name="waist_cm" value="{{ client.waist_cm or '' }}" min="0" max="200" /></div>
+            <div class="form__group"><label class="form__label">Грудь</label><input class="form__input" type="number" name="chest_cm" value="{{ client.chest_cm or '' }}" min="0" max="200" /></div>
+            <div class="form__group"><label class="form__label">Плечи</label><input class="form__input" type="number" name="shoulders_cm" value="{{ client.shoulders_cm or '' }}" min="0" max="200" /></div>
+            <div class="form__group"><label class="form__label">Бицепс</label><input class="form__input" type="number" name="biceps_cm" value="{{ client.biceps_cm or '' }}" min="0" max="100" /></div>
+            </div>
+        </fieldset>
+        <fieldset class="mt-2" style="border:1px solid var(--border);border-radius:8px;padding:12px;">
+            <legend style="color:var(--text-secondary);font-size:0.9rem;font-weight:600;">Калипер (кожные складки, мм)</legend>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="form__group"><label class="form__label">Грудь</label><input class="form__input" type="number" name="skinfold_chest" value="{{ client.skinfold_chest or '' }}" min="0" max="100" /></div>
+            <div class="form__group"><label class="form__label">Живот</label><input class="form__input" type="number" name="skinfold_abdominal" value="{{ client.skinfold_abdominal or '' }}" min="0" max="100" /></div>
+            <div class="form__group"><label class="form__label">Бедро</label><input class="form__input" type="number" name="skinfold_thigh" value="{{ client.skinfold_thigh or '' }}" min="0" max="100" /></div>
+            <div class="form__group"><label class="form__label">Трицепс</label><input class="form__input" type="number" name="skinfold_triceps" value="{{ client.skinfold_triceps or '' }}" min="0" max="100" /></div>
+            <div class="form__group"><label class="form__label">Под лопаткой</label><input class="form__input" type="number" name="skinfold_subscapular" value="{{ client.skinfold_subscapular or '' }}" min="0" max="100" /></div>
+            </div>
+        </fieldset>
+        <div class="form__actions">
+            <button class="btn btn--primary" type="submit">Сохранить</button>
+        </div>
     </form>
+
+    <div class="form__actions">
+        <form method="post" action="/clients/delete/{{ client.id }}" onsubmit="return confirm('Удалить клиента?');" class="form--inline">
+            {{ csrf_input(request) }}
+            <button class="btn btn--secondary">Удалить</button>
+        </form>
+    </div>
+</div>
 </div>
 
 {% endblock %}

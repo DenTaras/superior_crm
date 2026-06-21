@@ -95,6 +95,14 @@ def ensure_client_columns():
         ("birth_year", "INTEGER"), ("birth_place", "TEXT"), ("phone", "TEXT"),
         ("name", "TEXT"),
         ("height_cm", "INTEGER"), ("weight_kg", "INTEGER"), ("body_fat", "INTEGER"),
+        ("photo_path", "TEXT"),
+        ("hip_cm", "INTEGER"), ("waist_cm", "INTEGER"), ("chest_cm", "INTEGER"),
+        ("shoulders_cm", "INTEGER"), ("biceps_cm", "INTEGER"),
+        ("neck_cm", "INTEGER"), ("wrist_cm", "INTEGER"),
+        ("skinfold_chest", "INTEGER"), ("skinfold_abdominal", "INTEGER"),
+        ("skinfold_thigh", "INTEGER"), ("skinfold_triceps", "INTEGER"),
+        ("skinfold_subscapular", "INTEGER"),
+        ("sex", "TEXT"),
     ]
     with engine.connect() as conn:
         for col, coltype in to_add:
@@ -136,12 +144,33 @@ def ensure_subscription_purchase_columns():
                 pass
 
 
+def ensure_anthropometry_log_columns():
+    """Добавить новые колонки в anthropometry_log (если таблица уже существует)."""
+    existing = _get_table_columns("anthropometry_log")
+    if not existing:
+        return
+    to_add = [
+        ("neck_cm", "INTEGER"), ("wrist_cm", "INTEGER"),
+        ("skinfold_chest", "INTEGER"), ("skinfold_abdominal", "INTEGER"),
+        ("skinfold_thigh", "INTEGER"), ("skinfold_triceps", "INTEGER"),
+        ("skinfold_subscapular", "INTEGER"),
+    ]
+    with engine.connect() as conn:
+        for col, coltype in to_add:
+            if col not in existing:
+                try:
+                    conn.execute(text(f"ALTER TABLE anthropometry_log ADD COLUMN {col} {coltype}"))
+                except Exception:
+                    pass
+
+
 def run_startup_migrations():
     """Создать таблицы и выполнить runtime-миграции (только для прямого запуска)."""
     Base.metadata.create_all(engine)
     ensure_client_columns()
     ensure_journal_columns()
     ensure_subscription_purchase_columns()
+    ensure_anthropometry_log_columns()
 
     # Добавить недостающие упражнения из seed
     from app.seed_exercises import ensure_exercises

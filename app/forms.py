@@ -38,6 +38,18 @@ def parse_client_form(
     height_cm: Optional[int] = Form(None),
     weight_kg: Optional[int] = Form(None),
     body_fat: Optional[int] = Form(None),
+    hip_cm: Optional[int] = Form(None),
+    waist_cm: Optional[int] = Form(None),
+    chest_cm: Optional[int] = Form(None),
+    shoulders_cm: Optional[int] = Form(None),
+    biceps_cm: Optional[int] = Form(None),
+    neck_cm: Optional[int] = Form(None),
+    wrist_cm: Optional[int] = Form(None),
+    skinfold_chest: Optional[int] = Form(None),
+    skinfold_abdominal: Optional[int] = Form(None),
+    skinfold_thigh: Optional[int] = Form(None),
+    skinfold_triceps: Optional[int] = Form(None),
+    skinfold_subscapular: Optional[int] = Form(None),
 ) -> ClientCreateForm:
     """Form → ClientCreateForm с валидацией."""
     return _validate(ClientCreateForm,
@@ -50,6 +62,18 @@ def parse_client_form(
         height_cm=height_cm if height_cm not in (None, "") else None,
         weight_kg=weight_kg if weight_kg not in (None, "") else None,
         body_fat=body_fat if body_fat not in (None, "") else None,
+        hip_cm=hip_cm if hip_cm not in (None, "") else None,
+        waist_cm=waist_cm if waist_cm not in (None, "") else None,
+        chest_cm=chest_cm if chest_cm not in (None, "") else None,
+        shoulders_cm=shoulders_cm if shoulders_cm not in (None, "") else None,
+        biceps_cm=biceps_cm if biceps_cm not in (None, "") else None,
+        neck_cm=neck_cm if neck_cm not in (None, "") else None,
+        wrist_cm=wrist_cm if wrist_cm not in (None, "") else None,
+        skinfold_chest=skinfold_chest if skinfold_chest not in (None, "") else None,
+        skinfold_abdominal=skinfold_abdominal if skinfold_abdominal not in (None, "") else None,
+        skinfold_thigh=skinfold_thigh if skinfold_thigh not in (None, "") else None,
+        skinfold_triceps=skinfold_triceps if skinfold_triceps not in (None, "") else None,
+        skinfold_subscapular=skinfold_subscapular if skinfold_subscapular not in (None, "") else None,
     )
 
 
