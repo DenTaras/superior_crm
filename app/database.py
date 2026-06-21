@@ -103,6 +103,8 @@ def ensure_client_columns():
         ("skinfold_thigh", "INTEGER"), ("skinfold_triceps", "INTEGER"),
         ("skinfold_subscapular", "INTEGER"),
         ("sex", "TEXT"),
+        ("goal", "TEXT"),
+        ("activity_level", "TEXT"),
     ]
     with engine.connect() as conn:
         for col, coltype in to_add:
@@ -164,6 +166,41 @@ def ensure_anthropometry_log_columns():
                     pass
 
 
+def ensure_meal_templates_columns():
+    """Добавить колонки ingredients/recipe в meal_templates."""
+    existing = _get_table_columns("meal_templates")
+    if not existing:
+        return
+    with engine.connect() as conn:
+        if 'ingredients' not in existing:
+            try:
+                conn.execute(text("ALTER TABLE meal_templates ADD COLUMN ingredients TEXT"))
+            except Exception:
+                pass
+        if 'recipe' not in existing:
+            try:
+                conn.execute(text("ALTER TABLE meal_templates ADD COLUMN recipe TEXT"))
+            except Exception:
+                pass
+        if 'course' not in existing:
+            try:
+                conn.execute(text("ALTER TABLE meal_templates ADD COLUMN course TEXT"))
+            except Exception:
+                pass
+    # Заполняем course для существующих записей (main по умолчанию)
+    from app.seed_meals import _infer_course
+    from sqlalchemy.orm import sessionmaker
+    _s = sessionmaker(bind=engine)()
+    try:
+        from app.models import MealTemplate
+        for mt in _s.query(MealTemplate).filter(MealTemplate.course.is_(None)).all():
+            mt.course = _infer_course(mt.meal_type, mt.name)
+            _s.add(mt)
+        _s.commit()
+    finally:
+        _s.close()
+
+
 def run_startup_migrations():
     """Создать таблицы и выполнить runtime-миграции (только для прямого запуска)."""
     Base.metadata.create_all(engine)
@@ -171,6 +208,7 @@ def run_startup_migrations():
     ensure_journal_columns()
     ensure_subscription_purchase_columns()
     ensure_anthropometry_log_columns()
+    ensure_meal_templates_columns()
 
     # Добавить недостающие упражнения из seed
     from app.seed_exercises import ensure_exercises
@@ -180,3 +218,11 @@ def run_startup_migrations():
         ensure_exercises(_s)
     finally:
         _s.close()
+
+    # Seed шаблонов питания
+    from app.seed_meals import seed_meals
+    _s2 = sessionmaker(bind=engine)()
+    try:
+        seed_meals(_s2)
+    finally:
+        _s2.close()

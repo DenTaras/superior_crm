@@ -38,6 +38,8 @@ class Client(Base):
     password_hash = Column(String, nullable=True)
     photo_path = Column(String, nullable=True)   # путь к фото относительно static/
     sex = Column(String, nullable=True)            # m/f
+    goal = Column(String, nullable=True)             # lose | gain | recompose
+    activity_level = Column(String, nullable=True)   # sedentary | light | moderate | active | extreme
 
     def fio(self) -> str:
         """Краткое ФИО: «Фамилия Имя» или fallback на `name`."""
@@ -146,6 +148,32 @@ class TrainingPlanExercise(Base):
     sets = Column(Integer, default=0)             # количество подходов
     sort_order = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.now)
+
+
+class FoodRestriction(Base):
+    """Продукт/категория, которую клиент исключает из рациона."""
+    __tablename__ = "food_restrictions"
+    id = Column(Integer, primary_key=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    tag = Column(String, nullable=False)  # "молоко" | "свинина" | "глютен" | "орехи"
+
+
+class MealTemplate(Base):
+    """Шаблон приёма пищи."""
+    __tablename__ = "meal_templates"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    meal_type = Column(String, nullable=False)  # breakfast | snack | lunch | dinner
+    course = Column(String, nullable=True)       # main | first | drink
+    calories = Column(Integer, default=0)
+    protein = Column(Integer, default=0)
+    fat = Column(Integer, default=0)
+    carbs = Column(Integer, default=0)
+    weight_g = Column(Integer, default=0)
+    tags = Column(Text, nullable=True)        # JSON: ["молоко","орехи"]
+    ingredients = Column(Text, nullable=True)  # список продуктов на порцию
+    recipe = Column(Text, nullable=True)       # краткое описание приготовления
+    sort_order = Column(Integer, default=0)
 
 
 class AnthropometryLog(Base):
