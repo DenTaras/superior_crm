@@ -43,6 +43,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-family:Inte
 .header__nav { display:flex; gap:24px; }
 .header__nav-link { color:var(--text-secondary); text-decoration:none; transition:var(--transition); font-size:1.05rem; }
 .header__nav-link:hover { color:var(--accent); }
+.header__nav-link--active { color:var(--accent); font-weight:600; }
 .header__user { display:flex; align-items:center; gap:12px; font-size:14px; }
 .header__user-name { color:var(--text-secondary); text-decoration:none; transition:var(--transition); }
 .header__user-name:hover { color:var(--text-primary); }

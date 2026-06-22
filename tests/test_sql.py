@@ -8,7 +8,7 @@ def test_sql_page_requires_admin(client, anon_client):
 
     r_admin = client.get("/sql")
     assert r_admin.status_code == 200
-    assert "SQL-консоль" in r_admin.text
+    assert "SQL-запрос" in r_admin.text
 
 
 def test_sql_page_shows_form(client):

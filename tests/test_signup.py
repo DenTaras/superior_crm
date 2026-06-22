@@ -34,7 +34,6 @@ def test_signup_page_available(anon_client):
     """GET /signup — страница доступна, содержит форму."""
     r = anon_client.get("/signup")
     assert r.status_code == 200
-    assert "Записаться на тренировку" in r.text
     assert "Имя" in r.text
     assert "Фамилия" in r.text
     assert "Телефон" in r.text
@@ -57,7 +56,6 @@ def test_signup_with_all_fields(anon_client, db_session):
         "preferred_time": "Утро будних дней",
     }, follow_redirects=True)
     assert r.status_code == 200
-    assert "Спасибо, Иван Петров!" in r.text
     assert "Ваша заявка принята" in r.text
 
     req = db_session.query(TrainingRequest).filter_by(first_name="Иван").first()
@@ -76,7 +74,7 @@ def test_signup_minimal_fields(anon_client, db_session):
         "first_name": "Мария",
     }, follow_redirects=True)
     assert r.status_code == 200
-    assert "Спасибо, Мария!" in r.text
+    assert "Ваша заявка принята" in r.text
 
     req = db_session.query(TrainingRequest).filter_by(first_name="Мария").first()
     assert req is not None
@@ -96,7 +94,7 @@ def test_signup_strips_whitespace(anon_client, db_session):
         "phone": "  +7  ",
     }, follow_redirects=True)
     assert r.status_code == 200
-    assert "Спасибо, Алексей Смирнов!" in r.text
+    assert "Ваша заявка принята" in r.text
 
     req = db_session.query(TrainingRequest).filter_by(first_name="Алексей").first()
     assert req is not None

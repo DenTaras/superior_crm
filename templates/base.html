@@ -32,21 +32,22 @@
         </a>
         <nav class="header__nav">
             {% set _user = request.session.get('user') %}
+            {% set _path = request.url.path %}
             {% if _user and _user.role in ('admin', 'trainer') %}
-            <a href="/schedule" class="header__nav-link">Расписание</a>
-            <a href="/clients" class="header__nav-link">Клиенты</a>
-            <a href="/subscriptions" class="header__nav-link">Абонементы</a>
-            <a href="/journal" class="header__nav-link">Журнал</a>
-            <a href="/dashboard" class="header__nav-link">Дашборд</a>
-            <a href="/budget" class="header__nav-link">Бюджет</a>
-            <a href="/sql" class="header__nav-link">SQL</a>
+            <a href="/schedule" class="header__nav-link{% if _path.startswith('/schedule') or _path.startswith('/slot/') %} header__nav-link--active{% endif %}">Расписание</a>
+            <a href="/clients" class="header__nav-link{% if _path.startswith('/clients') %} header__nav-link--active{% endif %}">Клиенты</a>
+            <a href="/subscriptions" class="header__nav-link{% if _path == '/subscriptions' %} header__nav-link--active{% endif %}">Абонементы</a>
+            <a href="/journal" class="header__nav-link{% if _path == '/journal' %} header__nav-link--active{% endif %}">Журнал</a>
+            <a href="/dashboard" class="header__nav-link{% if _path == '/dashboard' %} header__nav-link--active{% endif %}">Дашборд</a>
+            <a href="/budget" class="header__nav-link{% if _path == '/budget' %} header__nav-link--active{% endif %}">Бюджет</a>
+            <a href="/sql" class="header__nav-link{% if _path == '/sql' %} header__nav-link--active{% endif %}">SQL</a>
             {% elif _user and _user.role == 'client' %}
-            <a href="/schedule" class="header__nav-link">Расписание</a>
-            <a href="/profile/nutrition" class="header__nav-link">Питание</a>
+            <a href="/schedule" class="header__nav-link{% if _path.startswith('/schedule') or _path.startswith('/slot/') %} header__nav-link--active{% endif %}">Расписание</a>
+            <a href="/profile/nutrition" class="header__nav-link{% if _path == '/profile/nutrition' %} header__nav-link--active{% endif %}">Питание</a>
             {% else %}
-            <a href="/signup" class="header__nav-link">Записаться</a>
-            <a href="/subscriptions" class="header__nav-link">Абонементы</a>
-            <a href="/contacts" class="header__nav-link">Контакты</a>
+            <a href="/signup" class="header__nav-link{% if _path == '/signup' %} header__nav-link--active{% endif %}">Записаться</a>
+            <a href="/subscriptions" class="header__nav-link{% if _path == '/subscriptions' %} header__nav-link--active{% endif %}">Абонементы</a>
+            <a href="/contacts" class="header__nav-link{% if _path == '/contacts' %} header__nav-link--active{% endif %}">Контакты</a>
             {% endif %}
         </nav>
         <div class="header__user">
