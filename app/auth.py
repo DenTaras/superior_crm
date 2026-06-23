@@ -235,7 +235,6 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
     user = get_current_user(request)
     if not user:
         return RedirectResponse("/login", status_code=303)
-
     if user["role"] == "client":
         client_id = user.get("client_id")
         c = db.get(Client, client_id)
@@ -338,8 +337,9 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
                     try:
                         cmap = json.loads(je.comments)
                         plan = cmap.get(cid_str, "")
-                    except Exception:
-                        pass
+                    except Exception as ex:
+                        import logging as _lg_auth
+                        _lg_auth.getLogger("superior.request").warning("PROFILE: parse journal comments: %s", ex)
                 journal_entries.append({
                     "entry": je,
                     "plan": plan,

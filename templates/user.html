@@ -2,6 +2,20 @@
 
 {% block content %}
 
+{% set payment_param = request.query_params.get('payment') %}
+{% if payment_param == 'success' %}
+<div class="flash flash--success" style="padding:12px 16px;margin-bottom:16px;border-radius:8px;background:var(--accent-bg);color:var(--accent);font-weight:600;">
+    ✅ Оплата прошла успешно! Абонемент активирован.
+</div>
+{% elif payment_param == 'cancelled' %}
+<div class="flash flash--info" style="padding:12px 16px;margin-bottom:16px;border-radius:8px;background:var(--bg-card);color:var(--text-secondary);">
+    Оплата отменена. Вы можете попробовать снова на странице <a href="/subscriptions">абонементов</a>.
+</div>
+{% elif payment_param == 'test' %}
+<div class="flash flash--success" style="padding:12px 16px;margin-bottom:16px;border-radius:8px;background:var(--accent-bg);color:var(--accent);font-weight:600;">
+    🧪 Тестовый платёж выполнен! Абонемент активирован (режим разработки).
+</div>
+{% endif %}
 
 <div class="panel">
     <p><strong>Пользователь:</strong> {{ user.name }}</p>

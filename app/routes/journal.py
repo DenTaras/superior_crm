@@ -29,14 +29,17 @@ def journal_page(request: Request, db: Session = Depends(get_db), _: dict = Depe
         try:
             if e.comments:
                 comments_map = json.loads(e.comments)
-        except Exception:
+        except Exception as ex:
+            import logging as _lg
+            _lg.getLogger("superior.request").warning("JOURNAL: failed to parse comments: %s", ex)
             comments_map = {}
         comments_list = []
         for cid, text in comments_map.items():
             try:
                 c = db.get(Client, int(cid))
                 name = c.fio() if c else f"#{cid}"
-            except Exception:
+            except Exception as ex:
+                _lg.getLogger("superior.request").warning("JOURNAL: failed to resolve client %s: %s", cid, ex)
                 name = f"#{cid}"
             comments_list.append((name, text))
         entries.append({"entry": e, "comments": comments_list})

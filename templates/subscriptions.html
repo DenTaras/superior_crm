@@ -158,4 +158,72 @@
     ** Цены указаны в рублях. Абонемент действует 90 дней с даты покупки.
 </p>
 
+{% set _user = request.session.get('user') %}
+{% if _user and _user.role == 'client' %}
+<hr class="mt-3 mb-2">
+<h3>Купить абонемент</h3>
+<form id="paymentForm" class="form--row mt-1" style="gap:8px;flex-wrap:wrap;">
+    <select id="ts" class="form__select" required style="width:auto;min-width:140px;">
+        <option value="">Время</option>
+        <option value="УТРО">Утро (8–12)</option>
+        <option value="ДЕНЬ">День (12–18)</option>
+        <option value="ВЕЧЕР">Вечер (18–21)</option>
+    </select>
+    <select id="fmt" class="form__select" required style="width:auto;min-width:140px;">
+        <option value="">Формат</option>
+        <option value="VIP">VIP — индивидуально</option>
+        <option value="Double">Double — 2 чел.</option>
+        <option value="Group">Group — до 4 чел.</option>
+    </select>
+    <select id="pkg" class="form__select" required style="width:auto;min-width:100px;">
+        <option value="">Пакет</option>
+        <option value="1">1 занятие</option>
+        <option value="4">4 занятия</option>
+        <option value="8">8 занятий</option>
+        <option value="12">12 занятий</option>
+    </select>
+    <button type="submit" class="btn btn--primary" id="payBtn">Оплатить</button>
+</form>
+<div id="paymentStatus" class="mt-1" style="font-size:0.9rem;"></div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+{% if _user and _user.role == 'client' %}
+<script>
+document.getElementById('paymentForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('payBtn');
+    const status = document.getElementById('paymentStatus');
+    btn.disabled = true;
+    status.textContent = 'Создание платежа…';
+    status.style.color = 'var(--text-secondary)';
+
+    try {
+        const resp = await fetch('/api/create-payment', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({
+                'time_slot': document.getElementById('ts').value,
+                'format_name': document.getElementById('fmt').value,
+                'package_size': document.getElementById('pkg').value,
+            }),
+        });
+        const data = await resp.json();
+        if (data.redirect_url) {
+            window.location.href = data.redirect_url;
+        } else if (data.error) {
+            status.textContent = 'Ошибка: ' + data.error;
+            status.style.color = 'var(--danger)';
+        }
+    } catch (err) {
+        status.textContent = 'Ошибка соединения';
+        status.style.color = 'var(--danger)';
+    } finally {
+        btn.disabled = false;
+    }
+});
+</script>
+{% endif %}
 {% endblock %}

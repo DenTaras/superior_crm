@@ -45,13 +45,7 @@ class Client(Base):
 
     def fio(self) -> str:
         """Краткое ФИО: «Фамилия Имя» или fallback на `name`."""
-        parts = []
-        if self.last_name:
-            parts.append(self.last_name)
-        if self.first_name:
-            parts.append(self.first_name)
-        if self.patronymic:
-            parts.append(self.patronymic)
+        parts = [p for p in [self.last_name, self.first_name, self.patronymic] if p]
         if parts:
             return " ".join(parts)
         return (self.name or "").strip()
@@ -267,13 +261,7 @@ class Employee(Base):
     created_at = Column(DateTime, default=datetime.now)
 
     def fio(self) -> str:
-        parts = []
-        if self.last_name:
-            parts.append(self.last_name)
-        if self.first_name:
-            parts.append(self.first_name)
-        if self.patronymic:
-            parts.append(self.patronymic)
+        parts = [p for p in [self.last_name, self.first_name, self.patronymic] if p]
         return " ".join(parts) or "—"
 
 
@@ -284,6 +272,22 @@ class SlotEmployee(Base):
     slot_id = Column(Integer, ForeignKey("slots.id"), nullable=False, index=True)
     employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
     assigned_at = Column(DateTime, default=datetime.now)
+
+
+class Payment(Base):
+    """Платёж через онлайн-эквайринг."""
+    __tablename__ = "payments"
+    id = Column(Integer, primary_key=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    amount = Column(Integer, nullable=False)                       # сумма в копейках
+    currency = Column(String, default="RUB")
+    description = Column(String, default="")
+    provider = Column(String, default="yookassa")                  # yookassa | tinkoff | sber
+    provider_payment_id = Column(String, nullable=True)            # ID платежа в ПШ
+    status = Column(String, default="pending")                      # pending | succeeded | cancelled | refunded
+    metadata_json = Column(Text, nullable=True)                     # JSON: time_slot, format, package_size
+    confirmed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
 
 
 class Expense(Base):

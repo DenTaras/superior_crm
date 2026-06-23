@@ -39,11 +39,14 @@
             <a href="/subscriptions" class="header__nav-link{% if _path == '/subscriptions' %} header__nav-link--active{% endif %}">Абонементы</a>
             <a href="/journal" class="header__nav-link{% if _path == '/journal' %} header__nav-link--active{% endif %}">Журнал</a>
             <a href="/dashboard" class="header__nav-link{% if _path == '/dashboard' %} header__nav-link--active{% endif %}">Дашборд</a>
+            {% if _user.role == 'admin' %}
             <a href="/budget" class="header__nav-link{% if _path == '/budget' %} header__nav-link--active{% endif %}">Бюджет</a>
             <a href="/employees" class="header__nav-link{% if _path == '/employees' %} header__nav-link--active{% endif %}">Сотрудники</a>
             <a href="/sql" class="header__nav-link{% if _path == '/sql' %} header__nav-link--active{% endif %}">SQL</a>
+            {% endif %}
             {% elif _user and _user.role == 'client' %}
             <a href="/schedule" class="header__nav-link{% if _path.startswith('/schedule') or _path.startswith('/slot/') %} header__nav-link--active{% endif %}">Расписание</a>
+            <a href="/subscriptions" class="header__nav-link{% if _path == '/subscriptions' %} header__nav-link--active{% endif %}">Абонементы</a>
             <a href="/profile/nutrition" class="header__nav-link{% if _path == '/profile/nutrition' %} header__nav-link--active{% endif %}">Питание</a>
             <a href="/profile/nutrition2" class="header__nav-link{% if _path == '/profile/nutrition2' %} header__nav-link--active{% endif %}">Питание 2</a>
             {% else %}

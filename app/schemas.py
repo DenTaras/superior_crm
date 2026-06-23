@@ -28,7 +28,8 @@ class BookingSchema(BaseModel):
 # Совместимость Pydantic v1 / v2
 try:
     pyd_major = int(pydantic.__version__.split(".")[0])
-except Exception:
+except Exception as ex:
+    print(f"[WARN] Failed to detect pydantic version: {ex}, assuming v1")
     pyd_major = 1
 
 if pyd_major >= 2:

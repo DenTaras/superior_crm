@@ -155,7 +155,8 @@ def _load_session(sid: str) -> dict | None:
         if row is None:
             return None
         return json.loads(row.data)
-    except Exception:
+    except Exception as ex:
+        print(f"[WARN] _load_session({sid!r}): {ex}")
         return None
     finally:
         db.close()
@@ -172,7 +173,8 @@ def _save_session(sid: str, data: dict) -> None:
         else:
             row.data = json.dumps(data)
         db.commit()
-    except Exception:
+    except Exception as ex:
+        print(f"[WARN] _save_session({sid!r}): {ex}")
         db.rollback()
     finally:
         db.close()

@@ -393,7 +393,8 @@ def _normalize_capacity(capacity: int) -> int:
     """Привести вместимость к допустимому значению {1,2,3,4}."""
     try:
         capacity = int(capacity)
-    except Exception:
+    except Exception as ex:
+        print(f"[WARN] _normalize_capacity: invalid capacity {capacity!r}: {ex}, defaulting to 1")
         return 1
     return capacity if capacity in (1, 2, 3, 4) else 1
 

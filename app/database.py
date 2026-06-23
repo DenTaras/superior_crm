@@ -81,7 +81,8 @@ def _get_table_columns(table_name: str) -> list:
     try:
         inspector = sa_inspect(engine)
         return [col["name"] for col in inspector.get_columns(table_name)]
-    except Exception:
+    except Exception as ex:
+        print(f"[WARN] _get_table_columns({table_name!r}): {ex}")
         return []
 
 
@@ -113,8 +114,8 @@ def ensure_client_columns():
             if col not in existing:
                 try:
                     conn.execute(text(f"ALTER TABLE clients ADD COLUMN {col} {coltype}"))
-                except Exception:
-                    pass
+                except Exception as ex:
+                    print(f"[WARN] ALTER TABLE clients ADD {col}: {ex}")
 
 
 def ensure_journal_columns():
@@ -126,8 +127,8 @@ def ensure_journal_columns():
         with engine.connect() as conn:
             try:
                 conn.execute(text("ALTER TABLE journal ADD COLUMN comments TEXT"))
-            except Exception:
-                pass
+            except Exception as ex:
+                print(f"[WARN] ALTER TABLE journal ADD comments: {ex}")
 
 
 def ensure_subscription_purchase_columns():
@@ -139,13 +140,13 @@ def ensure_subscription_purchase_columns():
         if 'refunded' not in existing:
             try:
                 conn.execute(text("ALTER TABLE subscription_purchases ADD COLUMN refunded BOOLEAN DEFAULT 0"))
-            except Exception:
-                pass
+            except Exception as ex:
+                print(f"[WARN] ALTER TABLE subscription_purchases ADD refunded: {ex}")
         if 'refunded_at' not in existing:
             try:
                 conn.execute(text("ALTER TABLE subscription_purchases ADD COLUMN refunded_at TIMESTAMP"))
-            except Exception:
-                pass
+            except Exception as ex:
+                print(f"[WARN] ALTER TABLE subscription_purchases ADD refunded_at: {ex}")
 
 
 def ensure_anthropometry_log_columns():
@@ -164,8 +165,8 @@ def ensure_anthropometry_log_columns():
             if col not in existing:
                 try:
                     conn.execute(text(f"ALTER TABLE anthropometry_log ADD COLUMN {col} {coltype}"))
-                except Exception:
-                    pass
+                except Exception as ex:
+                    print(f"[WARN] ALTER TABLE anthropometry_log ADD {col}: {ex}")
 
 
 def ensure_meal_templates_columns():
@@ -177,18 +178,18 @@ def ensure_meal_templates_columns():
         if 'ingredients' not in existing:
             try:
                 conn.execute(text("ALTER TABLE meal_templates ADD COLUMN ingredients TEXT"))
-            except Exception:
-                pass
+            except Exception as ex:
+                print(f"[WARN] ALTER TABLE meal_templates ADD ingredients: {ex}")
         if 'recipe' not in existing:
             try:
                 conn.execute(text("ALTER TABLE meal_templates ADD COLUMN recipe TEXT"))
-            except Exception:
-                pass
+            except Exception as ex:
+                print(f"[WARN] ALTER TABLE meal_templates ADD recipe: {ex}")
         if 'course' not in existing:
             try:
                 conn.execute(text("ALTER TABLE meal_templates ADD COLUMN course TEXT"))
-            except Exception:
-                pass
+            except Exception as ex:
+                print(f"[WARN] ALTER TABLE meal_templates ADD course: {ex}")
     # Заполняем course для существующих записей (main по умолчанию)
     from app.seed_meals import _infer_course
     from sqlalchemy.orm import sessionmaker
@@ -214,8 +215,22 @@ def ensure_training_request_columns():
                 try:
                     coltype = "BOOLEAN" if col == "pd_consent" else "TIMESTAMP"
                     conn.execute(text(f"ALTER TABLE training_requests ADD COLUMN {col} {coltype}"))
-                except Exception:
-                    pass
+                except Exception as ex:
+                    print(f"[WARN] ALTER TABLE training_requests ADD {col}: {ex}")
+
+
+def ensure_payment_columns():
+    """Добавить колонки в payments (если таблица уже существует)."""
+    existing = _get_table_columns("payments")
+    if not existing:
+        return
+    with engine.connect() as conn:
+        for col in ("provider_payment_id",):
+            if col not in existing:
+                try:
+                    conn.execute(text(f"ALTER TABLE payments ADD COLUMN {col} TEXT"))
+                except Exception as ex:
+                    print(f"[WARN] ALTER TABLE payments ADD {col}: {ex}")
 
 
 def ensure_employee_columns():
@@ -227,8 +242,8 @@ def ensure_employee_columns():
         if "regional_coefficient" not in existing:
             try:
                 conn.execute(text("ALTER TABLE employees ADD COLUMN regional_coefficient INTEGER DEFAULT 100"))
-            except Exception:
-                pass
+            except Exception as ex:
+                print(f"[WARN] ALTER TABLE employees ADD regional_coefficient: {ex}")
 
 
 def run_startup_migrations():
@@ -241,6 +256,7 @@ def run_startup_migrations():
     ensure_meal_templates_columns()
     ensure_training_request_columns()
     ensure_employee_columns()
+    ensure_payment_columns()
 
     # Добавить недостающие упражнения из seed
     from app.seed_exercises import ensure_exercises

@@ -11,6 +11,15 @@ import os as _os
 import time as _time
 import logging as _logging
 
+# Загрузка .env (если есть) — ДО импорта app.database
+try:
+    from dotenv import load_dotenv
+    _dotenv_path = _os.path.join(_os.path.dirname(__file__), ".env")
+    if _os.path.exists(_dotenv_path):
+        load_dotenv(_dotenv_path)
+except ImportError:
+    pass
+
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
@@ -30,6 +39,8 @@ from app.routes.dashboard import router as dashboard_router
 from app.routes.nutrition import router as nutrition_router
 from app.routes.nutrition2 import router as nutrition2_router
 from app.routes.employees import router as employees_router
+from app.routes.payment import router as payment_router
+from app.routes.telegram import router as telegram_router
 from app.auth import router as auth_router
 from app.auth import get_current_user
 from app.timezone import now as tz_now
@@ -120,6 +131,8 @@ app.include_router(schedule_router)      # /schedule, /slot/{id}
 app.include_router(slots_router)         # /slots/*, /slot/{id}/add|remove|complete
 app.include_router(program_router)       # /slot/{id}/program
 app.include_router(employees_router)     # /employees
+app.include_router(payment_router)       # /api/create-payment, /api/payment-callback
+app.include_router(telegram_router)      # /tg-webhook
 
 
 
