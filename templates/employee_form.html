@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="mt-0">{{ 'Редактировать' if employee else 'Новый сотрудник' }}</h2>
+
+<form method="post" action="{% if employee %}/employees/{{ employee.id }}/edit{% else %}/employees/create{% endif %}" class="form" style="max-width:500px;">
+    {{ csrf_input(request) }}
+
+    <div class="form__group">
+        <label class="form__label">Имя *</label>
+        <input class="form__input" type="text" name="first_name" value="{{ employee.first_name if employee else '' }}" required />
+    </div>
+    <div class="form__group">
+        <label class="form__label">Фамилия</label>
+        <input class="form__input" type="text" name="last_name" value="{{ employee.last_name if employee else '' }}" />
+    </div>
+    <div class="form__group">
+        <label class="form__label">Отчество</label>
+        <input class="form__input" type="text" name="patronymic" value="{{ employee.patronymic if employee else '' }}" />
+    </div>
+    <div class="form__group">
+        <label class="form__label">Телефон</label>
+        <input class="form__input" type="text" name="phone" value="{{ employee.phone if employee else '' }}" />
+    </div>
+    <div class="form__group">
+        <label class="form__label">Должность</label>
+        <select name="position" class="form__select">
+            <option value="trainer" {% if employee and employee.position == 'trainer' %}selected{% endif %}>Тренер</option>
+            <option value="director" {% if employee and employee.position == 'director' %}selected{% endif %}>Директор</option>
+            <option value="admin" {% if employee and employee.position == 'admin' %}selected{% endif %}>Администратор</option>
+        </select>
+    </div>
+    <div class="form__group">
+        <label class="form__label">Логин *</label>
+        <input class="form__input" type="text" name="login" value="{{ employee.login if employee else '' }}" required />
+        {% if errors.login %}<span style="color:var(--danger);font-size:0.85rem;">{{ errors.login }}</span>{% endif %}
+    </div>
+    <div class="form__group">
+        <label class="form__label">Пароль{% if employee %} (оставьте пустым, чтобы не менять){% endif %} *</label>
+        <input class="form__input" type="password" name="password" {% if not employee %}required{% endif %} />
+    </div>
+
+    <hr class="mt-2 mb-2" />
+    <h4>Условия оплаты</h4>
+
+    <div class="form__group">
+        <label class="form__label">Тип оплаты</label>
+        <select name="salary_type" class="form__select">
+            <option value="fixed" {% if employee and employee.salary_type == 'fixed' %}selected{% endif %}>Только оклад</option>
+            <option value="fixed+bonus" {% if employee and employee.salary_type == 'fixed+bonus' %}selected{% endif %}>Оклад + премия (% от выручки)</option>
+            <option value="fixed+dividends" {% if employee and employee.salary_type == 'fixed+dividends' %}selected{% endif %}>Оклад + дивиденды (% от прибыли)</option>
+        </select>
+    </div>
+    <div class="form__group">
+        <label class="form__label">Оклад (₽/мес)</label>
+        <input class="form__input" type="number" name="salary_amount" value="{{ employee.salary_amount if employee else 0 }}" min="0" />
+    </div>
+    <div class="form__group">
+        <label class="form__label">Районный коэффициент (%)</label>
+        <input class="form__input" type="number" name="regional_coefficient" value="{{ employee.regional_coefficient if employee else 100 }}" min="100" max="200" />
+        <span class="text-muted" style="font-size:0.8rem;">Для Омска — 115. Фактический оклад = оклад × коэффициент / 100</span>
+    </div>
+    <div class="form__group">
+        <label class="form__label">Процент</label>
+        <input class="form__input" type="number" name="bonus_percent" value="{{ employee.bonus_percent if employee else 0 }}" min="0" max="100" />
+        <span class="text-muted" style="font-size:0.8rem;">Для тренера — % премии от выручки, для директора — % дивидендов от чистой прибыли</span>
+    </div>
+
+    <button class="btn btn--primary" type="submit">{{ 'Сохранить' if employee else 'Создать' }}</button>
+    <a class="btn btn--ghost" href="/employees">Отмена</a>
+</form>
+
+{% endblock %}

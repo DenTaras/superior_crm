@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="panel nutrition-panel">
+    <!-- Настройки -->
+    <details class="mt-1" style="cursor:pointer;">
+        <summary style="color:var(--text-secondary);font-weight:600;font-size:0.9rem;">Настройки рациона</summary>
+        <form method="post" action="/profile/nutrition2/settings" class="form mt-2" style="max-width:500px;">
+            {{ csrf_input(request) }}
+            <div class="form__group">
+                <label class="form__label">Цель</label>
+                <select name="goal" class="form__select">
+                    <option value="lose" {% if goal == 'lose' %}selected{% endif %}>Похудение</option>
+                    <option value="recompose" {% if goal == 'recompose' %}selected{% endif %}>Рекомпозиция</option>
+                    <option value="gain" {% if goal == 'gain' %}selected{% endif %}>Набор массы</option>
+                </select>
+            </div>
+            <div class="form__group">
+                <label class="form__label">Активность</label>
+                <select name="activity" class="form__select">
+                    <option value="sedentary" {% if activity == 'sedentary' %}selected{% endif %}>Сидячая работа</option>
+                    <option value="light" {% if activity == 'light' %}selected{% endif %}>1-2 тренировки/нед</option>
+                    <option value="moderate" {% if activity == 'moderate' %}selected{% endif %}>3-5 тренировок/нед</option>
+                    <option value="active" {% if activity == 'active' %}selected{% endif %}>6-7 тренировок/нед</option>
+                    <option value="extreme" {% if activity == 'extreme' %}selected{% endif %}>2 тренировки/день</option>
+                </select>
+            </div>
+            <div class="form__group">
+                <label class="form__label">Исключить продукты (через запятую)</label>
+                <input class="form__input" type="text" name="excluded_tags" value="{{ excluded_tags|join(',') }}" placeholder="молоко, свинина, орехи" />
+            </div>
+            <button class="btn btn--primary btn--small" type="submit">Сохранить и обновить</button>
+        </form>
+    </details>
+
+    <!-- Целевые макросы -->
+    <div class="stats mt-2" style="flex-wrap:wrap;">
+        <div class="stats__card"><div class="stats__value">{{ macros.calories }}</div><div class="stats__label">Цель ккал/день</div></div>
+        <div class="stats__card"><div class="stats__value" style="color:var(--text-primary);">{{ macros.protein }}</div><div class="stats__label">Белки (г)</div></div>
+        <div class="stats__card"><div class="stats__value" style="color:var(--text-primary);">{{ macros.fat }}</div><div class="stats__label">Жиры (г)</div></div>
+        <div class="stats__card"><div class="stats__value" style="color:var(--text-primary);">{{ macros.carbs }}</div><div class="stats__label">Углеводы (г)</div></div>
+    </div>
+
+    <!-- Навигация по дням + кнопка списка покупок -->
+    <div class="flex-row mt-2" style="gap:4px;flex-wrap:wrap;align-items:center;">
+        {% for d in week %}
+        <button class="btn btn--small day-btn {% if d.day == today_name %}btn--primary{% else %}btn--ghost{% endif %}"
+                data-day="{{ d.day }}" style="min-width:44px;">{{ d.day }}</button>
+        {% endfor %}
+        <a href="/profile/nutrition2/shopping-list?format=txt" class="btn btn--small btn--primary" style="margin-left:auto;" target="_blank">📋 Список покупок</a>
+    </div>
+
+    <!-- Дни (тот же план, что и в nutrition.html) -->
+    {% set meal_labels = {'breakfast':'Завтрак','snack':'Перекус','lunch':'Обед','dinner':'Ужин'} %}
+    {% set course_labels = {'main':'🍽 Второе','first':'🥣 Первое','drink':'🥤 Напиток'} %}
+
+    {% for d in week %}
+    <div class="day-table mt-2" id="day-{{ d.day }}" {% if d.day != today_name %}style="display:none;"{% endif %}>
+        <!-- Итого -->
+        <div class="panel mt-2" style="border:2px solid var(--accent);">
+            <h4 class="mt-0" style="margin-bottom:8px;">Итого за день</h4>
+            <div class="flex-row" style="gap:16px;flex-wrap:wrap;">
+                <span style="font-size:0.85rem;">Вес: <strong class="total-weight" style="color:var(--text-primary);">{{ d.total.weight_g }}</strong> г</span>
+                <span style="font-size:0.85rem;">Белки: <strong class="total-protein" style="color:var(--text-primary);">{{ d.total.protein }}</strong> г</span>
+                <span style="font-size:0.85rem;">Жиры: <strong class="total-fat" style="color:var(--text-primary);">{{ d.total.fat }}</strong> г</span>
+                <span style="font-size:0.85rem;">Углеводы: <strong class="total-carbs" style="color:var(--text-primary);">{{ d.total.carbs }}</strong> г</span>
+                <span style="font-size:1rem;font-weight:700;">Ккал: <strong class="total-calories" style="color:var(--accent);">{{ d.total.calories }}</strong></span>
+            </div>
+        </div>
+        {% set ns = namespace(prev_type='') %}
+        {% for m in d.meals %}
+            {% if ns.prev_type != m.meal_type %}
+                {% if ns.prev_type %}
+                    </div></div>
+                {% endif %}
+                <div class="panel mt-2" data-meal-type="{{ m.meal_type }}" style="border:1px solid var(--text-secondary);display:flex;gap:12px;">
+                    <div style="width:15%;min-width:130px;flex-shrink:0;">
+                        <h4 class="mt-0" style="font-size:1.25rem;margin-bottom:8px;">{{ meal_labels.get(m.meal_type, m.meal_type) }}</h4>
+                        <select class="course-select" style="width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-elevated);color:var(--text-primary);font-size:1.0rem;cursor:pointer;margin-bottom:6px;">
+                            {% if m.meal_type == 'snack' %}
+                            <option value="main">🍿 Перекус</option>
+                            <option value="drink">🥤 Напиток</option>
+                            {% else %}
+                            <option value="first">🥣 Первое</option>
+                            <option value="main">🍽 Второе</option>
+                            <option value="drink">🥤 Напиток</option>
+                            {% endif %}
+                        </select>
+                        <button class="btn btn--small meal-add" style="width:100%;padding:4px 8px;">+ Добавить</button>
+                    </div>
+                <div class="meals-block" style="flex:1;min-width:0;">
+                {% set ns.prev_type = m.meal_type %}
+            {% endif %}
+            <div class="meal-item" style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:6px;"
+                 data-meal-id="{{ m.id }}"
+                 data-base-weight="{{ m.weight_g }}"
+                 data-base-protein="{{ m.protein }}" data-base-fat="{{ m.fat }}"
+                 data-base-carbs="{{ m.carbs }}" data-base-calories="{{ m.calories }}"
+                 data-ingredients="{{ m.ingredients|e }}" data-recipe="{{ m.recipe|e }}"
+                 data-day="{{ d.day }}">
+                <div class="flex-row" style="gap:8px;align-items:center;flex-wrap:wrap;">
+                    <button class="btn btn--small meal-remove" style="padding:2px 6px;color:var(--danger);" title="Убрать">−</button>
+                    <span style="font-weight:600;font-size:0.85rem;min-width:60px;color:var(--text-muted);">{% if m.meal_type == 'snack' and m.course == 'main' %}🍿 Перекус{% else %}{{ course_labels.get(m.course, m.course) }}{% endif %}</span>
+                    <span class="meal-name" style="flex:1;cursor:pointer;font-size:0.9rem;">{{ m.name }}</span>
+                    <span style="font-size:0.8rem;color:var(--text-muted);">{{ m.weight_g }}г</span>
+                    <input type="number" class="meal-weight" value="{{ m.weight_g }}" min="1"
+                           style="width:50px;padding:2px 4px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-primary);font-size:0.8rem;">
+                    <span class="meal-protein" style="font-size:0.8rem;min-width:45px;"><span style="color:var(--text-muted);font-size:0.7rem;">Б </span><span class="meal-value">{{ m.protein }}</span></span>
+                    <span class="meal-fat" style="font-size:0.8rem;min-width:45px;"><span style="color:var(--text-muted);font-size:0.7rem;">Ж </span><span class="meal-value">{{ m.fat }}</span></span>
+                    <span class="meal-carbs" style="font-size:0.8rem;min-width:45px;"><span style="color:var(--text-muted);font-size:0.7rem;">У </span><span class="meal-value">{{ m.carbs }}</span></span>
+                    <span class="meal-calories" style="font-size:0.85rem;font-weight:600;min-width:55px;"><span style="color:var(--text-muted);font-size:0.7rem;">ккал </span><span class="meal-value">{{ m.calories }}</span></span>
+                    <button class="btn btn--small meal-prev" style="padding:2px 6px;">◀</button>
+                    <button class="btn btn--small meal-next" style="padding:2px 6px;">▶</button>
+                </div>
+                <div class="meal-detail" style="display:none;margin-top:6px;font-size:0.8rem;color:var(--text-secondary);padding-left:70px;">
+                    <strong>Состав:</strong> {{ m.ingredients }}<br>
+                    <strong>Приготовление:</strong> {{ m.recipe }}
+                </div>
+            </div>
+        {% endfor %}
+        </div></div>
+    </div>
+    {% endfor %}
+
+    <!-- Список покупок -->
+    <div class="panel mt-2" style="border:2px solid var(--accent);">
+        <div class="flex-row" style="justify-content:space-between;align-items:center;">
+            <h3 class="mt-0">📋 Список покупок на неделю</h3>
+            <a href="/profile/nutrition2/shopping-list?format=txt" class="btn btn--small" target="_blank">⬇ Скачать .txt</a>
+        </div>
+        {% for group in shopping_list %}
+        <div class="mt-2">
+            <h4 class="mt-0" style="font-size:0.95rem;color:var(--text-secondary);">{{ group.label }}</h4>
+            {% for item in group['items'] %}
+            <div class="flex-row" style="gap:8px;font-size:0.85rem;padding:2px 0;">
+                <span style="flex:1;">{{ item.name }}</span>
+                <span style="color:var(--text-muted);min-width:80px;text-align:right;">{{ item.display }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.course-select option { background:#1a1a1a; color:#e0e0e0; }
+.nutrition-panel { padding:12px 16px !important; }
+.nutrition-panel .panel { padding:12px 16px !important; }
+.nutrition-panel .day-table .panel { padding:12px 16px !important; }
+.nutrition-panel .mt-2 { margin-top:10px !important; }
+.nutrition-panel .meal-item { padding:6px 10px !important; margin-bottom:4px !important; }
+.nutrition-panel .meal-item .flex-row { gap:4px !important; }
+.nutrition-panel .meal-name { font-size:0.82rem !important; }
+.nutrition-panel .meal-weight { width:40px !important; padding:1px 3px !important; font-size:0.75rem !important; }
+.nutrition-panel .meal-protein,
+.nutrition-panel .meal-fat,
+.nutrition-panel .meal-carbs { font-size:0.75rem !important; min-width:35px !important; }
+.nutrition-panel .meal-calories { font-size:0.8rem !important; min-width:45px !important; }
+.nutrition-panel .btn--small { padding:3px 8px !important; font-size:0.78rem !important; }
+</style>
+<script>
+(function(){
+// Переключение дней
+document.querySelectorAll('.day-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+        var day = this.dataset.day;
+        document.querySelectorAll('.day-table').forEach(function(t){ t.style.display = 'none'; });
+        var tab = document.getElementById('day-' + day);
+        if (tab) tab.style.display = '';
+        document.querySelectorAll('.day-btn').forEach(function(b){ b.classList.remove('btn--primary'); b.classList.add('btn--ghost'); });
+        this.classList.remove('btn--ghost'); this.classList.add('btn--primary');
+    });
+});
+
+var alternatives = {{ alternatives_json|safe }};
+
+function recalcItem(item) {
+    var baseW = parseFloat(item.dataset.baseWeight) || 1;
+    var input = item.querySelector('.meal-weight');
+    var newW = parseFloat(input.value) || baseW;
+    var ratio = newW / baseW;
+    item.querySelector('.meal-protein .meal-value').textContent = Math.round(parseFloat(item.dataset.baseProtein) * ratio);
+    item.querySelector('.meal-fat .meal-value').textContent = Math.round(parseFloat(item.dataset.baseFat) * ratio);
+    item.querySelector('.meal-carbs .meal-value').textContent = Math.round(parseFloat(item.dataset.baseCarbs) * ratio);
+    item.querySelector('.meal-calories .meal-value').textContent = Math.round(parseFloat(item.dataset.baseCalories) * ratio);
+    recalcTotalFrom(item.closest('.day-table'));
+}
+
+function recalcTotalFrom(dayTable) {
+    if (!dayTable) return;
+    var items = dayTable.querySelectorAll('.meal-item');
+    var total = {weight:0, protein:0, fat:0, carbs:0, calories:0};
+    items.forEach(function(it){
+        var w = parseFloat(it.querySelector('.meal-weight').value) || 0;
+        total.weight += w;
+        total.protein += parseInt(it.querySelector('.meal-protein .meal-value').textContent) || 0;
+        total.fat += parseInt(it.querySelector('.meal-fat .meal-value').textContent) || 0;
+        total.carbs += parseInt(it.querySelector('.meal-carbs .meal-value').textContent) || 0;
+        total.calories += parseInt(it.querySelector('.meal-calories .meal-value').textContent) || 0;
+    });
+    dayTable.querySelector('.total-weight').textContent = total.weight;
+    dayTable.querySelector('.total-protein').textContent = total.protein;
+    dayTable.querySelector('.total-fat').textContent = total.fat;
+    dayTable.querySelector('.total-carbs').textContent = total.carbs;
+    dayTable.querySelector('.total-calories').textContent = total.calories;
+}
+
+document.addEventListener('input', function(e){
+    if (e.target.classList.contains('meal-weight')) {
+        var item = e.target.closest('.meal-item');
+        if (item) recalcItem(item);
+    }
+});
+
+document.addEventListener('click', function(e){
+    if (e.target.classList.contains('meal-remove')) {
+        var item = e.target.closest('.meal-item');
+        if (!item) return;
+        var dayTable = item.closest('.day-table');
+        item.remove();
+        if (dayTable) recalcTotalFrom(dayTable);
+    }
+});
+
+document.addEventListener('click', function(e){
+    if (!e.target.classList.contains('meal-add')) return;
+    var btn = e.target;
+    var panel = btn.closest('.panel');
+    if (!panel) return;
+    var h4 = panel.querySelector('h4');
+    var typeMap = {'Завтрак':'breakfast','Перекус':'snack','Обед':'lunch','Ужин':'dinner'};
+    var mealType = typeMap[h4 ? h4.textContent.trim() : ''] || '';
+    var block = panel.querySelector('.meals-block');
+    if (!block) return;
+    var select = btn.parentElement.querySelector('.course-select');
+    if (!select) return;
+    var courseKey = select.value;
+    var courseLabel = select.options[select.selectedIndex].text;
+    var pool;
+    if (mealType === 'snack') {
+        if (courseKey === 'drink') {
+            pool = alternatives.filter(function(m){ return m.meal_type === 'snack' && m.course === 'drink'; });
+        } else {
+            pool = alternatives.filter(function(m){ return m.meal_type === 'snack' && (m.course || 'main') === 'main'; });
+        }
+    } else {
+        pool = alternatives.filter(function(m){ return (m.course || 'main') === courseKey; });
+    }
+    if (pool.length === 0) { alert('Нет подходящих блюд.'); return; }
+    var pick = pool[Math.floor(Math.random() * pool.length)];
+    var html = '<div class="meal-item" style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin-bottom:4px;"' +
+        ' data-meal-id="' + pick.id + '"' +
+        ' data-base-weight="' + pick.weight_g + '"' +
+        ' data-base-protein="' + pick.protein + '" data-base-fat="' + pick.fat + '"' +
+        ' data-base-carbs="' + pick.carbs + '" data-base-calories="' + pick.calories + '"' +
+        ' data-ingredients="' + (pick.ingredients||'') + '" data-recipe="' + (pick.recipe||'') + '">' +
+        '<div class="flex-row" style="gap:4px;align-items:center;flex-wrap:wrap;">' +
+        '<button class="btn btn--small meal-remove" style="padding:2px 6px;color:var(--danger);">−</button>' +
+        '<span style="font-weight:600;font-size:0.82rem;min-width:60px;color:var(--text-muted);">' + courseLabel + '</span>' +
+        '<span class="meal-name" style="flex:1;cursor:pointer;font-size:0.82rem;">' + pick.name + '</span>' +
+        '<span style="font-size:0.78rem;color:var(--text-muted);">' + pick.weight_g + 'г</span>' +
+        '<input type="number" class="meal-weight" value="' + pick.weight_g + '" min="1" style="width:40px;padding:1px 3px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-primary);font-size:0.75rem;">' +
+        '<span class="meal-protein" style="font-size:0.75rem;min-width:35px;"><span style="color:var(--text-muted);font-size:0.65rem;">Б </span><span class="meal-value">' + pick.protein + '</span></span>' +
+        '<span class="meal-fat" style="font-size:0.75rem;min-width:35px;"><span style="color:var(--text-muted);font-size:0.65rem;">Ж </span><span class="meal-value">' + pick.fat + '</span></span>' +
+        '<span class="meal-carbs" style="font-size:0.75rem;min-width:35px;"><span style="color:var(--text-muted);font-size:0.65rem;">У </span><span class="meal-value">' + pick.carbs + '</span></span>' +
+        '<span class="meal-calories" style="font-size:0.8rem;font-weight:600;min-width:45px;"><span style="color:var(--text-muted);font-size:0.65rem;">ккал </span><span class="meal-value">' + pick.calories + '</span></span>' +
+        '<button class="btn btn--small meal-prev" style="padding:2px 6px;">◀</button>' +
+        '<button class="btn btn--small meal-next" style="padding:2px 6px;">▶</button>' +
+        '</div>' +
+        '<div class="meal-detail" style="display:none;margin-top:4px;font-size:0.78rem;color:var(--text-secondary);padding-left:70px;">' +
+        '<strong>Состав:</strong> ' + (pick.ingredients||'—') + '<br>' +
+        '<strong>Приготовление:</strong> ' + (pick.recipe||'—') + '</div></div>';
+    block.insertAdjacentHTML('beforeend', html);
+    var dt = panel.closest('.day-table');
+    if (dt) recalcTotalFrom(dt);
+});
+
+document.addEventListener('click', function(e){
+    var nameEl = e.target.closest('.meal-name');
+    if (!nameEl) return;
+    var item = nameEl.closest('.meal-item');
+    if (!item) return;
+    var detail = item.querySelector('.meal-detail');
+    if (detail) detail.style.display = detail.style.display === 'none' ? '' : 'none';
+});
+
+document.addEventListener('click', function(e){
+    var btn = e.target.closest('.meal-prev, .meal-next');
+    if (!btn) return;
+    var item = btn.closest('.meal-item');
+    if (!item) return;
+    var nameEl = item.querySelector('.meal-name');
+    var weightInput = item.querySelector('.meal-weight');
+    var mealType = '';
+    var parentBlock = item.closest('.panel');
+    if (parentBlock) {
+        var h4 = parentBlock.querySelector('h4');
+        var typeMap = {'Завтрак':'breakfast','Перекус':'snack','Обед':'lunch','Ужин':'dinner'};
+        mealType = typeMap[h4 ? h4.textContent.trim() : ''] || '';
+    }
+    var spans = item.querySelectorAll('.flex-row > span');
+    var courseLabel = '';
+    for (var s = 0; s < spans.length; s++) {
+        var txt = spans[s].textContent.trim();
+        if (txt.indexOf('Первое') !== -1) { courseLabel = 'first'; break; }
+        if (txt.indexOf('Второе') !== -1) { courseLabel = 'main'; break; }
+        if (txt.indexOf('Перекус') !== -1) { courseLabel = 'main'; break; }
+        if (txt.indexOf('Напиток') !== -1) { courseLabel = 'drink'; break; }
+    }
+    var course = courseLabel || 'main';
+    var pool;
+    if (mealType === 'snack') {
+        if (course === 'drink') {
+            pool = alternatives.filter(function(m){ return m.meal_type === 'snack' && m.course === 'drink'; });
+        } else {
+            pool = alternatives.filter(function(m){ return m.meal_type === 'snack' && (m.course || 'main') === 'main'; });
+        }
+    } else {
+        pool = alternatives.filter(function(m){ return (m.course || 'main') === course; });
+    }
+    if (pool.length < 2) return;
+    var direction = btn.classList.contains('meal-next') ? 1 : -1;
+    var curId = parseInt(item.dataset.mealId);
+    var curIdx = -1;
+    if (curId) curIdx = pool.findIndex(function(m){ return m.id === curId; });
+    if (curIdx === -1) curIdx = pool.findIndex(function(m){ return m.name === nameEl.textContent; });
+    if (curIdx === -1) curIdx = 0;
+    var newIdx = (curIdx + direction + pool.length) % pool.length;
+    if (newIdx === curIdx) return;
+    var pick = pool[newIdx];
+    nameEl.textContent = pick.name;
+    item.dataset.mealId = pick.id;
+    item.dataset.baseWeight = pick.weight_g;
+    item.dataset.baseProtein = pick.protein;
+    item.dataset.baseFat = pick.fat;
+    item.dataset.baseCarbs = pick.carbs;
+    item.dataset.baseCalories = pick.calories;
+    item.dataset.ingredients = pick.ingredients || '';
+    item.dataset.recipe = pick.recipe || '';
+    weightInput.value = pick.weight_g;
+    var detail = item.querySelector('.meal-detail');
+    if (detail) {
+        detail.innerHTML = '<strong>Состав:</strong> ' + (pick.ingredients || '—') + '<br>' +
+            '<strong>Приготовление:</strong> ' + (pick.recipe || '—');
+    }
+    recalcItem(item);
+});
+})();
+</script>
+{% endblock %}

@@ -28,6 +28,8 @@ from app.routes.exercises_api import router as exercises_api_router
 from app.routes.budget import router as budget_router
 from app.routes.dashboard import router as dashboard_router
 from app.routes.nutrition import router as nutrition_router
+from app.routes.nutrition2 import router as nutrition2_router
+from app.routes.employees import router as employees_router
 from app.auth import router as auth_router
 from app.auth import get_current_user
 from app.timezone import now as tz_now
@@ -112,10 +114,12 @@ app.include_router(exercises_api_router) # /api/exercise-*
 app.include_router(budget_router)        # /budget
 app.include_router(dashboard_router)     # /dashboard
 app.include_router(nutrition_router)      # /profile/nutrition
+app.include_router(nutrition2_router)     # /profile/nutrition2
 app.include_router(clients_router)       # /clients, /clients/*
 app.include_router(schedule_router)      # /schedule, /slot/{id}
 app.include_router(slots_router)         # /slots/*, /slot/{id}/add|remove|complete
 app.include_router(program_router)       # /slot/{id}/program
+app.include_router(employees_router)     # /employees
 
 
 
@@ -169,6 +173,23 @@ if "alembic" not in __import__("sys").modules:
                 Slot(start_time=now + timedelta(hours=1), capacity=1),
                 Slot(start_time=now + timedelta(hours=2), capacity=2),
                 Slot(start_time=now + timedelta(hours=3), capacity=4),
+            ])
+            db.commit()
+
+        # Seed сотрудников
+        from app.models import Employee
+        if db.query(Employee).count() == 0:
+            db.add_all([
+                Employee(first_name="Анна", last_name="Директорова",
+                         position="director", login="admin",
+                         password_hash=hash_password("admin"),
+                         salary_type="fixed+dividends",
+                         salary_amount=120_000, regional_coefficient=115, dividend_percent=50),
+                Employee(first_name="Пётр", last_name="Тренеров",
+                         position="trainer", login="trainer",
+                         password_hash=hash_password("trainer"),
+                         salary_type="fixed+bonus",
+                         salary_amount=40_000, regional_coefficient=115, bonus_percent=10),
             ])
             db.commit()
     finally:

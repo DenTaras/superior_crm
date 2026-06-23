@@ -2,6 +2,11 @@
 
 {% block content %}
 
+{% if error %}
+<div class="panel" style="border-color:var(--danger);margin-bottom:12px;">
+    <p style="color:var(--danger);">{{ error }}</p>
+</div>
+{% endif %}
 
 <p class="text-secondary mb-3">Заполните форму, и мы свяжемся с вами для уточнения деталей.</p>
 
@@ -26,6 +31,12 @@
     <div class="form__group">
         <label class="form__label">Предпочитаемое время</label>
         <input class="form__input" type="text" name="preferred_time" placeholder="Например: утро будних дней, вечер после 18:00" />
+    </div>
+    <div class="form__group" style="margin-top:12px;">
+        <label class="form__label" style="font-size:0.85rem;font-weight:400;gap:8px;display:flex;align-items:flex-start;">
+            <input type="checkbox" name="pd_consent" value="true" required style="margin-top:2px;">
+            Я согласен на <a href="/privacy" target="_blank">обработку персональных данных</a>
+        </label>
     </div>
     <button class="btn btn--primary" type="submit">Отправить заявку</button>
 </form>

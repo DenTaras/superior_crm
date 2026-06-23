@@ -15,6 +15,7 @@
 | GET | `/register` | 🔓 все | register.html | Форма регистрации |
 | POST | `/register` | 🔓 все | — | Регистрация нового клиента |
 | GET | `/profile` | 🔓 все | user.html | Личный кабинет (разный для ролей) |
+| POST | `/profile/revoke-consent` | 🔓 все | — | Отзыв согласия на обработку ПД |
 
 ## Расписание и слоты
 
@@ -29,6 +30,8 @@
 | POST | `/slot/{id}/add` | 👥 | — | Добавить бронь |
 | POST | `/slot/{id}/remove` | 👥 | — | Удалить бронь |
 | POST | `/slot/{id}/complete` | 👥 | — | Завершить тренировку |
+| POST | `/slot/{id}/assign-trainer` | 👥 | — | Назначить тренера на слот |
+| POST | `/slot/{id}/remove-trainer` | 👥 | — | Удалить тренера со слота |
 | GET | `/slot/{id}/program` | 👥 | slot_program.html | План тренировки |
 | POST | `/slot/{id}/program/save` | 👥 | JSON | Сохранить заметку (автосохранение) |
 
@@ -50,13 +53,23 @@
 |-------|------|------|--------|----------|
 | GET | `/journal` | 👥 | journal.html | Журнал тренировок |
 | GET | `/dashboard` | 👥 | dashboard.html | Дашборд с графиками (Chart.js) |
-| GET | `/budget` | 🛡️ | budget.html | Финансовая статистика |
+| GET | `/budget` | 🛡️ | budget.html | Финансовая статистика + расходы (ФОТ, налоги) |
+| GET | `/employees` | 🛡️ | employees.html | Список сотрудников |
+| GET | `/employees/create` | 🛡️ | employee_form.html | Форма создания сотрудника |
+| POST | `/employees/create` | 🛡️ | — | Создать сотрудника |
+| GET | `/employees/{id}/edit` | 🛡️ | employee_form.html | Форма редактирования |
+| POST | `/employees/{id}/edit` | 🛡️ | — | Сохранить сотрудника |
+| POST | `/employees/{id}/toggle` | 🛡️ | — | Уволить / восстановить |
 | GET | `/sql` | 🛡️ | sql.html | SQL-консоль |
 | POST | `/sql` | 🛡️ | sql.html | Выполнить SQL |
 | GET | `/subscriptions` | 🔓 все | subscriptions.html | Матрица цен |
-| GET | `/signup` | 🔓 все | signup.html | Заявка на пробную |
+| GET | `/signup` | 🔓 все | signup.html | Заявка на пробную (с согласием ПД) |
 | POST | `/signup` | 🔓 все | — | Отправить заявку |
 | GET | `/contacts` | 🔓 все | contacts.html | Контакты студии |
+| GET | `/privacy` | 🔓 все | privacy.html | Политика конфиденциальности |
+| GET | `/profile/nutrition` | 🛡️ client | nutrition.html | Питание v1 (карточки блюд) |
+| POST | `/profile/nutrition` | 🛡️ client | — | Настройки питания / замена блюда |
+| GET | `/profile/nutrition2` | 🛡️ client | nutrition2.html | Питание v2 (список покупок) |
 | GET | `/api/exercise-groups` | 👥 | JSON | Список групп упражнений |
 | GET | `/api/exercises` | 👥 | JSON | Упражнения по группе |
 | GET | `/api/exercise-log` | 👥 | JSON | Последний лог +5% прогрессия |

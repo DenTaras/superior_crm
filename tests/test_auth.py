@@ -73,6 +73,7 @@ def test_register(anon_client):
     r = anon_client.post("/register", data={
         "login": "new_user", "password": "pass",
         "first_name": "New", "last_name": "User", "phone": "+70000000123",
+        "pd_consent": "true",
     }, follow_redirects=False)
     assert r.status_code == 303
 
@@ -94,6 +95,7 @@ def test_register_duplicate_login(anon_client, db_session):
     r = anon_client.post("/register", data={
         "login": "dup_user", "password": "x",
         "first_name": "Dup2", "last_name": "", "phone": "",
+        "pd_consent": "true",
     }, follow_redirects=False)
     assert r.status_code == 403
     assert "занят" in r.text

@@ -12,7 +12,7 @@ CRM для студии персонального тренинга SUPERIOR. С
 - **Playwright** — E2E-тесты
 - **ruff** — линтинг (line-length=120)
 - **Chart.js** — графики на дашборде
-- **pytest** — 189 тестов (166 unit + 23 E2E)
+- **pytest** — 205 тестов + 3 skipped
 - **GitHub Actions** — CI (lint + test + migrations)
 
 ## Быстрый запуск (SQLite)
@@ -33,6 +33,7 @@ uvicorn main:app --reload
 |------|-------|--------|
 | Администратор | `admin` | `admin` |
 | Тренер | `trainer` | `trainer` |
+| Тренер (сотрудник) | `trainer_emp` | `trainer_emp` |
 | Клиент | `client_1` | `client_1` |
 | Клиент | `client_2` | `client_2` |
 | Клиент | `client_3` | `client_3` |
@@ -63,6 +64,11 @@ uvicorn main:app --reload
 | `exercises` | Упражнения (53 шт.) |
 | `client_exercise_log` | Лог выполнения упражнений (фактические повторы) |
 | `training_plan_exercises` | Упражнения в плане тренировки (поаподходно) |
+| `products` | Продукты питания (93 шт. в 14 категориях) |
+| `meal_products` | Связь шаблонов блюд с продуктами (~300 связей) |
+| `employees` | Сотрудники (director/trainer/admin): ФИО, оклад, районный коэффициент, % бонуса/дивидендов |
+| `slot_employees` | Назначение тренеров на слоты |
+| `expenses` | Расходы по месяцам и категориям (аренда, реклама и т.д.) |
 
 ## Функционал
 
@@ -78,6 +84,30 @@ uvicorn main:app --reload
 - Создание, редактирование, удаление клиента
 - Фильтрация по имени и телефону
 - **Пагинация** (25 на странице)
+
+### Сотрудники (`/employees`) — admin только
+- Создание, редактирование, увольнение сотрудников
+- Поля: ФИО, телефон, должность (director/trainer/admin), логин/пароль, тип оплаты, оклад, районный коэффициент (по умолчанию 100, для Омска — 115), % бонуса, % дивидендов
+- Вход в систему по логину/паролю сотрудника
+- Назначение тренеров на слоты расписания
+
+### Профиль тренера (`/profile`) — trainer
+- Отображение предстоящих тренировок (назначенные слоты)
+
+### Питание (`/profile/nutrition`) — client только
+- Расчёт BMR, TDEE, макросов под цель (похудение/рекомпозиция/набор)
+- Генерация недельного плана питания (62 шаблона блюд)
+- Каждый день: завтрак, обед, ужин (первое + второе + напиток) + 2 перекуса
+- UI: карточки с БЖУ, весом, рецептами, замена (◀▶), добавление/удаление блюд
+- Масштабирование веса блюд под целевую калорийность
+- Исключение продуктов по тегам (аллергии/непереносимости)
+- Компактный дизайн (20/80 сплит)
+
+### Питание v2 + Список покупок (`/profile/nutrition2`) — client только
+- Нормализованная структура продуктов (`Product`, `MealProduct`)
+- Список покупок на неделю с группировкой по категориям (мясо, птица, рыба, молочка, овощи, бакалея и т.д.)
+- Экспорт в .txt
+- Авто-очистка дубликатов блюд при seed
 - Покупка абонемента (1/4/8/12 занятий, 3 time_slot × 3 формата)
 - Per-package остаток (`SubscriptionPurchase.remaining`)
 - Блокировка записи при отсутствии пакета для time_slot слота
@@ -120,17 +150,25 @@ uvicorn main:app --reload
 - **Силовые показатели** — 1ПМ для 5 базовых упражнений (формула Эпли)
 - **Нормативы (разряды)** — МСМК / МС / КМС / 1-3 разряд с таблицей весов
 - **История тренировок** — запланированные и проведённые занятия с планом упражнений
+- **Отзыв согласия на обработку ПД**
 - Для admin/trainer: статистика (клиенты, слоты, журнал)
+- Для trainer: список предстоящих назначенных тренировок
 
 ### SQL-консоль (`/sql`) — admin только
 - Выполнение произвольных SQL-запросов (SELECT, DELETE, INSERT, UPDATE)
 - Отображение результатов в таблице
 - Заметки с частыми запросами (localStorage)
 
+### Политика конфиденциальности (`/privacy`)
+- Полный текст политики обработки персональных данных (152-ФЗ)
+- Согласие на обработку ПД при регистрации (`/register`) и записи на пробную (`/signup`)
+- Возможность отзыва согласия в личном кабинете
+
 ### Публичные страницы
 - `/signup` — заявка на пробную тренировку
 - `/subscriptions` — абонементы и цены
 - `/contacts` — адрес, телефон, соцсети, режим работы
+- `/privacy` — политика конфиденциальности
 
 ### Конструктор тренировки
 - 7 групп мышц: СПИНА, ГРУДЬ, НОГИ, ПЛЕЧИ, БИЦЕПС, ТРИЦЕПС, ПРЕСС
@@ -146,6 +184,12 @@ uvicorn main:app --reload
 ### Бюджет (`/budget`) — admin
 - Финансовая статистика: общая и месячная выручка
 - История покупок с привязкой к клиенту
+- **Расходная часть**:
+  - ФОТ: оклад × районный коэффициент (для Омска — 1.15), НДФЛ 13%, соц.взносы 30.2%
+  - УСН 6% от выручки
+  - Аренда и прочие расходы (из таблицы `Expense`)
+  - Дивиденды (процент от чистой прибыли)
+  - Чистая прибыль
 ## Безопасность
 
 - **CSRF-защита** — `CsrfMiddleware` проверяет токен во всех POST-формах
@@ -162,7 +206,7 @@ uvicorn main:app --reload
 ### Unit-тесты
 
 ```powershell
-pytest --ignore=tests/test_e2e.py -q   # 166 тестов
+pytest -q
 ```
 
 | Файл | Кол-во | Что проверяет |
@@ -170,34 +214,28 @@ pytest --ignore=tests/test_e2e.py -q   # 166 тестов
 | `test_auth.py` | 8 | Логин/лог-аут всех ролей, регистрация |
 | `test_bookings.py` | 5 | capacity, дубликаты, constraint, очистка notes |
 | `test_calendar.py` | 3 | Отображение недели, week_offset |
-| `test_clients.py` | 3 | CRUD, пагинация |
-| `test_edge_cases.py` | 34 | XSS, SQLi, граничные значения |
+| `test_clients.py` | 7 | CRUD, пагинация, антропометрия, профиль |
+| `test_edge_cases.py` | 35 | XSS, SQLi, граничные значения |
+| `test_employees.py` | 10 | Сотрудники, назначение тренеров, бюджет/расходы |
 | `test_flash.py` | 9 | Flash-модалка, countdown, replaceState |
 | `test_journal.py` | 2 | Завершение слота, страница журнала |
 | `test_logging.py` | 6 | audit_log, CREATE/DELETE/ADD записи |
+| `test_nutrition.py` | 17 | BMR/TDEE, макросы, план, UI, настройки |
+| `test_nutrition2.py` | 9 | Список покупок, .txt, seed, дубликаты |
 | `test_optimization.py` | 9 | Тайминги с большими dataset-ами |
 | `test_program.py` | 1 | Save + persist |
 | `test_security.py` | 10 | XSS, хеши, CSRF, rate limit, CSP |
 | `test_session.py` | 5 | Независимость сессий, logout |
+| `test_signup.py` | 11 | GET/POST /signup, контакты |
 | `test_slots.py` | 4 | Конфликты, прошлое |
-| `test_subscriptions.py` | 3 | Абонементы, лимиты |
+| `test_sql.py` | 8 | SQL-консоль |
+| `test_strength.py` | 15 | 1ПМ, нормативы, лог, профиль |
+| `test_subscriptions.py` | 5 | Абонементы, лимиты, FIFO |
+| `test_time_slots.py` | 7 | time_slot matching, бронь, профиль |
+| `test_full_integration.py` | 3 | Полный цикл + budget + consumption log |
+| `test_exercises.py` | 4 | API групп, упражнений, лог |
 
-### E2E-тесты (Playwright)
-
-```powershell
-pytest tests/test_e2e.py -v  # 23 теста (автостарт сервера)
-pytest tests/test_e2e.py --headed  # с видимым браузером
-```
-
-Автоматически запускают uvicorn на свободном порту с `CSRF_DISABLE=1` и временной БД (не затрагивает `superior.db`).
-
-| Класс | Роль | Тесты |
-|-------|------|-------|
-| `TestAnonymous` | Неавторизованный | home, редиректы на login |
-| `TestClient` | Клиент | profile, редиректы на / |
-| `TestTrainer` | Тренер | clients, journal, subscriptions, create_client |
-| `TestAdmin` | Админ | create_client, logout |
-| `TestFlash` | Любой | auto-hide, manual close |
+Всего: **205 тестов** (3 skipped — требуют Playwright).
 
 ### Линтинг
 
@@ -220,7 +258,7 @@ python -m alembic history
 superior_crm/
 ├── main.py                  # Точка входа (FastAPI app + middleware + seed)
 ├── app/
-│   ├── models.py            # SQLAlchemy модели (6 таблиц)
+│   ├── models.py            # SQLAlchemy модели (19 таблиц)
 │   ├── database.py          # Engine, Session, get_db, Jinja2 templates
 │   ├── schemas.py           # Pydantic-схемы (данные + формы)
 │   ├── forms.py             # Depends-функции Form → Pydantic
@@ -230,16 +268,32 @@ superior_crm/
 │   ├── ratelimit.py         # Rate limiter (in-memory)
 │   ├── logging_config.py    # Настройка логирования
 │   ├── timezone.py          # Утилиты времени (UTC storage, localtime display)
+│   ├── nutrition.py         # Расчёт BMR/TDEE/макросов, генерация плана
+│   ├── nutrition2.py        # Нормализованные продукты, список покупок
+│   ├── seed_products.py     # Seed 93 продуктов и ~300 связей MealProduct
+│   ├── seed_meals.py        # Seed 62 шаблонов блюд
 │   └── routes/
 │       ├── clients.py       # /clients
 │       ├── schedule.py      # /schedule, /slot/{id}
 │       ├── slots.py         # /slots/*, /slot/{id}/add|remove|complete
 │       ├── program.py       # /slot/{id}/program
-│       └── journal.py       # /, /journal, /subscriptions
-├── templates/               # Jinja2 шаблоны (11 файлов)
+│       ├── journal.py       # /, /journal, /subscriptions
+│       ├── employees.py     # /employees (CRUD)
+│       └── budget.py        # /budget (выручка + расходы)
+├── templates/               # Jinja2 шаблоны (14 файлов)
+│   ├── base.html            # Базовый layout с навигацией
+│   ├── schedule.html        # Недельное расписание
+│   ├── slot.html            # Детали слота + клиенты + тренеры
+│   ├── employees.html       # Список сотрудников
+│   ├── employee_form.html   # Создание/редактирование сотрудника
+│   ├── privacy.html         # Политика конфиденциальности
+│   ├── budget.html          # Бюджет с расходами
+│   ├── nutrition.html       # Питание v1 (карточки)
+│   ├── nutrition2.html      # Питание v2 (список покупок)
+│   └── ...
 ├── static/style.css
-├── tests/                   # 15 файлов, 129 тестов
-├── alembic/                 # Миграции (3 версии)
+├── tests/                   # 24 файла, 205 тестов
+├── alembic/                 # Миграции (5 версий)
 ├── .github/workflows/       # CI (GitHub Actions)
 ├── requirements.txt
 └── README.md

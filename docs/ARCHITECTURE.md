@@ -8,7 +8,7 @@
 | ORM | SQLAlchemy (синхронный) |
 | Шаблоны | Jinja2 |
 | БД | SQLite (dev) / PostgreSQL (prod) |
-| Миграции | Alembic |
+| Миграции | Alembic (5 версий) + runtime-миграции |
 | Валидация форм | Pydantic v2 |
 | E2E-тесты | Playwright (pytest-playwright) |
 | Линтер | ruff (line-length=120) |
@@ -19,7 +19,7 @@
 superior_crm/
 ├── app/
 │   ├── __init__.py          # (пустой)
-│   ├── models.py            # SQLAlchemy модели (12 таблиц)
+│   ├── models.py            # SQLAlchemy модели (19 таблиц)
 │   ├── database.py          # Engine, SessionLocal, get_db, templates, миграции
 │   ├── schemas.py           # Pydantic-схемы форм
 │   ├── forms.py             # Парсеры форм из POST-данных
@@ -28,25 +28,38 @@ superior_crm/
 │   ├── csrf.py              # Stateless CSRF (HMAC-SHA256)
 │   ├── pricing.py           # Матрица цен, helpers (time_slot, format)
 │   ├── strength.py          # 1ПМ (Эпли), нормативы
+│   ├── nutrition.py         # Расчёт BMR/TDEE/макросов, генерация плана
+│   ├── nutrition2.py        # Нормализованные продукты, список покупок
 │   ├── seed_exercises.py    # 7 групп, 53 упражнения
+│   ├── seed_products.py     # Seed 93 продуктов, ~300 связей MealProduct
+│   ├── seed_meals.py        # Seed 62 шаблонов блюд
 │   ├── timezone.py          # now(), now_aware()
 │   ├── logging_config.py    # audit_log, request-логгер
 │   ├── ratelimit.py         # In-memory rate limiter
 │   └── routes/
 │       ├── clients.py       # /clients — CRUD + подписки
 │       ├── schedule.py      # /schedule — календарь
-│       ├── slots.py         # /slot/{id}, /slots/* — слоты, брони, завершение
+│       ├── slots.py         # /slots/* — слоты, брони, завершение
 │       ├── program.py       # /slot/{id}/program — план тренировки
 │       ├── journal.py       # /journal — журнал
 │       ├── signup.py        # /signup — публичная заявка
 │       ├── sql_console.py   # /sql — консоль (admin)
 │       ├── exercises_api.py # /api/exercise-* — AJAX для конструктора
-│       ├── budget.py        # /budget — финансы (admin)
-│       └── dashboard.py     # /dashboard — дашборд с графиками (admin/trainer)
-├── templates/               # Jinja2-шаблоны (17 шт.)
+│       ├── budget.py        # /budget — финансы с расходами (admin)
+│       ├── dashboard.py     # /dashboard — дашборд с графиками (admin/trainer)
+│       └── employees.py     # /employees — CRUD сотрудников (admin)
+├── templates/               # Jinja2-шаблоны (16 шт.)
+│   ├── base.html            # Базовый layout
+│   ├── employees.html       # Список сотрудников
+│   ├── employee_form.html   # Создание/редактирование сотрудника
+│   ├── privacy.html         # Политика конфиденциальности
+│   ├── nutrition.html       # Питание v1
+│   ├── nutrition2.html      # Питание v2 / список покупок
+│   └── ...
 ├── static/
 │   └── style.css            # BEM CSS (тёмная тема)
-├── tests/                   # 166 unit + 23 E2E = 189 тестов
+├── tests/                   # 205 unit + 3 skipped
+├── docs/                    # Документация (5 файлов)
 ├── alembic/                 # 5 миграций
 ├── main.py                  # Точка входа, middleware, seed
 ├── requirements.txt
@@ -73,6 +86,7 @@ superior_crm/
 ## Аутентификация
 
 - Admin/trainer — по логину/паролю из переменных окружения (ADMIN_LOGIN/PASSWORD, TRAINER_LOGIN/PASSWORD)
+- Сотрудники (Employee) — по логину/паролю из таблицы employees (PBKDF2-SHA256), роль определяется по должности
 - Client — по логину/паролю из таблицы clients (PBKDF2-SHA256)
 - Сессии — в таблице sessions (DB-backed, не cookie)
 - Rate limit — 5 попыток в минуту на логин (in-memory)

@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.database import get_db, templates
-from app.models import SubscriptionPurchase, SubscriptionConsumption, Client
+from app.models import SubscriptionPurchase, SubscriptionConsumption, Client, Employee, Expense
 from app.auth import require_role
 
 router = APIRouter()
@@ -115,5 +115,78 @@ def budget_page(
             "month_revenue": month_revenue,
             "purchases": purchase_list,
             "consumptions": consumption_list,
+            "expenses": _calc_expenses(db, round(total_earned)),
         },
     )
+
+
+def _calc_expenses(db, monthly_revenue: int) -> dict:
+    """Рассчитать расходы на зарплату, налоги и чистую прибыль."""
+    current_month = datetime.now().strftime("%Y-%m")
+    employees = db.query(Employee).filter(Employee.is_active == True).all()
+
+    salary_total = 0
+    ndfl_total = 0
+    social_total = 0
+    employee_details = []
+
+    for emp in employees:
+        coeff = (emp.regional_coefficient or 100) / 100.0
+        salary = round(emp.salary_amount * coeff)
+        ndfl = round(salary * 0.13)        # НДФЛ 13%
+        social = round(salary * 0.302)     # Взносы ФОТ 30.2%
+        total_cost = salary + social
+        salary_total += salary
+        ndfl_total += ndfl
+        social_total += social
+
+        # Премия / дивиденды
+        bonus = 0
+        dividend = 0
+        if emp.bonus_percent:
+            bonus = round(monthly_revenue * emp.bonus_percent / 100)
+        if emp.dividend_percent:
+            dividend = 0  # рассчитывается после вычета всех расходов
+
+        employee_details.append({
+            "name": emp.fio(),
+            "position": emp.position,
+            "salary": salary,
+            "ndfl": ndfl,
+            "social": social,
+            "total_cost": total_cost,
+            "take_home": salary - ndfl,
+            "bonus": bonus,
+        })
+
+    # Расходы из БД (аренда, прочее)
+    manual_expenses = db.query(Expense).filter(Expense.month == current_month).all()
+    rent_total = sum(e.amount for e in manual_expenses if e.category == "rent")
+    other_total = sum(e.amount for e in manual_expenses if e.category == "other")
+
+    fot_total = salary_total + social_total
+    usn_tax = round(monthly_revenue * 0.06)  # УСН 6%
+    total_expenses = fot_total + usn_tax + rent_total + other_total
+
+    # Дивиденды (после всех расходов)
+    net_profit_before_dividends = monthly_revenue - total_expenses
+    dividend_total = 0
+    for emp in employees:
+        if emp.dividend_percent:
+            dividend_total += round(net_profit_before_dividends * emp.dividend_percent / 100)
+
+    net_profit = net_profit_before_dividends - dividend_total
+
+    return {
+        "employees": employee_details,
+        "salary_total": salary_total,
+        "ndfl_total": ndfl_total,
+        "social_total": social_total,
+        "fot_total": fot_total,
+        "usn_tax": usn_tax,
+        "rent_total": rent_total,
+        "other_total": other_total,
+        "total_expenses": total_expenses,
+        "dividend_total": dividend_total,
+        "net_profit": net_profit,
+    }

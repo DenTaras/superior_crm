@@ -318,6 +318,13 @@ MEAL_TEMPLATES = [
 
 def seed_meals(db):
     """Заполнить таблицу шаблонов (обновляет все записи по имени)."""
+    # Удаляем дубликаты по имени (оставляем только запись с минимальным id)
+    from sqlalchemy import func as _func
+    subq = db.query(MealTemplate.name, _func.min(MealTemplate.id).label("min_id")).group_by(MealTemplate.name).having(_func.count(MealTemplate.id) > 1).subquery()
+    dupes = db.query(MealTemplate).join(subq, (MealTemplate.name == subq.c.name) & (MealTemplate.id != subq.c.min_id)).all()
+    for d in dupes:
+        db.delete(d)
+
     existing = {m.name: m for m in db.query(MealTemplate).all()}
     for i, m in enumerate(MEAL_TEMPLATES):
         course = m.get("course") or _infer_course(m["meal_type"], m["name"])
@@ -335,7 +342,6 @@ def seed_meals(db):
             sort_order=i,
         )
         if m["name"] in existing:
-            # Обновить существующую запись
             for k, v in kwargs.items():
                 setattr(existing[m["name"]], k, v)
         else:

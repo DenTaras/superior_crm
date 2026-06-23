@@ -1,26 +1,23 @@
 # Тестирование Superior CRM
 
-**189 тестов: 166 unit + 23 E2E**
+**205 тестов + 3 skipped**
 
 ## Запуск
 
 ```powershell
 # Все unit-тесты
-pytest --ignore=tests/test_e2e.py -q
+pytest -q
 
 # Конкретный файл
 pytest tests/test_auth.py -v
 
-# E2E-тесты (автостарт сервера с временной БД)
-pytest tests/test_e2e.py -v
-
-# E2E с видимым браузером
-pytest tests/test_e2e.py --headed
+# С отчётом по времени
+pytest -q --durations=5
 ```
 
 ## Структура тестов
 
-### Unit-тесты (166)
+### Полный список
 
 | Файл | Тестов | Что проверяет |
 |------|--------|--------------|
@@ -29,10 +26,14 @@ pytest tests/test_e2e.py --headed
 | `test_calendar.py` | 3 | Отображение недели, week_offset |
 | `test_clients.py` | 7 | CRUD, пагинация, антропометрия, профиль |
 | `test_edge_cases.py` | 35 | XSS, SQLi, mass assignment, дашборд |
+| `test_employees.py` | 10 | Сотрудники, назначение тренеров, бюджет/расходы |
 | `test_exercises.py` | 4 | API групп, упражнений, лог |
 | `test_flash.py` | 9 | Flash-модалка |
+| `test_full_integration.py` | 3 | Полный цикл + budget + consumption log |
 | `test_journal.py` | 2 | Завершение, журнал |
 | `test_logging.py` | 6 | audit-логи |
+| `test_nutrition.py` | 17 | BMR/TDEE, макросы, план, UI, настройки |
+| `test_nutrition2.py` | 9 | Список покупок, .txt, seed, дубликаты |
 | `test_optimization.py` | 9 | Тайминги загрузки страниц |
 | `test_program.py` | 1 | Сохранение заметки |
 | `test_security.py` | 10 | XSS, CSRF, rate limit, CSP |
@@ -43,19 +44,6 @@ pytest tests/test_e2e.py --headed
 | `test_strength.py` | 15 | 1ПМ, нормативы, лог, профиль |
 | `test_subscriptions.py` | 5 | Абонементы (группировка, списание FIFO) |
 | `test_time_slots.py` | 7 | Привязка к time_slot, бронь по слотам, профиль |
-
-### E2E-тесты (23)
-
-| Класс | Роль | Тесты |
-|-------|------|-------|
-| TestAnonymous | аноним | home, redirects (clients, journal, profile) |
-| TestClient | клиент | profile, redirects |
-| TestTrainer | тренер | clients, journal, subscriptions, create_client |
-| TestAdmin | админ | create_client, logout |
-| TestFlash | — | auto_hide, close |
-| TestProgram | админ | full_flow (создать → записать → программа → завершить → журнал) |
-| TestSignup | аноним | form_visible, success, minimal, nav_link, nav_hidden |
-| TestProfile | клиент/админ | client_profile_shows_info, admin_profile_shows_stats |
 
 ## Как это работает
 

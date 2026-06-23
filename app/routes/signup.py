@@ -10,6 +10,12 @@ from app.models import TrainingRequest
 router = APIRouter()
 
 
+@router.get("/privacy")
+def privacy_page(request: Request):
+    """Политика обработки персональных данных."""
+    return templates.TemplateResponse(request=request, name="privacy.html", context={})
+
+
 @router.get("/signup")
 def signup_page(request: Request):
     """Форма записи на пробную тренировку."""
@@ -24,15 +30,24 @@ def signup_post(
     phone: str = Form(""),
     goal: str = Form(""),
     preferred_time: str = Form(""),
+    pd_consent: bool = Form(False),
     db: Session = Depends(get_db),
 ):
     """Сохранить заявку на тренировку."""
+    if not pd_consent:
+        return templates.TemplateResponse(
+            request=request, name="signup.html",
+            context={"error": "Необходимо согласие на обработку персональных данных"},
+        )
+    from datetime import datetime
     req = TrainingRequest(
         first_name=first_name.strip(),
         last_name=last_name.strip(),
         phone=phone.strip(),
         goal=goal.strip(),
         preferred_time=preferred_time.strip(),
+        pd_consent=True,
+        pd_consent_at=datetime.now(),
     )
     db.add(req)
     db.commit()

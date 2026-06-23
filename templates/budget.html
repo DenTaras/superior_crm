@@ -98,4 +98,62 @@
 <p class="text-muted mt-1" style="font-size:0.85rem;">Последние 50 списаний.</p>
 {% endif %}
 
+{% if expenses %}
+<hr class="mt-3 mb-2" />
+<h3>Расходы (текущий месяц)</h3>
+
+<div class="stats mb-2" style="flex-wrap:wrap;">
+    <div class="stats__card"><div class="stats__value">{{ expenses.fot_total }}</div><div class="stats__label">ФОТ (оклад + взносы)</div></div>
+    <div class="stats__card"><div class="stats__value">{{ expenses.usn_tax }}</div><div class="stats__label">УСН 6%</div></div>
+    <div class="stats__card"><div class="stats__value">{{ expenses.rent_total }}</div><div class="stats__label">Аренда</div></div>
+    <div class="stats__card"><div class="stats__value">{{ expenses.total_expenses }}</div><div class="stats__label">Всего расходов</div></div>
+    <div class="stats__card" style="border:2px solid var(--accent);">
+        <div class="stats__value" style="color:var(--accent);">{{ expenses.net_profit }}</div>
+        <div class="stats__label">Чистая прибыль</div>
+    </div>
+</div>
+
+<h4>Сотрудники</h4>
+<div class="table__wrapper mt-1">
+<table class="table">
+    <thead>
+        <tr>
+            <th class="table__header">ФИО</th>
+            <th class="table__header">Должность</th>
+            <th class="table__header">Оклад</th>
+            <th class="table__header">НДФЛ 13%</th>
+            <th class="table__header">Взносы 30.2%</th>
+            <th class="table__header">Итого расход</th>
+            <th class="table__header">На руки</th>
+            {% if expenses.dividend_total %}<th class="table__header">Дивиденды</th>{% endif %}
+        </tr>
+    </thead>
+    <tbody>
+    {% for emp in expenses.employees %}
+    <tr class="table__row">
+        <td class="table__cell">{{ emp.name }}</td>
+        <td class="table__cell">
+            {% if emp.position == 'director' %}Директор
+            {% elif emp.position == 'trainer' %}Тренер
+            {% else %}Администратор
+            {% endif %}
+        </td>
+        <td class="table__cell">{{ "{:,}".format(emp.salary) }} ₽</td>
+        <td class="table__cell">{{ "{:,}".format(emp.ndfl) }} ₽</td>
+        <td class="table__cell">{{ "{:,}".format(emp.social) }} ₽</td>
+        <td class="table__cell"><strong>{{ "{:,}".format(emp.total_cost) }} ₽</strong></td>
+        <td class="table__cell">{{ "{:,}".format(emp.take_home) }} ₽</td>
+        {% if expenses.dividend_total %}<td class="table__cell">{{ "{:,}".format(emp.bonus) }} ₽</td>{% endif %}
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+<p class="text-muted mt-1" style="font-size:0.85rem;">
+    НДФЛ удерживается из оклада сотрудника. Взносы ФОТ — расход компании сверх оклада.
+    УСН 6% считается от фиксированной выручки за месяц.
+    {% if expenses.dividend_total %}Дивиденды выплачиваются из чистой прибыли.{% endif %}
+</p>
+{% endif %}
+
 {% endblock %}

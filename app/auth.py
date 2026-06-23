@@ -17,7 +17,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db, templates
-from app.models import Client
+from app.models import Client, Employee
 from app.ratelimit import check_rate_limit, clear_rate_limit
 from app.pricing import slot_time_slot
 from app.timezone import now as tz_now
@@ -105,14 +105,26 @@ def login_post(
             status_code=429,
         )
 
-    # admin
+    # Проверка по сотрудникам (админ, тренер, директор)
+    employee = db.query(Employee).filter(Employee.login == login, Employee.is_active == True).first()
+    if employee and employee.password_hash and verify_password(password, employee.password_hash):
+        clear_rate_limit(f"login:{login}")
+        request.session.regenerate_id()
+        role_map = {"director": "admin", "trainer": "trainer", "admin": "admin"}
+        request.session["user"] = {
+            "role": role_map.get(employee.position, "trainer"),
+            "name": employee.fio(),
+            "employee_id": employee.id,
+        }
+        return RedirectResponse("/", status_code=303)
+
+    # fallback: hardcoded admin/trainer (legacy)
     if login == ADMIN_LOGIN and password == ADMIN_PASSWORD:
         clear_rate_limit(f"login:{login}")
         request.session.regenerate_id()
         request.session["user"] = {"role": "admin", "name": "Администратор"}
         return RedirectResponse("/", status_code=303)
 
-    # trainer
     if login == TRAINER_LOGIN and password == TRAINER_PASSWORD:
         clear_rate_limit(f"login:{login}")
         request.session.regenerate_id()
@@ -153,9 +165,17 @@ def register_post(
     first_name: str = Form(...),
     last_name: str = Form(""),
     phone: str = Form(""),
+    pd_consent: bool = Form(False),
     db: Session = Depends(get_db),
 ):
     """Регистрация нового клиента."""
+    if not pd_consent:
+        return templates.TemplateResponse(
+            request=request, name="register.html",
+            context={"error": "Необходимо согласие на обработку персональных данных"},
+            status_code=403,
+        )
+
     # проверяем, что логин уникален
     existing = db.query(Client).filter(Client.login == login).first()
     if existing:
@@ -165,6 +185,7 @@ def register_post(
             status_code=403,
         )
 
+    from datetime import datetime
     client = Client(
         login=login,
         password_hash=hash_password(password),
@@ -172,6 +193,8 @@ def register_post(
         last_name=last_name.strip(),
         phone=phone.strip(),
         name=f"{last_name.strip()} {first_name.strip()}".strip(),
+        pd_consent_given=True,
+        pd_consent_at=datetime.now(),
     )
     db.add(client)
     db.flush()
@@ -488,6 +511,27 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
     total_clients = db.query(ClientModel).count()
     total_slots = db.query(SlotModel).count()
     total_journal = db.query(JournalEntry).count()
+
+    # Ближайшие тренировки для тренера
+    trainer_slots = []
+    if user["role"] == "trainer" and user.get("employee_id"):
+        from app.models import SlotEmployee, Booking as Bk
+        se_list = db.query(SlotEmployee).filter(
+            SlotEmployee.employee_id == user["employee_id"]
+        ).all()
+        slot_ids = [se.slot_id for se in se_list]
+        if slot_ids:
+            upcoming = db.query(SlotModel).filter(
+                SlotModel.id.in_(slot_ids),
+                SlotModel.start_time >= tz_now(),
+            ).order_by(SlotModel.start_time).limit(10).all()
+            for s in upcoming:
+                bk_count = db.query(Bk).filter(Bk.slot_id == s.id).count()
+                trainer_slots.append({
+                    "slot": s,
+                    "client_count": bk_count,
+                })
+
     return templates.TemplateResponse(
         request=request, name="user.html",
         context={
@@ -495,6 +539,7 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
             "total_clients": total_clients,
             "total_slots": total_slots,
             "total_journal": total_journal,
+            "trainer_slots": trainer_slots,
         },
     )
 
@@ -584,4 +629,24 @@ def profile_cancel(request: Request, db: Session = Depends(get_db), slot_id: int
     db.query(Booking).filter(Booking.slot_id == slot_id, Booking.client_id == client_id).delete()
     db.commit()
     audit_log("superior.audit.bookings", "REMOVE", client_id=client_id, slot_id=slot_id)
+    return RedirectResponse("/profile", status_code=303)
+
+
+@router.post("/profile/revoke-consent")
+def profile_revoke_consent(request: Request, db: Session = Depends(get_db)):
+    """Отзыв согласия на обработку ПД."""
+    from datetime import datetime
+
+    user = get_current_user(request)
+    if not user or user["role"] != "client":
+        return RedirectResponse("/login", status_code=303)
+
+    client_id = user.get("client_id")
+    c = db.get(Client, client_id)
+    if c:
+        c.pd_consent_given = False
+        c.pd_consent_at = None
+        db.add(c)
+        db.commit()
+
     return RedirectResponse("/profile", status_code=303)

@@ -97,6 +97,7 @@ def test_register_creates_new_session(anon_client):
     r = anon_client.post("/register", data={
         "login": "fresh_user", "password": "123",
         "first_name": "Fresh", "last_name": "User", "phone": "+70000000999",
+        "pd_consent": "true",
     }, follow_redirects=False)
     assert r.status_code == 303
 

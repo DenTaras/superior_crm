@@ -224,6 +224,28 @@
     </details>
     {% endif %}
 
+    {% if trainer_slots is defined %}
+    <hr class="mt-2 mb-2" />
+    <h3>Мои ближайшие тренировки</h3>
+    <table class="table mt-1">
+        <thead>
+            <tr><th class="table__header">Дата</th><th class="table__header">Время</th><th class="table__header">Клиентов</th><th class="table__header"></th></tr>
+        </thead>
+        <tbody>
+        {% for ts in trainer_slots %}
+        <tr class="table__row">
+            <td class="table__cell">{{ ts.slot.start_time.strftime('%d.%m') }}</td>
+            <td class="table__cell">{{ ts.slot.start_time.strftime('%H:%M') }}</td>
+            <td class="table__cell">{{ ts.client_count }}</td>
+            <td class="table__cell"><a class="btn btn--small btn--ghost" href="/slot/{{ ts.slot.id }}">Открыть</a></td>
+        </tr>
+        {% else %}
+        <tr><td class="table__cell" colspan="4">Нет ближайших тренировок</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
     {% if total_clients is defined %}
     <hr class="mt-2 mb-2" />
     <div class="stats">
@@ -240,6 +262,26 @@
             <div class="stats__label">Записей в журнале</div>
         </div>
     </div>
+    {% endif %}
+</div>
+
+<hr class="mt-2 mb-2">
+<div class="flex-row" style="gap:12px;align-items:center;flex-wrap:wrap;">
+    <span style="font-size:0.85rem;color:var(--text-secondary);">
+        Согласие на обработку ПД:
+        {% if client and client.pd_consent_given %}
+        ✅ Да ({{ client.pd_consent_at.strftime('%d.%m.%Y') if client.pd_consent_at else '—' }})
+        {% elif client %}
+        ❌ Нет
+        {% else %}
+        —
+        {% endif %}
+    </span>
+    {% if user.role == 'client' and client and client.pd_consent_given %}
+    <form method="post" action="/profile/revoke-consent" onsubmit="return confirm('Вы уверены? После отзыва согласия обработка ваших данных будет прекращена. Для восстановления доступа обратитесь к администратору.');">
+        {{ csrf_input(request) }}
+        <button class="btn btn--ghost btn--small" type="submit" style="color:var(--danger);">Отозвать согласие</button>
+    </form>
     {% endif %}
 </div>
 

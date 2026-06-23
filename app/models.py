@@ -40,6 +40,8 @@ class Client(Base):
     sex = Column(String, nullable=True)            # m/f
     goal = Column(String, nullable=True)             # lose | gain | recompose
     activity_level = Column(String, nullable=True)   # sedentary | light | moderate | active | extreme
+    pd_consent_given = Column(Boolean, default=False)
+    pd_consent_at = Column(DateTime, nullable=True)
 
     def fio(self) -> str:
         """Краткое ФИО: «Фамилия Имя» или fallback на `name`."""
@@ -104,6 +106,8 @@ class TrainingRequest(Base):
     goal = Column(String, default="")              # цель тренировок
     preferred_time = Column(String, default="")    # предпочитаемое время
     created_at = Column(DateTime, default=datetime.now)
+    pd_consent = Column(Boolean, default=False)
+    pd_consent_at = Column(DateTime, nullable=True)
 
 
 class ExerciseGroup(Base):
@@ -222,4 +226,72 @@ class SubscriptionConsumption(Base):
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     slot_id = Column(Integer, ForeignKey("slots.id"), nullable=True)
     slot_time = Column(DateTime, nullable=True)       # когда прошла тренировка
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class Product(Base):
+    """Продукт питания."""
+    __tablename__ = "products"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=False)
+    category = Column(String, nullable=False)  # meat | poultry | fish | dairy | eggs | vegetables | fruit | groceries | seasoning | other
+    unit = Column(String, default="г")          # г | мл | шт
+
+
+class MealProduct(Base):
+    """Связь шаблона блюда с продуктом + количество."""
+    __tablename__ = "meal_products"
+    id = Column(Integer, primary_key=True)
+    meal_template_id = Column(Integer, ForeignKey("meal_templates.id"), nullable=False, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False, index=True)
+    amount = Column(Integer, nullable=False)      # в единицах product.unit
+
+
+class Employee(Base):
+    """Сотрудник студии (тренер, директор)."""
+    __tablename__ = "employees"
+    id = Column(Integer, primary_key=True)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, default="")
+    patronymic = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    position = Column(String, nullable=False)       # director | trainer | admin
+    login = Column(String, unique=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True)
+    salary_type = Column(String, default="fixed")   # fixed | fixed+bonus | fixed+dividends
+    salary_amount = Column(Integer, default=0)       # оклад руб/мес
+    regional_coefficient = Column(Integer, default=100)  # районный коэффициент в % (100=1.0, 115=1.15)
+    bonus_percent = Column(Integer, nullable=True)   # премия % от выручки
+    dividend_percent = Column(Integer, nullable=True) # дивиденды % от чистой прибыли
+    created_at = Column(DateTime, default=datetime.now)
+
+    def fio(self) -> str:
+        parts = []
+        if self.last_name:
+            parts.append(self.last_name)
+        if self.first_name:
+            parts.append(self.first_name)
+        if self.patronymic:
+            parts.append(self.patronymic)
+        return " ".join(parts) or "—"
+
+
+class SlotEmployee(Base):
+    """Назначение тренера на слот."""
+    __tablename__ = "slot_employees"
+    id = Column(Integer, primary_key=True)
+    slot_id = Column(Integer, ForeignKey("slots.id"), nullable=False, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
+    assigned_at = Column(DateTime, default=datetime.now)
+
+
+class Expense(Base):
+    """Статья расходов."""
+    __tablename__ = "expenses"
+    id = Column(Integer, primary_key=True)
+    month = Column(String, nullable=False, index=True)      # "2026-06"
+    category = Column(String, nullable=False)                # salary | tax_ndfl | tax_social | tax_usn | rent | other
+    description = Column(String, default="")
+    amount = Column(Integer, nullable=False)                 # в рублях
     created_at = Column(DateTime, default=datetime.now)

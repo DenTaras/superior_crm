@@ -3,13 +3,13 @@
 from datetime import datetime, timedelta
 from app.timezone import now as tz_now
 
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db, templates
-from app.models import Slot, Booking, Client
-from app.auth import get_current_user
+from app.models import Slot, Booking, Client, Employee, SlotEmployee
+from app.auth import get_current_user, require_role
 
 router = APIRouter()
 
@@ -93,6 +93,14 @@ def slot_page(
     clients = [db.get(Client, b.client_id) for b in bookings]
     all_clients = db.query(Client).all()
 
+    # Тренеры на слоте
+    slot_employees = db.query(SlotEmployee).filter(SlotEmployee.slot_id == slot_id).all()
+    assigned_trainers = [db.get(Employee, se.employee_id) for se in slot_employees]
+    available_trainers = db.query(Employee).filter(
+        Employee.is_active == True,
+        Employee.position.in_(["trainer", "director"]),
+    ).all()
+
     return templates.TemplateResponse(
         request=request,
         name="slot.html",
@@ -100,7 +108,45 @@ def slot_page(
             "slot": slot,
             "clients": clients,
             "all_clients": all_clients,
+            "assigned_trainers": assigned_trainers,
+            "available_trainers": available_trainers,
             "week_offset": week_offset,
             "user": user,
         },
     )
+
+
+@router.post("/slot/{slot_id}/assign-trainer")
+def assign_trainer(
+    slot_id: int,
+    employee_id: int = Form(...),
+    week_offset: int = Form(0),
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_role("admin", "trainer")),
+):
+    """Назначить тренера на слот."""
+    existing = db.query(SlotEmployee).filter(
+        SlotEmployee.slot_id == slot_id,
+        SlotEmployee.employee_id == employee_id,
+    ).first()
+    if not existing:
+        db.add(SlotEmployee(slot_id=slot_id, employee_id=employee_id))
+        db.commit()
+    return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}", status_code=303)
+
+
+@router.post("/slot/{slot_id}/remove-trainer")
+def remove_trainer(
+    slot_id: int,
+    employee_id: int = Form(...),
+    week_offset: int = Form(0),
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_role("admin", "trainer")),
+):
+    """Убрать тренера со слота."""
+    db.query(SlotEmployee).filter(
+        SlotEmployee.slot_id == slot_id,
+        SlotEmployee.employee_id == employee_id,
+    ).delete()
+    db.commit()
+    return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}", status_code=303)

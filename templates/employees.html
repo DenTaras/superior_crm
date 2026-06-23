@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div style="display:flex;justify-content:space-between;align-items:center;">
+    <h2 class="mt-0">Сотрудники</h2>
+    <a class="btn btn--primary" href="/employees/create">+ Добавить</a>
+</div>
+
+<div class="table__wrapper mt-2">
+<table class="table">
+    <thead>
+        <tr>
+            <th class="table__header">ФИО</th>
+            <th class="table__header">Должность</th>
+            <th class="table__header">Логин</th>
+            <th class="table__header">Оклад</th>
+            <th class="table__header">РК</th>
+            <th class="table__header">%</th>
+            <th class="table__header">Статус</th>
+            <th class="table__header"></th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for emp in employees %}
+    <tr class="table__row" style="{% if not emp.is_active %}opacity:0.5;{% endif %}">
+        <td class="table__cell">{{ emp.fio() }}</td>
+        <td class="table__cell">
+            {% if emp.position == 'director' %}Директор
+            {% elif emp.position == 'trainer' %}Тренер
+            {% else %}Администратор
+            {% endif %}
+        </td>
+        <td class="table__cell">{{ emp.login }}</td>
+        <td class="table__cell">{{ "{:,}".format(emp.salary_amount) }} ₽</td>
+        <td class="table__cell">{{ emp.regional_coefficient or 100 }}%</td>
+        <td class="table__cell">
+            {% if emp.bonus_percent %}премия {{ emp.bonus_percent }}%
+            {% elif emp.dividend_percent %}дивиденды {{ emp.dividend_percent }}%
+            {% else %}—
+            {% endif %}
+        </td>
+        <td class="table__cell">{{ '✅ Активен' if emp.is_active else '🚫 Уволен' }}</td>
+        <td class="table__cell" style="text-align:right;">
+            <a class="btn btn--ghost btn--small" href="/employees/{{ emp.id }}/edit">✎</a>
+            <form method="post" action="/employees/{{ emp.id }}/toggle" class="form--inline">
+                {{ csrf_input(request) }}
+                <button class="btn btn--ghost btn--small" type="submit" 
+                        onclick="return confirm('{{ "Уволить" if emp.is_active else "Восстановить" }} сотрудника?')">
+                    {{ '🚫' if emp.is_active else '✅' }}
+                </button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

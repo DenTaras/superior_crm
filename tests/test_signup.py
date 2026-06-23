@@ -54,6 +54,7 @@ def test_signup_with_all_fields(anon_client, db_session):
         "phone": "+79991112233",
         "goal": "Похудеть и подтянуться",
         "preferred_time": "Утро будних дней",
+        "pd_consent": "true",
     }, follow_redirects=True)
     assert r.status_code == 200
     assert "Ваша заявка принята" in r.text
@@ -72,6 +73,7 @@ def test_signup_minimal_fields(anon_client, db_session):
 
     r = anon_client.post("/signup", data={
         "first_name": "Мария",
+        "pd_consent": "true",
     }, follow_redirects=True)
     assert r.status_code == 200
     assert "Ваша заявка принята" in r.text
@@ -92,6 +94,7 @@ def test_signup_strips_whitespace(anon_client, db_session):
         "first_name": "  Алексей  ",
         "last_name": "  Смирнов  ",
         "phone": "  +7  ",
+        "pd_consent": "true",
     }, follow_redirects=True)
     assert r.status_code == 200
     assert "Ваша заявка принята" in r.text
@@ -106,6 +109,7 @@ def test_signup_success_page_has_home_link(anon_client):
     """Страница успеха содержит ссылку 'На главную'."""
     r = anon_client.post("/signup", data={
         "first_name": "UniqueHomeLink",
+        "pd_consent": "true",
     }, follow_redirects=True)
     assert r.status_code == 200
     assert 'href="/"' in r.text
@@ -116,8 +120,8 @@ def test_signup_can_submit_multiple_times(anon_client, db_session):
     """Можно отправить несколько заявок — каждая сохраняется."""
     from app.models import TrainingRequest
 
-    anon_client.post("/signup", data={"first_name": "First"}, follow_redirects=True)
-    anon_client.post("/signup", data={"first_name": "Second"}, follow_redirects=True)
+    anon_client.post("/signup", data={"first_name": "First", "pd_consent": "true"}, follow_redirects=True)
+    anon_client.post("/signup", data={"first_name": "Second", "pd_consent": "true"}, follow_redirects=True)
 
     assert db_session.query(TrainingRequest).filter_by(first_name="First").count() == 1
     assert db_session.query(TrainingRequest).filter_by(first_name="Second").count() == 1
@@ -129,7 +133,7 @@ def test_signup_preserves_created_at(anon_client, db_session):
     from app.models import TrainingRequest
 
     before = datetime.now()
-    anon_client.post("/signup", data={"first_name": "TimeTest"}, follow_redirects=True)
+    anon_client.post("/signup", data={"first_name": "TimeTest", "pd_consent": "true"}, follow_redirects=True)
     after = datetime.now()
 
     req = db_session.query(TrainingRequest).filter_by(first_name="TimeTest").first()

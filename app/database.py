@@ -105,6 +105,8 @@ def ensure_client_columns():
         ("sex", "TEXT"),
         ("goal", "TEXT"),
         ("activity_level", "TEXT"),
+        ("pd_consent_given", "BOOLEAN"),
+        ("pd_consent_at", "TIMESTAMP"),
     ]
     with engine.connect() as conn:
         for col, coltype in to_add:
@@ -201,6 +203,34 @@ def ensure_meal_templates_columns():
         _s.close()
 
 
+def ensure_training_request_columns():
+    """Добавить колонки pd_consent в training_requests."""
+    existing = _get_table_columns("training_requests")
+    if not existing:
+        return
+    with engine.connect() as conn:
+        for col in ("pd_consent", "pd_consent_at"):
+            if col not in existing:
+                try:
+                    coltype = "BOOLEAN" if col == "pd_consent" else "TIMESTAMP"
+                    conn.execute(text(f"ALTER TABLE training_requests ADD COLUMN {col} {coltype}"))
+                except Exception:
+                    pass
+
+
+def ensure_employee_columns():
+    """Добавить колонку regional_coefficient в employees."""
+    existing = _get_table_columns("employees")
+    if not existing:
+        return
+    with engine.connect() as conn:
+        if "regional_coefficient" not in existing:
+            try:
+                conn.execute(text("ALTER TABLE employees ADD COLUMN regional_coefficient INTEGER DEFAULT 100"))
+            except Exception:
+                pass
+
+
 def run_startup_migrations():
     """Создать таблицы и выполнить runtime-миграции (только для прямого запуска)."""
     Base.metadata.create_all(engine)
@@ -209,6 +239,8 @@ def run_startup_migrations():
     ensure_subscription_purchase_columns()
     ensure_anthropometry_log_columns()
     ensure_meal_templates_columns()
+    ensure_training_request_columns()
+    ensure_employee_columns()
 
     # Добавить недостающие упражнения из seed
     from app.seed_exercises import ensure_exercises
@@ -226,3 +258,11 @@ def run_startup_migrations():
         seed_meals(_s2)
     finally:
         _s2.close()
+
+    # Seed продуктов и связей
+    from app.seed_products import seed_products
+    _s3 = sessionmaker(bind=engine)()
+    try:
+        seed_products(_s3)
+    finally:
+        _s3.close()
