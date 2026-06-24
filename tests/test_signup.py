@@ -157,3 +157,24 @@ def test_signup_nav_link_exists(anon_client):
     r = anon_client.get("/")
     assert r.status_code == 200
     assert 'Записаться' in r.text
+
+
+def test_gallery_page_available(anon_client):
+    """GET /gallery returns 200 with placeholders."""
+    r = anon_client.get("/gallery")
+    assert r.status_code == 200
+    assert "Галерея" in r.text
+    assert "gallery-card" in r.text
+
+
+def test_gallery_has_emoji_placeholders(anon_client):
+    """Gallery has emoji placeholders."""
+    r = anon_client.get("/gallery")
+    assert "📸" in r.text
+    assert "🏋️" in r.text
+
+
+def test_gallery_nav_link_exists(anon_client):
+    """Navigation has gallery link."""
+    r = anon_client.get("/")
+    assert "/gallery" in r.text

@@ -16,6 +16,12 @@ def privacy_page(request: Request):
     return templates.TemplateResponse(request=request, name="privacy.html", context={})
 
 
+@router.get("/gallery")
+def gallery_page(request: Request):
+    """Галерея студии."""
+    return templates.TemplateResponse(request=request, name="gallery.html", context={})
+
+
 @router.get("/signup")
 def signup_page(request: Request):
     """Форма записи на пробную тренировку."""

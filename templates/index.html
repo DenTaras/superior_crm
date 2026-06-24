@@ -2,29 +2,23 @@
 
 {% block content %}
 
-
-<!-- слоган -->
-
+<div class="content-with-image">
+    <div class="content-with-image__text">
 
 <!-- основаня информция -->
 <div class="panel">
     <div class="page__title">
-        <h2>Что такое 111 SUPERIOR?</h2>
-        <a href="/signup" class="btn btn--primary"> Записаться на тренировку</a>
+        <h2>Что такое SUPERIOR?</h2>
     </div>
     <p>
-        Студия персональных силовых тренировок в приватном формате.
+        Камерная студия персональных силовых тренировок у Каскада.
     </p>
     <br>
     <p>
-        Мы делаем акцент на качество, а не на количество. <br>
+        Мы делаем акцент на качество, а не на количество. Мест всего 50 <br>
         Поэтому в SUPERIOR нет и не будет посторонних, шума и очередей
     </p>
 </div>
-
-<br>
-<br>
-<br>
 
 <div class="panel panel--dark">
     <h2>Почему обычные залы не дают результата</h2>
@@ -39,10 +33,6 @@
     </p>
 </div>
 
-<br>
-<br>
-<br>
-
 <div class="panel">
     <h2>Мы гарантируем</h2>
     <ul>
@@ -55,12 +45,18 @@
     </ul>
 </div>
 
+    </div>
+    
+    <div class="content-with-image__image">
+        <div class="page__controls">
+            <a href="/signup" class="btn btn--primary"> Записаться на тренировку</a>
+            <a href="/subscriptions" class="btn btn--primary"> Узнать цену</a>
+        </div>
 
-<br>
-<br>
-<br>
+        <h2>Фигура мечты за 12 месяцев - это РЕАЛЬНО</h2>
 
-
-
+        <img src="/static/photos/picture.png" alt="SUPERIOR Private Gym">
+    </div>
+</div>
 
 {% endblock %}
