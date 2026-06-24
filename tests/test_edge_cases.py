@@ -469,10 +469,13 @@ def test_double_complete_slot_is_safe(client, db_session):
 
     r1 = client.post(f"/slot/{s.id}/complete", data={}, follow_redirects=False)
     assert r1.status_code == 303
-    # слот уже удалён — повторное завершение
+    # слот помечен completed — повторное завершение
+    from app.models import Slot
+    db_session.refresh(s)
+    assert s.completed is True
     r2 = client.post(f"/slot/{s.id}/complete", data={}, follow_redirects=False)
     assert r2.status_code == 303
-    assert "/schedule" in r2.headers["location"]
+    assert "/slot/" in r2.headers["location"]
 
 
 def test_schedule_shows_empty_week(client):

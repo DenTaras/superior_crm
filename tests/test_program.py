@@ -99,6 +99,6 @@ def test_program_save_and_persistence(client, db_session):
     assert jm.get(str(c1.id)) == 'note for one'
     assert jm.get(str(c2.id)) == 'note for two'
 
-    # training notes for this slot should be removed
+    # training notes remain after completion (slot is marked completed, not deleted)
     tn_after = db_session.query(TrainingNote).filter(TrainingNote.slot_id == slot.id).all()
-    assert len(tn_after) == 0
+    assert len(tn_after) == 2

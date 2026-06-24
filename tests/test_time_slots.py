@@ -28,10 +28,10 @@ def test_buy_all_combos_and_book_matching_slots(client, db_session):
     ]
     fmt_to_cap = {"VIP": 1, "Double": 2, "Group": 4}
     for ts, fmt in combos:
-        price = get_price(ts, fmt, 1)
+        price = get_price(ts, fmt, 4)
         p = SubscriptionPurchase(
             client_id=c.id, time_slot=ts, format_name=fmt,
-            package_size=1, price=price, remaining=1,
+            package_size=4, price=price, remaining=4,
         )
         db_session.add(p)
     db_session.commit()
@@ -174,7 +174,7 @@ def test_completion_prefers_exact_time_slot_over_fallback(client, db_session):
     db_session.add(c)
     db_session.commit()
 
-    # УТРО: 1 занятие, ВЕЧЕР: 1 занятие
+    # УТРО: 4 занятия, ВЕЧЕР: 4 занятия
     p_utro = SubscriptionPurchase(
         client_id=c.id, time_slot="УТРО", format_name="Group",
         package_size=1, price=3200, remaining=1,

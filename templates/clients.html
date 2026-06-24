@@ -33,7 +33,8 @@
                     <div style="font-size:0.85rem;">
                         {% for p in row.active_purchases %}
                         {% set booked = row.booked_by_time_slot.get(p.time_slot, 0) %}
-                        <span class="badge badge--success" style="margin-right:2px;margin-bottom:2px;">{{ p.format_name }} {{ p.time_slot }}: {{ p.remaining }}/{{ booked }}</span>
+                        {% set fmt_class = "badge--vip" if p.format_name == "VIP" else "badge--double" if p.format_name == "Double" else "badge--group" %}
+                        <span class="badge {{ fmt_class }}" style="margin-right:2px;margin-bottom:2px;">{{ p.format_name }} {{ p.time_slot }}: {{ p.remaining }}/{{ booked }}</span>
                         {% endfor %}
                     </div>
                     {% else %}
@@ -56,7 +57,6 @@
                             <option value="Group">Group</option>
                         </select>
                         <select name="package_size" class="form__select" style="width:auto;">
-                            <option value="1">1 занятие</option>
                             <option value="4">4 занятия</option>
                             <option value="8">8 занятий</option>
                             <option value="12">12 занятий</option>

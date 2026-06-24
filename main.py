@@ -12,13 +12,14 @@ import time as _time
 import logging as _logging
 
 # Загрузка .env (если есть) — ДО импорта app.database
-try:
-    from dotenv import load_dotenv
-    _dotenv_path = _os.path.join(_os.path.dirname(__file__), ".env")
-    if _os.path.exists(_dotenv_path):
-        load_dotenv(_dotenv_path)
-except ImportError:
-    pass
+if _os.getenv("CSRF_DISABLE") != "1":
+    try:
+        from dotenv import load_dotenv
+        _dotenv_path = _os.path.join(_os.path.dirname(__file__), ".env")
+        if _os.path.exists(_dotenv_path):
+            load_dotenv(_dotenv_path, override=True)
+    except ImportError:
+        pass
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
@@ -39,8 +40,8 @@ from app.routes.dashboard import router as dashboard_router
 from app.routes.nutrition import router as nutrition_router
 from app.routes.nutrition2 import router as nutrition2_router
 from app.routes.employees import router as employees_router
-from app.routes.payment import router as payment_router
-from app.routes.telegram import router as telegram_router
+# from app.routes.payment import router as payment_router
+# from app.routes.telegram import router as telegram_router
 from app.auth import router as auth_router
 from app.auth import get_current_user
 from app.timezone import now as tz_now
@@ -131,8 +132,10 @@ app.include_router(schedule_router)      # /schedule, /slot/{id}
 app.include_router(slots_router)         # /slots/*, /slot/{id}/add|remove|complete
 app.include_router(program_router)       # /slot/{id}/program
 app.include_router(employees_router)     # /employees
-app.include_router(payment_router)       # /api/create-payment, /api/payment-callback
-app.include_router(telegram_router)      # /tg-webhook
+# if _os.getenv("DISABLE_PAYMENTS") != "1":
+#     app.include_router(payment_router)       # /api/create-payment, /api/payment-callback
+# if _os.getenv("DISABLE_TELEGRAM") != "1":
+#     app.include_router(telegram_router)      # /tg-webhook
 
 
 
@@ -143,67 +146,10 @@ if "alembic" not in __import__("sys").modules:
     run_startup_migrations()
 
     # Seed-данные для разработки
-    from app.auth import hash_password
-    from app.seed_exercises import seed_exercises
+    from app.seed_data import seed_all
 
     db = SessionLocal()
     try:
-        seed_exercises(db)
-
-        if db.query(Client).count() == 0:
-            from app.models import SubscriptionPurchase
-            clients_data = [
-                Client(first_name="Иван", last_name="Pетров",
-                       birth_year=1985, birth_place="Москва",
-                       phone="+79990000001", name="Петров Иван",
-                       login="client_1", password_hash=hash_password("client_1")),
-                Client(first_name="Мария", last_name="Иванова",
-                       birth_year=1990, birth_place="Санкт-Петербург",
-                       phone="+79990000002", name="Иванова Мария",
-                       login="client_2", password_hash=hash_password("client_2")),
-                Client(first_name="Алексей", last_name="Сидоров",
-                       birth_year=1988, birth_place="Казань",
-                       phone="+79990000003", name="Сидоров Алексей",
-                       login="client_3", password_hash=hash_password("client_3")),
-                Client(first_name="Денис", last_name="Тарасов",
-                       birth_year=1994, birth_place="Омск",
-                       phone="+79990000004", name="Тарасов Денис",
-                       login="client_4", password_hash=hash_password("client_4")),
-            ]
-            db.add_all(clients_data)
-            db.flush()
-            # Пробные занятия для каждого seed-клиента
-            for cl in clients_data:
-                db.add(SubscriptionPurchase(
-                    client_id=cl.id, time_slot="-", format_name="-",
-                    package_size=1, price=0, remaining=1,
-                ))
-            db.commit()
-
-        if db.query(Slot).count() == 0:
-            now = datetime.now()
-            db.add_all([
-                Slot(start_time=now + timedelta(hours=1), capacity=1),
-                Slot(start_time=now + timedelta(hours=2), capacity=2),
-                Slot(start_time=now + timedelta(hours=3), capacity=4),
-            ])
-            db.commit()
-
-        # Seed сотрудников
-        from app.models import Employee
-        if db.query(Employee).count() == 0:
-            db.add_all([
-                Employee(first_name="Анна", last_name="Директорова",
-                         position="director", login="admin",
-                         password_hash=hash_password("admin"),
-                         salary_type="fixed+dividends",
-                         salary_amount=120_000, regional_coefficient=115, dividend_percent=50),
-                Employee(first_name="Пётр", last_name="Тренеров",
-                         position="trainer", login="trainer",
-                         password_hash=hash_password("trainer"),
-                         salary_type="fixed+bonus",
-                         salary_amount=40_000, regional_coefficient=115, bonus_percent=10),
-            ])
-            db.commit()
+        seed_all(db)
     finally:
         db.close()

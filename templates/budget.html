@@ -2,6 +2,23 @@
 
 {% block content %}
 
+<form method="get" action="/budget" class="form--row mb-3" style="gap:8px;">
+    <select name="month" class="form__select" style="width:auto;">
+        {% for m in range(1, 13) %}
+        <option value="{{ m }}"{% if m == sel_month %} selected{% endif %}>{{ '0' + m|string if m < 10 else m }}</option>
+        {% endfor %}
+    </select>
+    <select name="year" class="form__select" style="width:auto;">
+        {% for y in range(2025, 2031) %}
+        <option value="{{ y }}"{% if y == sel_year %} selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+    </select>
+    <button class="btn btn--small" type="submit">Показать</button>
+</form>
+
+
+<h3>ДОХОДЫ</h3>
+<hr class="mt-1 mb-2" />
 
 <div class="stats mb-3">
     <div class="stats__card">
@@ -22,7 +39,7 @@
     </div>
     <div class="stats__card">
         <div class="stats__value">{{ month_revenue }}</div>
-        <div class="stats__label">За месяц (руб)</div>
+        <div class="stats__label">За {{ '0' + sel_month|string if sel_month < 10 else sel_month }}.{{ sel_year }} (руб)</div>
     </div>
     {% if total_refunded > 0 %}
     <div class="stats__card" style="color:var(--danger);">
@@ -38,7 +55,8 @@
 </p>
 
 {% if purchases %}
-<h3>История продаж</h3>
+<details class="mt-3" style="cursor:pointer;">
+    <summary style="color:var(--text-secondary); font-weight:600; font-size:0.9rem;">История продаж</summary>
 <div class="table__wrapper mt-1">
     <table class="table">
         <thead>
@@ -67,12 +85,14 @@
         </tbody>
     </table>
 </div>
+</details>
 {% else %}
 <p class="text-muted">Пока нет продаж.</p>
 {% endif %}
 
 {% if consumptions %}
-<h3 class="mt-3">История списаний</h3>
+<details class="mt-3" style="cursor:pointer;">
+    <summary style="color:var(--text-secondary); font-weight:600; font-size:0.9rem;">История списаний</summary>
 <div class="table__wrapper mt-1">
     <table class="table">
         <thead>
@@ -96,11 +116,13 @@
     </table>
 </div>
 <p class="text-muted mt-1" style="font-size:0.85rem;">Последние 50 списаний.</p>
+</details>
 {% endif %}
 
 {% if expenses %}
-<hr class="mt-3 mb-2" />
-<h3>Расходы (текущий месяц)</h3>
+<br>
+<h3>РАСХОДЫ</h3>
+<hr class="mt-1 mb-2" />
 
 <div class="stats mb-2" style="flex-wrap:wrap;">
     <div class="stats__card"><div class="stats__value">{{ expenses.fot_total }}</div><div class="stats__label">ФОТ (оклад + взносы)</div></div>
@@ -113,7 +135,8 @@
     </div>
 </div>
 
-<h4>Сотрудники</h4>
+<details class="mt-3" style="cursor:pointer;">
+    <summary style="color:var(--text-secondary); font-weight:600; font-size:0.9rem;">Сотрудники</summary>
 <div class="table__wrapper mt-1">
 <table class="table">
     <thead>
@@ -149,6 +172,7 @@
     </tbody>
 </table>
 </div>
+</details>
 <p class="text-muted mt-1" style="font-size:0.85rem;">
     НДФЛ удерживается из оклада сотрудника. Взносы ФОТ — расход компании сверх оклада.
     УСН 6% считается от фиксированной выручки за месяц.

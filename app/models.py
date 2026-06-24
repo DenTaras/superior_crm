@@ -57,6 +57,7 @@ class Slot(Base):
     id = Column(Integer, primary_key=True)
     start_time = Column(DateTime)
     capacity = Column(Integer, default=4)
+    completed = Column(Boolean, default=False)
 
 
 class Booking(Base):

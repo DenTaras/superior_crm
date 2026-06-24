@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, Integer
 
 from app.database import get_db, templates
-from app.models import Slot, Booking, Client, JournalEntry, TrainingNote, TrainingPlanExercise, ClientExerciseLog, SubscriptionPurchase, SubscriptionConsumption
+from app.models import Slot, Booking, Client, JournalEntry, TrainingNote, TrainingPlanExercise, ClientExerciseLog, SubscriptionPurchase, SubscriptionConsumption, SlotEmployee
 from app.schemas import SlotAddForm, SlotEditForm, BookingAddForm, SlotRemoveForm
 from app.forms import parse_slot_add_form, parse_slot_edit_form, parse_booking_add_form, parse_slot_remove_form
 from app.logging_config import audit_log
@@ -377,13 +377,11 @@ def complete_slot(
         comments=json.dumps(comments_map),
     )
     db.add(entry)
-    db.query(Booking).filter(Booking.slot_id == slot_id).delete()
-    db.query(TrainingPlanExercise).filter(TrainingPlanExercise.slot_id == slot_id).delete()
-    db.query(TrainingNote).filter(TrainingNote.slot_id == slot_id).delete()
-    db.query(Slot).filter(Slot.id == slot_id).delete()
+    slot.completed = True
+    db.add(slot)
     db.commit()
     audit_log("superior.audit.training", "COMPLETE", slot_id=slot_id, clients=", ".join(client_names))
-    return RedirectResponse("/journal", status_code=303)
+    return RedirectResponse(f"/slot/{slot_id}?week_offset={week_offset}", status_code=303)
 
 
 # ---- Вспомогательные функции ----

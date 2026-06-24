@@ -27,13 +27,16 @@ def test_complete_slot_creates_journal_and_decrements(client, db_session):
     r = client.post(f"/slot/{s.id}/complete", data={}, follow_redirects=False)
     assert r.status_code == 303
 
-    # slot should be removed
+    # slot should be marked as completed (not deleted)
     from app.models import Slot as SlotModel
-    assert db_session.query(SlotModel).filter(SlotModel.id == s.id).first() is None
+    completed_slot = db_session.query(SlotModel).filter(SlotModel.id == s.id).first()
+    assert completed_slot is not None
+    assert completed_slot.completed is True
 
-    # bookings should be removed
+    # bookings should remain (just marked completed)
     from app.models import Booking as BookingModel
-    assert db_session.query(BookingModel).filter(BookingModel.slot_id == s.id).count() == 0
+    remaining_bookings = db_session.query(BookingModel).filter(BookingModel.slot_id == s.id).count()
+    assert remaining_bookings == 2
 
     # SubscriptionPurchase remaining decremented (FIFO)
     upd1 = db_session.get(SubscriptionPurchase, p1.id)

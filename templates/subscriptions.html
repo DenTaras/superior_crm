@@ -8,149 +8,86 @@
     Чем больше занятий в пакете — тем выгоднее каждое.
 </p>
 
-<div class="pricing-wrapper">
-    <table class="pricing-table">
-        <thead>
-            <tr>
-                <th class="pricing__corner" rowspan="2">
-                    <span>Время</span>
-                    <span>Занятий</span>
-                </th>
-                <th class="pricing__corner" rowspan="2">
-                    <span>Размер пакета</span>
-                </th>
-                <th class="pricing__type-header pricing__type-header--vip" colspan="2">VIP<br><span class="pricing__sub">индивидуально</span></th>
-                <th class="pricing__type-header pricing__type-header--double" colspan="2">Double<br><span class="pricing__sub">2 человека</span></th>
-                <th class="pricing__type-header pricing__type-header--group" colspan="2">Group<br><span class="pricing__sub">до 4 человек</span></th>
-            </tr>
-            <tr>
-                <th class="pricing__sub-header">за пакет</th>
-                <th class="pricing__sub-header">занятие</th>
-                <th class="pricing__sub-header">за пакет</th>
-                <th class="pricing__sub-header">занятие</th>
-                <th class="pricing__sub-header">за пакет</th>
-                <th class="pricing__sub-header">занятие</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- УТРО -->
-            <tr class="pricing__time-row">
-                <td class="pricing__time-label" rowspan="4">УТРО<br><span class="pricing__sub">8:00 – 12:00</span></td>
-                <td class="pricing__count">1</td>
-                <td class="pricing__price">5 200</td>
-                <td class="pricing__unit">5 200</td>
-                <td class="pricing__price">4 000</td>
-                <td class="pricing__unit">4 000</td>
-                <td class="pricing__price">3 200</td>
-                <td class="pricing__unit">3 200</td>
-            </tr>
-            <tr>
-                <td class="pricing__count">4</td>
-                <td class="pricing__price">15 600</td>
-                <td class="pricing__unit">3 900</td>
-                <td class="pricing__price">12 000</td>
-                <td class="pricing__unit">3 000</td>
-                <td class="pricing__price">9 600</td>
-                <td class="pricing__unit">2 400</td>
-            </tr>
-            <tr>
-                <td class="pricing__count">8</td>
-                <td class="pricing__price">28 600</td>
-                <td class="pricing__unit">3 575</td>
-                <td class="pricing__price">22 000</td>
-                <td class="pricing__unit">2 750</td>
-                <td class="pricing__price">17 600</td>
-                <td class="pricing__unit">2 200</td>
-            </tr>
-            <tr>
-                <td class="pricing__count">12</td>
-                <td class="pricing__price">39 000</td>
-                <td class="pricing__unit">3 250</td>
-                <td class="pricing__price">30 000</td>
-                <td class="pricing__unit">2 500</td>
-                <td class="pricing__price">24 000</td>
-                <td class="pricing__unit">2 000</td>
-            </tr>
+{% set ts_info = {"УТРО": "8:00 – 12:00", "ДЕНЬ": "12:00 – 18:00", "ВЕЧЕР": "18:00 – 21:00"} %}
+{% set fmt_labels = {"VIP": "VIP", "Double": "Double", "Group": "Group"} %}
+{% set fmt_titles = {"VIP": "индивидуально", "Double": "до 2 человек", "Group": "до 4 человек"} %}
+{% set fmt_css = {"VIP": "pricing__type-header--vip", "Double": "pricing__type-header--double", "Group": "pricing__type-header--group"} %}
 
-            <!-- ДЕНЬ -->
-            <tr class="pricing__time-row">
-                <td class="pricing__time-label" rowspan="4">ДЕНЬ<br><span class="pricing__sub">12:00 – 18:00</span></td>
-                <td class="pricing__count">1</td>
-                <td class="pricing__price">4 160</td>
-                <td class="pricing__unit">4 160</td>
-                <td class="pricing__price">3 200</td>
-                <td class="pricing__unit">3 200</td>
-                <td class="pricing__price">2 560</td>
-                <td class="pricing__unit">2 560</td>
-            </tr>
-            <tr>
-                <td class="pricing__count">4</td>
-                <td class="pricing__price">12 480</td>
-                <td class="pricing__unit">3 120</td>
-                <td class="pricing__price">9 600</td>
-                <td class="pricing__unit">2 400</td>
-                <td class="pricing__price">7 680</td>
-                <td class="pricing__unit">1 920</td>
-            </tr>
-            <tr>
-                <td class="pricing__count">8</td>
-                <td class="pricing__price">22 880</td>
-                <td class="pricing__unit">2 860</td>
-                <td class="pricing__price">17 600</td>
-                <td class="pricing__unit">2 200</td>
-                <td class="pricing__price">14 080</td>
-                <td class="pricing__unit">1 760</td>
-            </tr>
-            <tr>
-                <td class="pricing__count">12</td>
-                <td class="pricing__price">31 200</td>
-                <td class="pricing__unit">2 600</td>
-                <td class="pricing__price">24 000</td>
-                <td class="pricing__unit">2 000</td>
-                <td class="pricing__price">19 200</td>
-                <td class="pricing__unit">1 600</td>
-            </tr>
+<div class="pricing-layout">
+    <div class="pricing-wrapper">
+        <table class="pricing-table">
+            <thead>
+                <tr>
+                    <th class="pricing__corner" rowspan="2">
+                        <span>Время</span>
+                        <span>Занятий</span>
+                    </th>
+                    <th class="pricing__corner" rowspan="2">
+                        <span>Размер пакета</span>
+                    </th>
+                    {% for fmt in formats %}
+                    <th class="pricing__type-header {{ fmt_css[fmt] }}" colspan="2">{{ fmt_labels[fmt] }}<br><span class="pricing__sub">{{ fmt_titles[fmt] }}</span></th>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    {% for fmt in formats %}
+                    <th class="pricing__sub-header">за пакет</th>
+                    <th class="pricing__sub-header">занятие</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for ts in time_slots %}
+                <tr class="pricing__time-row">
+                    <td class="pricing__time-label" rowspan="{{ package_sizes|length }}">{{ ts }}<br><span class="pricing__sub">{{ ts_info[ts] }}</span></td>
+                    {% for size in package_sizes %}
+                    {% if not loop.first %}<tr>{% endif %}
+                    <td class="pricing__count">{{ size }}</td>
+                    {% for fmt in formats %}
+                    {% set price = pricing[ts][fmt][size] %}
+                {% set is_best = best_deal and ts == best_deal[0] and fmt == best_deal[1] and size == best_deal[2] %}
+                <td class="pricing__price{% if is_best %} pricing__price--best{% endif %}">{{ "{:,}".format(price).replace(",", " ") }}</td>
+                <td class="pricing__unit{% if is_best %} pricing__price--best{% endif %}">{{ "{:,}".format(price // size).replace(",", " ") }}</td>
+                    {% endfor %}
+                </tr>
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-            <!-- ВЕЧЕР -->
-            <tr class="pricing__time-row">
-                <td class="pricing__time-label" rowspan="4">ВЕЧЕР<br><span class="pricing__sub">18:00 – 21:00</span></td>
-                <td class="pricing__count">1</td>
-                <td class="pricing__price">6 760</td>
-                <td class="pricing__unit">6 760</td>
-                <td class="pricing__price">5 200</td>
-                <td class="pricing__unit">5 200</td>
-                <td class="pricing__price">4 160</td>
-                <td class="pricing__unit">4 160</td>
-            </tr>
-            <tr>
-                <td class="pricing__count">4</td>
-                <td class="pricing__price">20 280</td>
-                <td class="pricing__unit">5 070</td>
-                <td class="pricing__price">15 600</td>
-                <td class="pricing__unit">3 900</td>
-                <td class="pricing__price">12 480</td>
-                <td class="pricing__unit">3 120</td>
-            </tr>
-            <tr>
-                <td class="pricing__count">8</td>
-                <td class="pricing__price">37 180</td>
-                <td class="pricing__unit">4 648</td>
-                <td class="pricing__price">28 600</td>
-                <td class="pricing__unit">3 575</td>
-                <td class="pricing__price">22 880</td>
-                <td class="pricing__unit">2 860</td>
-            </tr>
-            <tr>
-                <td class="pricing__count">12</td>
-                <td class="pricing__price">50 700</td>
-                <td class="pricing__unit">4 225</td>
-                <td class="pricing__price">39 000</td>
-                <td class="pricing__unit">3 250</td>
-                <td class="pricing__price">31 200</td>
-                <td class="pricing__unit">2 600</td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="pricing-info">
+        <div class="pricing-info__card">
+            <h3 class="pricing-info__title">Почему это выгодно?</h3>
+            <div class="pricing-info__cols">
+                <div class="pricing-info__col">
+                    <p class="pricing-info__subtitle">В обычном фитнес-клубе:</p>
+                    <ul class="pricing-info__list">
+                        <li>Абонемент: 15 000 ₽/год</li>
+                        <li>Персональные тренировки: от 2 000 ₽/шт</li>
+                        <li>Итого за 12 тренировок: 39 000 ₽</li>
+                        <li>+ толпа, очереди и сомнительный результат</li>
+                    </ul>
+                </div>
+                <div class="pricing-info__col">
+                    <p class="pricing-info__subtitle pricing-info__subtitle--good">В SUPERIOR:</p>
+                    <ul class="pricing-info__list">
+                        <li>12 тренировок: от 19 000 ₽</li>
+                        <li>Персональный подход</li>
+                        <li>План питания</li>
+                        <li>Приватная атмосфера</li>
+                        <li>Результат гарантирован</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="pricing-info__card">
+            <h3 class="pricing-info__title">Специальное предложение</h3>
+            <p class="pricing-info__text">VIP на 2 месяца за 50000 ₽ <br> 
+                (осталось 10 шт.)</p>
+        </div>
+    </div>
+
 </div>
 
 <p class="text-muted mt-3" style="font-size:0.85rem;">
@@ -172,12 +109,11 @@
     <select id="fmt" class="form__select" required style="width:auto;min-width:140px;">
         <option value="">Формат</option>
         <option value="VIP">VIP — индивидуально</option>
-        <option value="Double">Double — 2 чел.</option>
+        <option value="Double">Double — до 2 чел.</option>
         <option value="Group">Group — до 4 чел.</option>
     </select>
     <select id="pkg" class="form__select" required style="width:auto;min-width:100px;">
         <option value="">Пакет</option>
-        <option value="1">1 занятие</option>
         <option value="4">4 занятия</option>
         <option value="8">8 занятий</option>
         <option value="12">12 занятий</option>

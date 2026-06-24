@@ -51,7 +51,32 @@ def journal_page(request: Request, db: Session = Depends(get_db), _: dict = Depe
 @router.get("/subscriptions")
 def subscriptions_page(request: Request):
     """Публичная страница с информацией об абонементах и ценах."""
-    return templates.TemplateResponse(request=request, name="subscriptions.html", context={})
+    from app.pricing import PRICING, TIME_SLOTS, FORMATS, PACKAGE_SIZES
+
+    # Находим самую выгодную цену за занятие
+    best_price_per_session = float("inf")
+    best_key = None
+    for ts in TIME_SLOTS:
+        for fmt in FORMATS:
+            for size in PACKAGE_SIZES:
+                price = PRICING[ts][fmt][size]
+                per_session = price / size
+                if per_session < best_price_per_session:
+                    best_price_per_session = per_session
+                    best_key = (ts, fmt, size)
+                elif per_session == best_price_per_session and size > (best_key[2] if best_key else 0):
+                    best_key = (ts, fmt, size)
+
+    return templates.TemplateResponse(
+        request=request, name="subscriptions.html",
+        context={
+            "pricing": PRICING,
+            "time_slots": TIME_SLOTS,
+            "formats": FORMATS,
+            "package_sizes": PACKAGE_SIZES,
+            "best_deal": best_key,
+        },
+    )
 
 
 @router.get("/contacts")

@@ -79,7 +79,8 @@ class YooKassaProvider(PaymentProvider):
         self.shop_id = os.getenv("YOOKASSA_SHOP_ID", "")
         self.secret_key = os.getenv("YOOKASSA_SECRET_KEY", "")
         if not self.shop_id or not self.secret_key:
-            _log.warning("YOOKASSA_SHOP_ID / YOOKASSA_SECRET_KEY not set, payments will fail")
+            if os.getenv("DISABLE_PAYMENTS") != "1":
+                _log.warning("YOOKASSA_SHOP_ID / YOOKASSA_SECRET_KEY not set, payments will fail")
 
     def create_payment(self, payment_id, amount, description, success_url, cancel_url):
         import yookassa
@@ -118,7 +119,8 @@ class TinkoffProvider(PaymentProvider):
         self.terminal_key = os.getenv("TINKOFF_TERMINAL_KEY", "")
         self.password = os.getenv("TINKOFF_PASSWORD", "")
         if not self.terminal_key or not self.password:
-            _log.warning("TINKOFF_TERMINAL_KEY / TINKOFF_PASSWORD not set, payments will fail")
+            if os.getenv("DISABLE_PAYMENTS") != "1":
+                _log.warning("TINKOFF_TERMINAL_KEY / TINKOFF_PASSWORD not set, payments will fail")
 
     @staticmethod
     def _sign(data: dict, password: str) -> str:
@@ -159,7 +161,7 @@ class TinkoffProvider(PaymentProvider):
 
 def get_provider() -> PaymentProvider:
     """Вернуть провайдера в зависимости от PAYMENT_PROVIDER env."""
-    if os.getenv("TESTING") or os.getenv("CSRF_DISABLE"):
+    if os.getenv("DISABLE_PAYMENTS") == "1" or os.getenv("TESTING") or os.getenv("CSRF_DISABLE"):
         return MockProvider()
     provider_name = os.getenv("PAYMENT_PROVIDER", "yookassa").lower()
     providers = {
@@ -169,10 +171,14 @@ def get_provider() -> PaymentProvider:
     }
     cls = providers.get(provider_name)
     if cls is None:
-        _log.warning("Unknown PAYMENT_PROVIDER=%s, falling back to mock", provider_name)
+        if os.getenv("DISABLE_PAYMENTS") != "1":
+            _log.warning("Unknown PAYMENT_PROVIDER=%s, falling back to mock", provider_name)
         return MockProvider()
     return cls()
 
 
 # Экземпляр для импорта
-payment_provider = get_provider()
+if os.getenv("DISABLE_PAYMENTS") == "1":
+    payment_provider = MockProvider()
+else:
+    payment_provider = get_provider()

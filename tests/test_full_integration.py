@@ -108,10 +108,10 @@ def test_full_cycle_all_combos_with_progression(client, anon_client, db_session)
     fmt_to_cap = {"VIP": 1, "Double": 2, "Group": 4}
 
     for ts, fmt in combos:
-        price = get_price(ts, fmt, 1)
+        price = get_price(ts, fmt, 4)
         db_session.add(SubscriptionPurchase(
             client_id=client_id, time_slot=ts, format_name=fmt,
-            package_size=1, price=price, remaining=1,
+            package_size=4, price=price, remaining=4,
         ))
     db_session.commit()
 
@@ -190,7 +190,7 @@ def test_full_cycle_all_combos_with_progression(client, anon_client, db_session)
         SubscriptionPurchase.client_id == client_id,
     ).all()
     for p in purchases:
-        assert p.remaining == 0, (
+        assert p.remaining == 3, (
             f"Purchase {p.id} ({p.time_slot}/{p.format_name}) "
             f"still has remaining={p.remaining}"
         )

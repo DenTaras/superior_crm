@@ -105,7 +105,9 @@
                     {% set cell = grid.get((d_idx, hour)) %}
                     {% if cell %}
                     {%- set color_class = '' -%}
-                    {%- if cell.slot.capacity == 1 -%}
+                    {%- if cell.slot.completed -%}
+                        {%- set color_class = 'calendar__slot--completed' -%}
+                    {%- elif cell.slot.capacity == 1 -%}
                         {%- set color_class = 'calendar__slot--red' -%}
                     {%- elif cell.slot.capacity == 2 -%}
                         {%- set color_class = 'calendar__slot--yellow' -%}
@@ -117,18 +119,22 @@
                         {%- endif -%}
                     {%- endif -%}
                     <a class="calendar__slot {{ color_class }}" href="/slot/{{ cell.slot.id }}?week_offset={{ week_offset }}">
-                        <div class="calendar__slot-header">
-                            <div class="calendar__slot-time">{{ cell.slot.start_time.strftime('%H:%M') }}</div>
-                            <div class="calendar__slot-capacity">{{ cell.booked }}/{{ cell.slot.capacity }}</div>
+                        <div class="calendar__slot-inner">
+                            <div class="calendar__slot-info">
+                                <div class="calendar__slot-time">{{ cell.slot.start_time.strftime('%H:%M') }}</div>
+                                <div class="calendar__slot-capacity">{{ cell.booked }}/{{ cell.slot.capacity }}</div>
+                            </div>
+                            {% if cell.clients %}
+                            <ul class="calendar__slot-clients">
+                                {% for c in cell.clients %}
+                                <li>{{ c.name or c.fio() }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
                         </div>
-                        {% if cell.clients %}
-                        <ul class="calendar__slot-clients">
-                            {% for c in cell.clients %}
-                            <li>{{ c.fio() }}</li>
-                            {% endfor %}
-                        </ul>
-                        {% endif %}
                     </a>
+                    {% else %}
+                    <div class="calendar__cell--empty" data-day="{{ d_idx }}" data-hour="{{ hour }}"></div>
                     {% endif %}
                 </td>
                 {% endfor %}
@@ -137,5 +143,35 @@
         </tbody>
     </table>
 </div>
+
+{% block scripts %}
+{% if user and user.role in ('admin', 'trainer') %}
+<script>
+(function() {
+    var days = [];
+    {% for day in days %}
+    days.push('{{ day.strftime("%Y-%m-%d") }}');
+    {% endfor %}
+    document.querySelectorAll('.calendar__cell--empty').forEach(function(el) {
+        el.style.cursor = 'pointer';
+        el.title = 'Кликните, чтобы создать слот';
+        el.addEventListener('click', function() {
+            var d = parseInt(this.dataset.day);
+            var h = parseInt(this.dataset.hour);
+            var date = days[d];
+            var startInput = document.querySelector('input[name="start_time"]');
+            var endInput = document.querySelector('input[name="end_time"]');
+            if (startInput && endInput) {
+                startInput.value = date + 'T' + ('0' + h).slice(-2) + ':00';
+                endInput.value = date + 'T' + ('0' + (h + 1)).slice(-2) + ':00';
+                startInput.scrollIntoView({behavior:'smooth',block:'center'});
+                startInput.focus();
+            }
+        });
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}
 
 {% endblock %}

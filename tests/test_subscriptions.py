@@ -15,10 +15,13 @@ def test_subscriptions_page_shows_packages(client):
     assert "ДЕНЬ" in body
     assert "ВЕЧЕР" in body
     # Размеры пакетов
-    assert "5200" in body or "5 200" in body
-    assert "15 600" in body
-    assert "28 600" in body
+    assert "15 000" in body
+    assert "28 000" in body
     assert "39 000" in body
+    # Цены за занятие
+    assert "занятие" in body or "за пакет" in body
+    # Блок выгоды
+    assert "Почему это выгодно" in body or "SUPERIOR:" in body
     # Цены за занятие
     assert "занятие" in body
     assert "пакет" in body

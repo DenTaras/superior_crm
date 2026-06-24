@@ -1,24 +1,11 @@
-"""Тесты Telegram-бота (без реального API Telegram)."""
+"""Тесты Telegram-бота (без роутов — они отключены)."""
 
 import os
 import sys
 
 
-def test_webhook_accepts_empty_body(anon_client):
-    """Webhook принимает запрос (с токеном или без — главное без паники)."""
-    r = anon_client.post("/tg-webhook", json={})
-    assert r.status_code in (200, 500, 503)
-
-
-def test_webhook_info(anon_client):
-    """/tg-webhook-info отдаёт информацию."""
-    r = anon_client.get("/tg-webhook-info")
-    assert r.status_code in (200, 503)
-
-
 def test_telegram_module_imports():
     """Модуль telegram_bot импортируется без ошибок."""
-    # Сбрасываем кеш модуля, чтобы перезагрузить с новым окружением
     for mod in list(sys.modules.keys()):
         if 'telegram_bot' in mod:
             del sys.modules[mod]
@@ -39,7 +26,6 @@ def test_router_has_handlers():
 def test_post_to_channel_returns_false_without_token():
     """post_to_channel возвращает False без токена."""
     import asyncio
-    # Очищаем env временно
     old_token = os.environ.pop("BOT_TOKEN", None)
     old_channel = os.environ.pop("BOT_CHANNEL_ID", None)
     for mod in list(sys.modules.keys()):

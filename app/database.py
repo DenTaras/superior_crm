@@ -246,6 +246,19 @@ def ensure_employee_columns():
                 print(f"[WARN] ALTER TABLE employees ADD regional_coefficient: {ex}")
 
 
+def ensure_slot_completed_column():
+    """Добавить колонку completed в slots."""
+    existing = _get_table_columns("slots")
+    if not existing:
+        return
+    with engine.connect() as conn:
+        if "completed" not in existing:
+            try:
+                conn.execute(text("ALTER TABLE slots ADD COLUMN completed BOOLEAN DEFAULT 0"))
+            except Exception as ex:
+                print(f"[WARN] ALTER TABLE slots ADD completed: {ex}")
+
+
 def run_startup_migrations():
     """Создать таблицы и выполнить runtime-миграции (только для прямого запуска)."""
     Base.metadata.create_all(engine)
@@ -257,6 +270,7 @@ def run_startup_migrations():
     ensure_training_request_columns()
     ensure_employee_columns()
     ensure_payment_columns()
+    ensure_slot_completed_column()
 
     # Добавить недостающие упражнения из seed
     from app.seed_exercises import ensure_exercises

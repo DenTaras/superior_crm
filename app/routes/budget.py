@@ -25,15 +25,31 @@ def budget_page(
     request: Request,
     db: Session = Depends(get_db),
     _: dict = Depends(require_role("admin")),
+    year: int = 0,
+    month: int = 0,
 ):
     """Страница бюджета с финансовой статистикой и логом операций."""
+    now = datetime.now()
+    year = year or now.year
+    month = month or now.month
+    month_str = f"{year}-{month:02d}"
 
-    # ---- Все покупки (кроме возвращённых) ----
+    # Начало и конец выбранного месяца
+    month_start = datetime(year, month, 1)
+    if month == 12:
+        month_end = datetime(year + 1, 1, 1)
+    else:
+        month_end = datetime(year, month + 1, 1)
+
+    # ---- Все покупки за выбранный месяц (кроме возвращённых) ----
     purchases = (
         db.query(SubscriptionPurchase)
-        .filter(SubscriptionPurchase.refunded == False)
+        .filter(
+            SubscriptionPurchase.refunded == False,
+            SubscriptionPurchase.created_at >= month_start,
+            SubscriptionPurchase.created_at < month_end,
+        )
         .order_by(SubscriptionPurchase.created_at.desc())
-        .limit(100)
         .all()
     )
 
@@ -83,12 +99,14 @@ def budget_page(
             "unearned": round(p.remaining * (p.price / p.package_size)) if p.package_size > 0 else 0,
         })
 
-    # ---- Лог списаний (consumptions) ----
-    # Показываем последние 50
+    # ---- Лог списаний (consumptions) за выбранный месяц ----
     consumptions = (
         db.query(SubscriptionConsumption)
+        .filter(
+            SubscriptionConsumption.created_at >= month_start,
+            SubscriptionConsumption.created_at < month_end,
+        )
         .order_by(SubscriptionConsumption.created_at.desc())
-        .limit(50)
         .all()
     )
     consumption_list = []
@@ -115,14 +133,16 @@ def budget_page(
             "month_revenue": month_revenue,
             "purchases": purchase_list,
             "consumptions": consumption_list,
-            "expenses": _calc_expenses(db, round(total_earned)),
+            "expenses": _calc_expenses(db, round(total_earned), month_str),
+            "sel_year": year,
+            "sel_month": month,
         },
     )
 
 
-def _calc_expenses(db, monthly_revenue: int) -> dict:
+def _calc_expenses(db, monthly_revenue: int, month_str: str | None = None) -> dict:
     """Рассчитать расходы на зарплату, налоги и чистую прибыль."""
-    current_month = datetime.now().strftime("%Y-%m")
+    current_month = month_str or datetime.now().strftime("%Y-%m")
     employees = db.query(Employee).filter(Employee.is_active == True).all()
 
     salary_total = 0
