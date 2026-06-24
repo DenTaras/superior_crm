@@ -16,5 +16,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd ~/superior_crm
-            git pull
-            make rebuild
+            git fetch origin
+            git reset --hard origin/main
+            docker build --no-cache -t superior-crm .
+            make stop run

@@ -96,7 +96,8 @@
         </thead>
         <tbody>
             {% for hour in hours %}
-            <tr class="{% if now_in_week and hour == now_hour %}calendar__row--now{% endif %}">
+            {% set divider = hour == 13 or hour == 18 %}
+            <tr class="{% if divider %}calendar__row--divider {% endif %}{% if now_in_week and hour == now_hour %}calendar__row--now{% endif %}">
                 <td class="calendar__time">{{ '%02d:00' % hour }}
                     {%- if now_in_week and hour == now_hour %} <span class="calendar__now-marker">▲ Сейчас</span>{% endif %}
                 </td>

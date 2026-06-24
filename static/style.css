@@ -485,3 +485,6 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter:invert(
 .calendar__cell--empty{width:100%;height:100%;min-height:60px;border-radius:var(--radius-sm);transition:var(--transition)}
 .calendar__cell--empty:hover{background:rgba(217,4,41,0.08)}
 .calendar__slot-inner{display:flex;gap:4px;height:100%}.calendar__slot-info{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex-shrink:0;min-width:40px}.calendar__slot-clients{flex:1;min-width:0;list-style:none;padding:2px 2px 2px 6px;margin:0;font-size:0.75rem;line-height:1.3;display:flex;flex-direction:column;justify-content:center;border-left:1px solid rgba(255,255,255,0.08)}.calendar__slot-clients li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-primary);line-height:1.0;padding:0}
+
+.calendar__row--divider td{border-top:2px solid rgba(255,255,255,0.15)}
+.calendar__row--divider .calendar__time{border-top:2px solid rgba(255,255,255,0.25)}
