@@ -6,8 +6,22 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from app.database import get_db
-from app.models import ExerciseGroup, Exercise, ClientExerciseLog, TrainingPlanExercise
+from app.models import ExerciseGroup, Exercise, ClientExerciseLog, TrainingPlanExercise, Client
 from app.auth import require_role
+
+# Упражнения, где учитывается собственный вес
+_BODYWEIGHT_EXERCISES = {
+    "Подтягивания прямым хватом",
+    "Подтягивания обратным хватом",
+    "Отжимания от брусьев",
+    "Отжимания от пола",
+    "Отжимания от скамьи",
+    "Приседания со штангой",
+    "Выпады с гантелями",
+    "Ягодичный мостик",
+    "Планка",
+    "Болгарские выпады",
+}
 
 router = APIRouter()
 
@@ -90,6 +104,10 @@ def api_plan_exercises(
         .order_by(TrainingPlanExercise.sort_order)
         .all()
     )
+
+    client = db.get(Client, client_id)
+    client_weight = client.weight_kg if client else None
+
     return [
         {
             "id": tpe.id,
@@ -100,6 +118,8 @@ def api_plan_exercises(
             "actual_reps": tpe.actual_reps,
             "sets": tpe.sets,
             "sort_order": tpe.sort_order,
+            "client_weight": client_weight,
+            "uses_bodyweight": ex.name in _BODYWEIGHT_EXERCISES,
         }
         for tpe, ex in items
     ]
@@ -149,6 +169,7 @@ def api_plan_exercises_add(
 class PlanExerciseUpdate(BaseModel):
     id: int
     actual_reps: int | None = None
+    weight: int | None = None
 
 
 @router.post("/api/plan-exercises/update")
@@ -157,11 +178,14 @@ def api_plan_exercises_update(
     _: dict = Depends(require_role("admin", "trainer")),
     db: Session = Depends(get_db),
 ):
-    """Обновить фактические повторения в упражнении плана."""
+    """Обновить фактические повторения и/или вес в упражнении плана."""
     tpe = db.get(TrainingPlanExercise, body.id)
     if not tpe:
         return JSONResponse({"ok": False}, status_code=404)
-    tpe.actual_reps = body.actual_reps
+    if body.actual_reps is not None:
+        tpe.actual_reps = body.actual_reps
+    if body.weight is not None:
+        tpe.weight = body.weight
     db.add(tpe)
     db.commit()
     return {"ok": True}

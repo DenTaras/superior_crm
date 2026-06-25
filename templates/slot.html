@@ -183,15 +183,15 @@
 				<p class="text-muted">Тренер не назначен</p>
 				{% endfor %}
 			</ul>
-			<form method="post" action="/slot/{{ slot.id }}/assign-trainer" class="flex-row mt-2">
+			<form method="post" action="/slot/{{ slot.id }}/assign-trainer" class="flex-row mt-2" id="assign-trainer-form">
 				{{ csrf_input(request) }}
-				<select name="employee_id" class="form__select">
+				<select name="employee_id" class="form__select" onchange="document.getElementById('assign-trainer-form').requestSubmit();">
+					<option value="">— Назначить тренера —</option>
 					{% for t in available_trainers %}
 					<option value="{{ t.id }}">{{ t.fio() }} ({{ t.position }})</option>
 					{% endfor %}
 				</select>
 				<input type="hidden" name="week_offset" value="{{ week_offset }}" />
-				<button class="btn btn--primary">Назначить</button>
 			</form>
 		</div>
 	</div>

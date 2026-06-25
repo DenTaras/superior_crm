@@ -31,7 +31,8 @@
                         <tr>
                             <th class="plan-table__num">#</th>
                             <th class="plan-table__header">Упражнение</th>
-                            <th class="plan-table__header">Вес (кг)</th>
+                            <th class="plan-table__header">Свой вес (кг)</th>
+                            <th class="plan-table__header">Вес снаряда (кг)</th>
                             <th class="plan-table__header">Цель</th>
                             <th class="plan-table__header">Факт</th>
 
@@ -47,6 +48,7 @@
             <span id="save-status" class="text-muted">Автосохранение включено</span>
             <div class="flex-row">
                 <button type="button" id="btn-from-table" class="btn btn--secondary btn--small">Перенести из таблицы</button>
+                <button type="button" id="btn-smart" class="btn btn--primary btn--small">🤖 Smart</button>
                 <button type="button" id="btn-constructor" class="btn btn--primary btn--small">Конструктор тренировки</button>
             </div>
         </div>
@@ -95,6 +97,38 @@
                 </div>
                 <p id="progress-hint" class="text-muted mt-1" style="font-size:0.85rem;"></p>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====== МОДАЛКА SMART ====== -->
+<div id="smart-modal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+        <div class="modal__header">
+            <h2>🤖 Smart — программа тренировки</h2>
+            <button type="button" id="smart-modal-close" class="btn btn--ghost btn--small">✕</button>
+        </div>
+        <div class="modal__body">
+            <p class="text-muted mb-2">Выберите сплит: программа соберётся автоматически с учётом прогрессии и ротации упражнений (15 подходов, 8-12 повторений).</p>
+            <div id="smart-splits" class="constructor-grid">
+                <button class="btn btn--secondary constructor-btn" data-split="legs_shoulders">
+                    <strong>🦵 Ноги+Плечи</strong><br>
+                    <span class="text-muted" style="font-size:0.75rem;">Приседания, становая, жим стоя и др.</span>
+                </button>
+                <button class="btn btn--secondary constructor-btn" data-split="chest">
+                    <strong>💪 Грудь</strong><br>
+                    <span class="text-muted" style="font-size:0.75rem;">Жим лёжа, разводка, брусья и др.</span>
+                </button>
+                <button class="btn btn--secondary constructor-btn" data-split="back">
+                    <strong>🔙 Спина</strong><br>
+                    <span class="text-muted" style="font-size:0.75rem;">Подтягивания, тяги, гиперэкстензия и др.</span>
+                </button>
+                <button class="btn btn--secondary constructor-btn" data-split="fullbody">
+                    <strong>🏋️ Фулбади</strong><br>
+                    <span class="text-muted" style="font-size:0.75rem;">На всё тело: жим, тяга, присед и др.</span>
+                </button>
+            </div>
+            <div id="smart-status" class="mt-2 text-muted" style="font-size:0.85rem;display:none;"></div>
         </div>
     </div>
 </div>
@@ -394,10 +428,30 @@
                     tdName.textContent = ex.exercise_name;
                     tr.appendChild(tdName);
 
-                    // Вес
+                    // Свой вес
+                    var tdBodyweight = document.createElement('td');
+                    tdBodyweight.className = 'plan-table__cell';
+                    tdBodyweight.textContent = (ex.uses_bodyweight && ex.client_weight) ? ex.client_weight : '';
+                    tr.appendChild(tdBodyweight);
+
+                    // Вес снаряда (редактируемый)
                     var tdWeight = document.createElement('td');
                     tdWeight.className = 'plan-table__cell';
-                    tdWeight.textContent = ex.weight || '—';
+                    var weightInput = document.createElement('input');
+                    weightInput.type = 'number';
+                    weightInput.className = 'plan-table__input';
+                    weightInput.min = '0';
+                    weightInput.value = ex.weight || '';
+                    weightInput.placeholder = '—';
+                    weightInput.addEventListener('change', function(){
+                        var val = this.value !== '' ? parseInt(this.value) : 0;
+                        fetch('/api/plan-exercises/update', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: ex.id, weight: val })
+                        });
+                    });
+                    tdWeight.appendChild(weightInput);
                     tr.appendChild(tdWeight);
 
                     // Цель (повторов)
@@ -446,6 +500,60 @@
                 });
             });
     }
+
+    // ---------- SMART ----------
+    var smartModal = document.getElementById('smart-modal');
+    var smartStatus = document.getElementById('smart-status');
+
+    document.getElementById('btn-smart').addEventListener('click', function(){
+        if(!selected){
+            alert('Сначала выберите клиента слева.');
+            return;
+        }
+        smartStatus.style.display = 'none';
+        smartModal.style.display = '';
+    });
+
+    document.getElementById('smart-modal-close').addEventListener('click', function(){
+        smartModal.style.display = 'none';
+    });
+    smartModal.addEventListener('click', function(e){
+        if(e.target === smartModal) smartModal.style.display = 'none';
+    });
+
+    document.querySelectorAll('#smart-splits .constructor-btn').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            var split = this.getAttribute('data-split');
+            var splitNames = {
+                'legs_shoulders': 'Ноги+Плечи',
+                'chest': 'Грудь',
+                'back': 'Спина',
+                'fullbody': 'Фулбади'
+            };
+            smartStatus.style.display = '';
+            smartStatus.textContent = 'Генерирую программу «' + (splitNames[split] || split) + '»...';
+
+            fetch('/api/smart-program', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    slot_id: parseInt(slotId),
+                    client_id: parseInt(selected),
+                    split: split
+                })
+            }).then(function(r){ return r.json(); }).then(function(data){
+                smartModal.style.display = 'none';
+                if(data.ok){
+                    loadPlanExercises();
+                } else {
+                    alert('Ошибка: ' + (data.error || 'неизвестная'));
+                }
+            }).catch(function(){
+                smartModal.style.display = 'none';
+                alert('Ошибка сети при генерации программы.');
+            });
+        });
+    });
 
 })();
 </script>

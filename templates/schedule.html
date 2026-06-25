@@ -123,7 +123,7 @@
                         <div class="calendar__slot-inner">
                             <div class="calendar__slot-info">
                                 <div class="calendar__slot-time">{{ cell.slot.start_time.strftime('%H:%M') }}</div>
-                                <div class="calendar__slot-capacity">{{ cell.booked }}/{{ cell.slot.capacity }}</div>
+                                <div class="calendar__slot-capacity">{% if cell.trainer_letter %}{{ cell.trainer_letter }} - {% endif %} {{ cell.booked }}/{{ cell.slot.capacity }}</div>
                             </div>
                             {% if cell.clients %}
                             <ul class="calendar__slot-clients">

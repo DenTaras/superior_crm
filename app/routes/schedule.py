@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db, templates
 from app.models import Slot, Booking, Client, Employee, SlotEmployee
 from app.auth import get_current_user, require_role
+from sqlalchemy.orm import joinedload
 
 router = APIRouter()
 
@@ -59,10 +60,18 @@ def schedule(
         if hour in hours:
             bookings = db.query(Booking).filter(Booking.slot_id == slot.id).all()
             clients_in_slot = [db.get(Client, b.client_id) for b in bookings]
+            # Тренер на слоте
+            se = db.query(SlotEmployee).filter(SlotEmployee.slot_id == slot.id).first()
+            trainer_letter = ""
+            if se:
+                emp = db.get(Employee, se.employee_id)
+                if emp and emp.last_name:
+                    trainer_letter = emp.last_name[0]
             grid[(day_index, hour)] = {
                 'slot': slot,
                 'booked': len(clients_in_slot),
                 'clients': clients_in_slot,
+                'trainer_letter': trainer_letter,
             }
 
     return templates.TemplateResponse(

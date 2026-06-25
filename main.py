@@ -31,6 +31,7 @@ from app.routes.clients import router as clients_router
 from app.routes.schedule import router as schedule_router
 from app.routes.slots import router as slots_router
 from app.routes.program import router as program_router
+from app.smart_program import router as smart_program_router
 from app.routes.journal import router as journal_router
 from app.routes.signup import router as signup_router
 from app.routes.sql_console import router as sql_router
@@ -131,6 +132,7 @@ app.include_router(clients_router)       # /clients, /clients/*
 app.include_router(schedule_router)      # /schedule, /slot/{id}
 app.include_router(slots_router)         # /slots/*, /slot/{id}/add|remove|complete
 app.include_router(program_router)       # /slot/{id}/program
+app.include_router(smart_program_router) # /api/smart-program
 app.include_router(employees_router)     # /employees
 # if _os.getenv("DISABLE_PAYMENTS") != "1":
 #     app.include_router(payment_router)       # /api/create-payment, /api/payment-callback
