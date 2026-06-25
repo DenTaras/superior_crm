@@ -4,6 +4,7 @@ import secrets
 import hashlib
 import hmac
 import os
+import re
 from urllib.parse import parse_qs
 
 from fastapi import Request, HTTPException
@@ -35,6 +36,27 @@ def _validate_csrf(token: str) -> bool:
     return secrets.compare_digest(expected, sig)
 
 
+def _extract_csrf_from_multipart(body: bytes, boundary: str) -> str:
+    """Извлечь _csrf_token из сырого multipart-тела без парсинга всего form-data.
+
+    Ищем часть вида:
+    --boundary\r\n
+    Content-Disposition: form-data; name="_csrf_token"\r\n
+    \r\n
+    токен\r\n
+    """
+    pattern = (
+        b"--" + boundary.encode() + b"\r\n"
+        rb"Content-Disposition: form-data; name=\"_csrf_token\".*?\r\n"
+        rb"\r\n"
+        rb"(.*?)\r\n"
+    )
+    match = re.search(pattern, body, re.DOTALL)
+    if match:
+        return match.group(1).decode("utf-8", errors="replace").strip()
+    return ""
+
+
 async def csrf_middleware(request: Request, call_next):
     """Проверить CSRF-токен на POST/PUT/DELETE запросах (stateless)."""
     if request.method in ("POST", "PUT", "DELETE", "PATCH"):
@@ -45,6 +67,11 @@ async def csrf_middleware(request: Request, call_next):
                 body = await request.body()
                 parsed = parse_qs(body.decode("utf-8", errors="replace"))
                 token = parsed.get("_csrf_token", [""])[0]
+            elif "multipart/form-data" in ct:
+                body = await request.body()
+                boundary = ct.split("boundary=", 1)[-1].strip().strip('"')
+                if boundary:
+                    token = _extract_csrf_from_multipart(body, boundary)
             if not token:
                 token = request.headers.get("X-CSRF-Token", "")
             if not _validate_csrf(token):

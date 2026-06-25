@@ -130,6 +130,11 @@
     <details class="mt-2" style="cursor:pointer;">
         <summary style="color:var(--text-secondary); font-weight:600; font-size:0.9rem;">Прогресс антропометрии</summary>
         <div class="mt-2">
+            <select id="anthroSelect" class="form__select" style="width:auto;margin-bottom:8px;">
+                <option value="weight_fat">Вес + % жира</option>
+                <option value="girths">Обхваты</option>
+                <option value="skinfold">Калипер (мм)</option>
+            </select>
             <canvas id="anthroChart" height="90"></canvas>
         </div>
     </details>
@@ -363,11 +368,21 @@ if (sel) {
 var allData = {{ anthro_chart_json|safe }};
 var weightPoints = allData['Вес'] || [];
 var fatPoints = allData['Жир'] || [];
+var girthKeys = ['Бедро', 'Талия', 'Грудь', 'Плечи', 'Бицепс', 'Шея', 'Запястье'];
+var girthColors = ['#2ecc71','#e74c3c','#3498db','#f39c12','#9b59b6','#1abc9c','#95a5a6'];
+var skinfoldKeys = ['Складка грудь', 'Складка живот', 'Складка бедро', 'Складка трицепс', 'Складка под лопаткой'];
+var skinfoldColors = ['#e74c3c','#f39c12','#2ecc71','#3498db','#9b59b6'];
 
 // Собираем все даты
 var labelSet = new Set();
 weightPoints.forEach(function(p){ labelSet.add(p.x); });
 fatPoints.forEach(function(p){ labelSet.add(p.x); });
+girthKeys.forEach(function(k){
+    (allData[k] || []).forEach(function(p){ labelSet.add(p.x); });
+});
+skinfoldKeys.forEach(function(k){
+    (allData[k] || []).forEach(function(p){ labelSet.add(p.x); });
+});
 var labels = Array.from(labelSet).sort(function(a,b){
     var da=a.split('.'), db=b.split('.');
     return parseInt(da[1])-parseInt(db[1])||parseInt(da[0])-parseInt(db[0]);
@@ -378,14 +393,19 @@ function buildDict(points) {
     points.forEach(function(p){ d[p.x] = p.y; });
     return d;
 }
-var wd = buildDict(weightPoints);
-var fd = buildDict(fatPoints);
 
-new Chart(document.getElementById('anthroChart'), {
-    type: 'line',
-    data: {
-        labels: labels,
-        datasets: [
+var anthroChart = null;
+
+function buildAnthroChart(mode) {
+    var datasets = [];
+    var scales = {
+        x: { ticks: { color: '#999' }, grid: { color: '#333' } },
+    };
+
+    if (mode === 'weight_fat') {
+        var wd = buildDict(weightPoints);
+        var fd = buildDict(fatPoints);
+        datasets = [
             {
                 label: 'Вес (кг)',
                 data: labels.map(function(l){ return wd[l] !== undefined ? wd[l] : null; }),
@@ -406,36 +426,85 @@ new Chart(document.getElementById('anthroChart'), {
                 spanGaps: true,
                 pointRadius: 4,
             }
-        ]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { labels: { color: '#ccc', boxWidth: 12, padding: 8 } }
-        },
-        scales: {
-            x: { ticks: { color: '#999' }, grid: { color: '#333' } },
-            y: {
-                type: 'linear',
-                display: true,
-                position: 'left',
-                ticks: { color: '#3498db' },
-                grid: { color: '#333' },
-                beginAtZero: false,
-                title: { display: true, text: 'Вес (кг)', color: '#3498db' }
-            },
-            y1: {
-                type: 'linear',
-                display: true,
-                position: 'right',
-                ticks: { color: '#e74c3c' },
-                grid: { drawOnChartArea: false },
-                beginAtZero: false,
-                title: { display: true, text: 'Жир (%)', color: '#e74c3c' }
-            }
-        }
+        ];
+        scales.y = {
+            type: 'linear', display: true, position: 'left',
+            ticks: { color: '#3498db' }, grid: { color: '#333' },
+            beginAtZero: false,
+            title: { display: true, text: 'Вес (кг)', color: '#3498db' }
+        };
+        scales.y1 = {
+            type: 'linear', display: true, position: 'right',
+            ticks: { color: '#e74c3c' }, grid: { drawOnChartArea: false },
+            beginAtZero: false,
+            title: { display: true, text: 'Жир (%)', color: '#e74c3c' }
+        };
+    } else if (mode === 'girths') {
+        // Обхваты
+        girthKeys.forEach(function(k, i){
+            var pts = allData[k] || [];
+            var d = buildDict(pts);
+            datasets.push({
+                label: k,
+                data: labels.map(function(l){ return d[l] !== undefined ? d[l] : null; }),
+                borderColor: girthColors[i],
+                backgroundColor: 'transparent',
+                tension: 0.3,
+                spanGaps: true,
+                pointRadius: 3,
+                borderWidth: 2,
+            });
+        });
+        scales.y = {
+            type: 'linear', display: true, position: 'left',
+            ticks: { color: '#999' }, grid: { color: '#333' },
+            beginAtZero: false,
+            title: { display: true, text: 'Обхваты (см)', color: '#999' }
+        };
+    } else if (mode === 'skinfold') {
+        // Калипер
+        skinfoldKeys.forEach(function(k, i){
+            var pts = allData[k] || [];
+            var d = buildDict(pts);
+            datasets.push({
+                label: k,
+                data: labels.map(function(l){ return d[l] !== undefined ? d[l] : null; }),
+                borderColor: skinfoldColors[i],
+                backgroundColor: 'transparent',
+                tension: 0.3,
+                spanGaps: true,
+                pointRadius: 3,
+                borderWidth: 2,
+            });
+        });
+        scales.y = {
+            type: 'linear', display: true, position: 'left',
+            ticks: { color: '#999' }, grid: { color: '#333' },
+            beginAtZero: false,
+            title: { display: true, text: 'Калипер (мм)', color: '#999' }
+        };
     }
-});
+
+    if (anthroChart) anthroChart.destroy();
+
+    anthroChart = new Chart(document.getElementById('anthroChart'), {
+        type: 'line',
+        data: { labels: labels, datasets: datasets },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { labels: { color: '#ccc', boxWidth: 12, padding: 8 } }
+            },
+            scales: scales
+        }
+    });
+}
+
+var anthroSel = document.getElementById('anthroSelect');
+if (anthroSel) {
+    buildAnthroChart(anthroSel.value);
+    anthroSel.addEventListener('change', function(){ buildAnthroChart(this.value); });
+}
 })();
 </script>
 {% endif %}

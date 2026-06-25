@@ -315,7 +315,7 @@ def clients_upload_photo(
         return RedirectResponse("/clients", status_code=303)
 
     # Создаём директорию для фото, если нет
-    photos_dir = os.path.join(os.path.dirname(__file__), "..", "static", "photos")
+    photos_dir = os.path.join(os.path.dirname(__file__), "..", "..", "static", "photos")
     os.makedirs(photos_dir, exist_ok=True)
 
     # Сохраняем как client_{id}.jpg, перезаписываем старое

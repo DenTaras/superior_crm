@@ -435,6 +435,11 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
                     ("hip_cm", "Бедро"),
                     ("waist_cm", "Талия"), ("chest_cm", "Грудь"),
                     ("shoulders_cm", "Плечи"), ("biceps_cm", "Бицепс"),
+                    ("skinfold_chest", "Складка грудь"),
+                    ("skinfold_abdominal", "Складка живот"),
+                    ("skinfold_thigh", "Складка бедро"),
+                    ("skinfold_triceps", "Складка трицепс"),
+                    ("skinfold_subscapular", "Складка под лопаткой"),
                 ]
                 for col, label in fields:
                     points = []
