@@ -92,15 +92,11 @@ def test_logout_clears_session(anon_client):
     assert "/login" in r2.headers.get("location", "")
 
 
-def test_register_creates_new_session(anon_client):
-    """После регистрации создаётся новая сессия, профиль доступен."""
+def test_register_disabled_returns_404(anon_client):
+    """Регистрация отключена — /register возвращает 404."""
     r = anon_client.post("/register", data={
         "login": "fresh_user", "password": "123",
         "first_name": "Fresh", "last_name": "User", "phone": "+70000000999",
         "pd_consent": "true",
     }, follow_redirects=False)
-    assert r.status_code == 303
-
-    r2 = anon_client.get("/profile")
-    assert r2.status_code == 200
-    assert "Fresh" in r2.text
+    assert r.status_code == 404

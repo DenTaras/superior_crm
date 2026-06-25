@@ -17,11 +17,11 @@
     </div>
     <div class="form__group">
         <label class="form__label">Отчество</label>
-        <input class="form__input" type="text" name="patronymic" value="{{ employee.patronymic if employee else '' }}" />
+        <input class="form__input" type="text" name="patronymic" value="{{ employee.patronymic or '' }}" />
     </div>
     <div class="form__group">
         <label class="form__label">Телефон</label>
-        <input class="form__input" type="text" name="phone" value="{{ employee.phone if employee else '' }}" />
+        <input class="form__input" type="text" name="phone" value="{{ employee.phone or '' }}" />
     </div>
     <div class="form__group">
         <label class="form__label">Должность</label>

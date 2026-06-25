@@ -8,7 +8,7 @@
 </div>
 {% endif %}
 
-<p class="text-secondary mb-3">Заполните форму, и мы свяжемся с вами для уточнения деталей.</p>
+<p class="text-secondary mb-3">Заполните форму, и мы перезвоним вам для уточнения деталей в течение 15 минут.</p>
 
 <form method="post" action="/signup" class="form" style="max-width:500px;">
     {{ csrf_input(request) }}
@@ -35,7 +35,7 @@
     <div class="form__group" style="margin-top:12px;">
         <label class="form__label" style="font-size:0.85rem;font-weight:400;gap:8px;display:flex;align-items:flex-start;">
             <input type="checkbox" name="pd_consent" value="true" required style="margin-top:2px;">
-            Я согласен на <a href="/privacy" target="_blank">обработку персональных данных</a>
+            Я согласен на <a href="/privacy" target="_blank" style="color:var(--text-secondary)">обработку персональных данных</a>
         </label>
     </div>
     <button class="btn btn--primary" type="submit">Отправить заявку</button>

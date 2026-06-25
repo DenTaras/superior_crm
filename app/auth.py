@@ -151,75 +151,75 @@ def login_post(
     )
 
 
-@router.get("/register")
-def register_page(request: Request):
-    """Форма регистрации нового клиента."""
-    return templates.TemplateResponse(request=request, name="register.html", context={})
+# @router.get("/register")
+# def register_page(request: Request):
+#     """Форма регистрации нового клиента."""
+#     return templates.TemplateResponse(request=request, name="register.html", context={})
 
 
-@router.post("/register")
-def register_post(
-    request: Request,
-    login: str = Form(...),
-    password: str = Form(...),
-    first_name: str = Form(...),
-    last_name: str = Form(""),
-    phone: str = Form(""),
-    pd_consent: bool = Form(False),
-    db: Session = Depends(get_db),
-):
-    """Регистрация нового клиента."""
-    if not pd_consent:
-        return templates.TemplateResponse(
-            request=request, name="register.html",
-            context={"error": "Необходимо согласие на обработку персональных данных"},
-            status_code=403,
-        )
-
-    # проверяем, что логин уникален
-    existing = db.query(Client).filter(Client.login == login).first()
-    if existing:
-        return templates.TemplateResponse(
-            request=request, name="register.html",
-            context={"error": "Логин уже занят"},
-            status_code=403,
-        )
-
-    from datetime import datetime
-    client = Client(
-        login=login,
-        password_hash=hash_password(password),
-        first_name=first_name.strip(),
-        last_name=last_name.strip(),
-        phone=phone.strip(),
-        name=f"{last_name.strip()} {first_name.strip()}".strip(),
-        pd_consent_given=True,
-        pd_consent_at=datetime.now(),
-    )
-    db.add(client)
-    db.flush()
-
-    # Пробное занятие как абонемент
-    from app.models import SubscriptionPurchase
-    purchase = SubscriptionPurchase(
-        client_id=client.id,
-        time_slot="-",
-        format_name="-",
-        # "-" — универсальный формат (подходит для любого слота)
-        package_size=1,
-        price=0,
-        remaining=1,
-    )
-    db.add(purchase)
-    db.commit()
-
-    request.session.regenerate_id()
-    request.session["user"] = {
-        "role": "client",
-        "name": client.fio(),
-        "client_id": client.id,
-    }
-    return RedirectResponse("/", status_code=303)
+# @router.post("/register")
+# def register_post(
+#     request: Request,
+#     login: str = Form(...),
+#     password: str = Form(...),
+#     first_name: str = Form(...),
+#     last_name: str = Form(""),
+#     phone: str = Form(""),
+#     pd_consent: bool = Form(False),
+#     db: Session = Depends(get_db),
+# ):
+#     """Регистрация нового клиента."""
+#     if not pd_consent:
+#         return templates.TemplateResponse(
+#             request=request, name="register.html",
+#             context={"error": "Необходимо согласие на обработку персональных данных"},
+#             status_code=403,
+#         )
+# 
+#     # проверяем, что логин уникален
+#     existing = db.query(Client).filter(Client.login == login).first()
+#     if existing:
+#         return templates.TemplateResponse(
+#             request=request, name="register.html",
+#             context={"error": "Логин уже занят"},
+#             status_code=403,
+#         )
+# 
+#     from datetime import datetime
+#     client = Client(
+#         login=login,
+#         password_hash=hash_password(password),
+#         first_name=first_name.strip(),
+#         last_name=last_name.strip(),
+#         phone=phone.strip(),
+#         name=f"{last_name.strip()} {first_name.strip()}".strip(),
+#         pd_consent_given=True,
+#         pd_consent_at=datetime.now(),
+#     )
+#     db.add(client)
+#     db.flush()
+#
+#     # Пробное занятие как абонемент
+#     from app.models import SubscriptionPurchase
+#     purchase = SubscriptionPurchase(
+#         client_id=client.id,
+#         time_slot="-",
+#         format_name="-",
+#         # "-" — универсальный формат (подходит для любого слота)
+#         package_size=1,
+#         price=0,
+#         remaining=1,
+#     )
+#     db.add(purchase)
+#     db.commit()
+#
+#     request.session.regenerate_id()
+#     request.session["user"] = {
+#         "role": "client",
+#         "name": client.fio(),
+#         "client_id": client.id,
+#     }
+#     return RedirectResponse("/", status_code=303)
 
 
 @router.post("/logout")
@@ -650,3 +650,86 @@ def profile_revoke_consent(request: Request, db: Session = Depends(get_db)):
         db.commit()
 
     return RedirectResponse("/profile", status_code=303)
+
+
+@router.get("/change-password")
+def change_password_page(request: Request):
+    """Форма смены пароля."""
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    return templates.TemplateResponse(
+        request=request, name="change_password.html",
+        context={"error": None, "success": None},
+    )
+
+
+@router.post("/change-password")
+def change_password_post(
+    request: Request,
+    db: Session = Depends(get_db),
+    old_password: str = Form(...),
+    new_password: str = Form(...),
+    new_password2: str = Form(...),
+):
+    """Смена пароля для любого авторизованного пользователя."""
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+
+    # Валидация
+    if new_password != new_password2:
+        return templates.TemplateResponse(
+            request=request, name="change_password.html",
+            context={"error": "Новые пароли не совпадают", "success": None},
+        )
+    if len(new_password) < 3:
+        return templates.TemplateResponse(
+            request=request, name="change_password.html",
+            context={"error": "Пароль должен быть минимум 3 символа", "success": None},
+        )
+
+    role = user["role"]
+
+    if role == "client":
+        client_id = user.get("client_id")
+        c = db.get(Client, client_id)
+        if not c or not c.password_hash or not verify_password(old_password, c.password_hash):
+            return templates.TemplateResponse(
+                request=request, name="change_password.html",
+                context={"error": "Неверный старый пароль", "success": None},
+            )
+        c.password_hash = hash_password(new_password)
+        db.add(c)
+        db.commit()
+    elif role in ("admin", "trainer"):
+        employee_id = user.get("employee_id")
+        if employee_id:
+            emp = db.get(Employee, employee_id)
+            if emp and emp.password_hash and verify_password(old_password, emp.password_hash):
+                emp.password_hash = hash_password(new_password)
+                db.add(emp)
+                db.commit()
+            elif emp and not emp.password_hash:
+                # Сотрудник без пароля (создан через seed) — разрешаем установить первый пароль
+                emp.password_hash = hash_password(new_password)
+                db.add(emp)
+                db.commit()
+            else:
+                return templates.TemplateResponse(
+                    request=request, name="change_password.html",
+                    context={"error": "Неверный старый пароль", "success": None},
+                )
+        else:
+            # Вошли через .env fallback — нельзя сменить пароль (нет записи в БД)
+            return templates.TemplateResponse(
+                request=request, name="change_password.html",
+                context={"error": "Смена пароля недоступна для учётной записи из .env. Обратитесь к администратору.", "success": None},
+            )
+    else:
+        return RedirectResponse("/", status_code=303)
+
+    return templates.TemplateResponse(
+        request=request, name="change_password.html",
+        context={"error": None, "success": "Пароль успешно изменён!"},
+    )

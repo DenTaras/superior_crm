@@ -131,6 +131,7 @@ def add_client_post(
         return RedirectResponse("/clients", status_code=303)
 
     from app.models import SubscriptionPurchase
+    from app.auth import hash_password
     client = Client(
         first_name=form.first_name,
         last_name=form.last_name,
@@ -138,9 +139,8 @@ def add_client_post(
         birth_year=form.birth_year,
         birth_place=form.birth_place,
         phone=form.phone,
-        height_cm=form.height_cm,
-        weight_kg=form.weight_kg,
-        body_fat=form.body_fat,
+        login=form.login,
+        password_hash=hash_password(form.password) if form.password else None,
         name=f"{form.last_name} {form.first_name}".strip(),
     )
     db.add(client)
@@ -199,6 +199,11 @@ def clients_edit_post(
         client.birth_year = form.birth_year
         client.birth_place = form.birth_place
         client.phone = form.phone
+        if form.login is not None:
+            client.login = form.login
+        if form.password:
+            from app.auth import hash_password
+            client.password_hash = hash_password(form.password)
         client.height_cm = form.height_cm
         client.weight_kg = form.weight_kg
         client.body_fat = form.body_fat

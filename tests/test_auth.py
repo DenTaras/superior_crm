@@ -68,22 +68,21 @@ def test_logout(client):
     assert "/login" in r2.headers.get("location", "")
 
 
-def test_register(anon_client):
-    """Регистрация нового клиента."""
+def test_register_disabled(anon_client):
+    """Регистрация отключена — /register возвращает 404."""
     r = anon_client.post("/register", data={
         "login": "new_user", "password": "pass",
         "first_name": "New", "last_name": "User", "phone": "+70000000123",
         "pd_consent": "true",
     }, follow_redirects=False)
-    assert r.status_code == 303
+    assert r.status_code == 404
 
-    r2 = anon_client.get("/profile")
-    assert r2.status_code == 200
-    assert "New" in r2.text
+    r2 = anon_client.get("/register")
+    assert r2.status_code == 404
 
 
 def test_register_duplicate_login(anon_client, db_session):
-    """Повторная регистрация с тем же логином возвращает ошибку."""
+    """Регистрация отключена — дубликат логина не проверяется."""
     from app.models import Client as ClientModel
     from app.auth import hash_password
 
@@ -97,5 +96,4 @@ def test_register_duplicate_login(anon_client, db_session):
         "first_name": "Dup2", "last_name": "", "phone": "",
         "pd_consent": "true",
     }, follow_redirects=False)
-    assert r.status_code == 403
-    assert "занят" in r.text
+    assert r.status_code == 404

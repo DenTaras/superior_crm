@@ -75,23 +75,21 @@ def test_create_edit_delete_client(client, db_session):
     assert deleted is None
 
 
-def test_create_client_with_anthropometry(client, db_session):
-    """Создание клиента с ростом, весом и % жира."""
+def test_create_client_with_login_and_password(client, db_session):
+    """Создание клиента с логином и паролем."""
     r = client.post("/clients/create", data={
         "first_name": "Антропо",
         "last_name": "Тест",
         "phone": "+79990000100",
-        "height_cm": "175",
-        "weight_kg": "80",
-        "body_fat": "15",
+        "login": "antropo_user",
+        "password": "secret123",
     }, follow_redirects=False)
     assert r.status_code == 303
 
     created = db_session.query(Client).filter(Client.first_name == "Антропо").first()
     assert created is not None
-    assert created.height_cm == 175
-    assert created.weight_kg == 80
-    assert created.body_fat == 15
+    assert created.login == "antropo_user"
+    assert created.password_hash is not None
 
 
 def test_edit_client_anthropometry(client, db_session):

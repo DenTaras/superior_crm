@@ -1,18 +1,33 @@
 """Утилиты для работы с таймзонами.
 
-По умолчанию сервер работает в UTC, отображение — МСК (UTC+3).
-Можно переопределить через переменную окружения TZ.
+Все времена в БД хранятся как локальные (наивные, без timezone),
+потому что браузер отправляет их из datetime-local в локальном времени.
+Поэтому `now()` возвращает локальное время (Омск UTC+6 по умолчанию).
+
+Можно переопределить через переменную окружения TZ_OFFSET.
 """
 
 import os
 from datetime import datetime, timezone, timedelta
 
-# Часовой пояс для отображения (по умолчанию МСК = UTC+3)
-LOCAL_TZ_OFFSET = int(os.getenv("TZ_OFFSET", "3"))
+# Часовой пояс (по умолчанию Омск = UTC+6)
+LOCAL_TZ_OFFSET = int(os.getenv("TZ_OFFSET", "6"))
 
 
 def now() -> datetime:
-    """Текущее время в UTC (naive — совместимо с SQLite-хранением)."""
+    """Текущее локальное время (naive) — подходит для сравнения с временами в БД.
+
+    Все слоты в БД хранятся в локальном времени (браузер присылает
+    datetime-local без таймзоны), поэтому сравнения корректны только
+    если tz_now() тоже возвращает локальное время.
+    """
+    utc = datetime.now(timezone.utc)
+    local = utc.astimezone(timezone(timedelta(hours=LOCAL_TZ_OFFSET)))
+    return local.replace(tzinfo=None)
+
+
+def now_utc() -> datetime:
+    """Текущее время в UTC (naive)."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
