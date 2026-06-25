@@ -45,11 +45,28 @@
         <div style="flex:1;min-width:200px;">
     <p><strong>Телефон:</strong> {{ client.phone|format_phone }}</p>
     <p><strong>Осталось занятий:</strong> {{ total_remaining }}</p>
+    {% if frozen_active is defined and client %}
+    <p class="mt-1"><strong>Заморозка:</strong>
+        {% if frozen_active %}
+        <span style="color:var(--accent);">активна до {{ client.frozen_until.strftime('%d.%m') }}</span>
+        <form method="post" action="/profile/unfreeze" class="form--inline" style="display:inline;">
+            {{ csrf_input(request) }}
+            <button class="btn btn--secondary btn--small" type="submit">🔥 Разморозить</button>
+        </form>
+        {% elif client %}
+        {{ client.freeze_days_remaining or 0 }} дней доступно
+        {% if client.freeze_days_remaining > 0 %}
+        <button class="btn btn--secondary btn--small" onclick="document.getElementById('freeze-modal').style.display=''">❄️ Заморозить</button>
+        {% endif %}
+        {% endif %}
+    </p>
+    {% endif %}
     {% if active_purchases %}
     <div class="mt-1" style="font-size:0.85rem;">
         {% for p in active_purchases %}
         {% set booked = booked_by_time_slot.get(p.time_slot, 0) %}
-        <span class="badge badge--success" style="margin-right:4px; margin-bottom:4px;">{{ p.format_name }} {{ p.time_slot }}: {{ p.remaining }}/{{ booked }}</span>
+        {% set fmt_class = "badge--vip" if p.format_name == "VIP" else "badge--double" if p.format_name == "Double" else "badge--group" %}
+        <span class="badge {{ fmt_class }}" style="margin-right:4px; margin-bottom:4px;">{{ p.format_name }} {{ p.time_slot }}: {{ p.remaining }}/{{ booked }}</span>
         {% endfor %}
     </div>
     {% elif total_remaining > 0 %}
@@ -63,187 +80,317 @@
 
     {% if available_slots is defined %}
     <hr class="mt-2 mb-2" />
-    <h3>Запись на тренировку</h3>
-    {% if client_bookings %}
-    <div class="mt-1">
-        <p class="text-muted" style="font-size:0.85rem;">Вы записаны на:</p>
-        {% for b in client_bookings %}
-        <div class="flex-row mt-1" style="justify-content:space-between;">
-            <span>{{ b.start_time.strftime('%d.%m.%Y %H:%M') }} — {{ b.format }} {{ b.time_slot }}</span>
-            <form method="post" action="/profile/cancel" class="form--inline">
-                {{ csrf_input(request) }}
-                <input type="hidden" name="slot_id" value="{{ b.slot_id }}" />
-                <button class="btn btn--small" type="submit" style="color:var(--accent);">Отменить бронь</button>
-            </form>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    {% if available_slots %}
-    <form method="post" action="/profile/book" class="form--row mt-1">
-        {{ csrf_input(request) }}
-        <select name="slot_id" class="form__select" style="width:auto;min-width:300px;">
-            <option value="">— выберите слот —</option>
-            {% for s in available_slots %}
-            <option value="{{ s.slot_id }}">{{ s.label }}</option>
-            {% endfor %}
-        </select>
-        <button class="btn btn--primary btn--small" type="submit">Забронировать</button>
-    </form>
-    {% elif not client_bookings %}
-    <p class="text-muted mt-1" style="font-size:0.85rem;">Нет доступных слотов для бронирования.</p>
-    {% endif %}
-    {% endif %}
-
-    <hr class="mt-2 mb-2" />
-    <div style="display:flex;flex-wrap:wrap;gap:24px;">
-        <div style="flex:1;min-width:200px;">
-            <h3>Антропометрия</h3>
-            <div class="stats mt-1" style="flex-wrap:wrap;">
-                <div class="stats__card stats__card--highlight" style="border:2px solid var(--accent);">
-                    <div class="stats__value" style="color:var(--text-primary);">{{ client.body_fat if client.body_fat is not none else (navy_bf_pct|string + '%') if navy_bf_pct is not none else '—' }}</div>
-                    <div class="stats__label">% жира</div>
+    <div class="flex-row" style="gap:24px;align-items:flex-start;flex-wrap:wrap;">
+        <div style="flex:1;min-width:280px;">
+            <h3>Запись на тренировку</h3>
+            {% if client_bookings %}
+            <div class="mt-1">
+                <p class="text-muted" style="font-size:0.85rem;">Вы записаны на:</p>
+                {% for b in client_bookings %}
+                <div class="flex-row mt-1" style="justify-content:space-between;">
+                    <span>{{ b.start_time.strftime('%d.%m.%Y %H:%M') }} — {{ b.format }} {{ b.time_slot }}</span>
+                    <form method="post" action="/profile/cancel" class="form--inline">
+                        {{ csrf_input(request) }}
+                        <input type="hidden" name="slot_id" value="{{ b.slot_id }}" />
+                        <button class="btn btn--small" type="submit" style="color:var(--accent);">Отменить бронь</button>
+                    </form>
                 </div>
-                <div class="stats__card"><div class="stats__value" style="color:var(--text-primary);">{{ client.weight_kg if client.weight_kg else '—' }}</div><div class="stats__label">Вес (кг)</div></div>
-            </div>
-        </div>
-        <div style="flex:2;min-width:280px;">
-            <p class="text-muted" style="font-size:0.85rem;font-weight:600;margin-bottom:4px;">Обхваты (см)</p>
-            <div class="stats mt-1" style="flex-wrap:wrap;gap:6px;">
-                <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.hip_cm if client.hip_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Бедро</div></div>
-                <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.waist_cm if client.waist_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Талия</div></div>
-                <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.chest_cm if client.chest_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Грудь</div></div>
-                <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.shoulders_cm if client.shoulders_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Плечи</div></div>
-                <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.biceps_cm if client.biceps_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Бицепс</div></div>
-                <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.neck_cm if client.neck_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Шея</div></div>
-                <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.wrist_cm if client.wrist_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Запястье</div></div>
-            </div>
-        </div>
-    </div>
-    {% if body_type %}
-    <p class="mt-1" style="font-size:0.9rem;color:var(--text-secondary);">
-        Телосложение: <strong>{{ body_type }}</strong>
-    </p>
-    {% endif %}
-
-    {% if anthro_chart_json and anthro_chart_json != '{}' %}
-    <details class="mt-2" style="cursor:pointer;">
-        <summary style="color:var(--text-secondary); font-weight:600; font-size:0.9rem;">Прогресс антропометрии</summary>
-        <div class="mt-2">
-            <select id="anthroSelect" class="form__select" style="width:auto;margin-bottom:8px;">
-                <option value="weight_fat">Вес + % жира</option>
-                <option value="girths">Обхваты</option>
-                <option value="skinfold">Калипер (мм)</option>
-            </select>
-            <canvas id="anthroChart" height="90"></canvas>
-        </div>
-    </details>
-    {% endif %}
-
-    {% if strength_data %}
-    <h3 class="mt-3">Силовые показатели</h3>
-    <div class="strength">
-        {% for s in strength_data %}
-        <div class="strength__card">
-            <div class="strength__name">{{ s.name }}</div>
-            <div class="strength__value">
-                {% if s.one_rm %}
-                {{ s.one_rm }} кг
-                {% else %}
-                <span class="text-muted">—</span>
-                {% endif %}
-            </div>
-            {% if s.source %}
-            <div class="strength__source">{{ s.source }}</div>
-            {% endif %}
-            {% if s.rank %}
-            <div class="strength__rank">{{ s.rank }}</div>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-
-    {% if client.weight_kg and standards_table %}
-    <details class="mt-3" style="cursor:pointer;">
-        <summary style="color:var(--text-secondary); font-weight:600; font-size:0.9rem;">Таблица нормативов для веса {{ client.weight_kg }} кг</summary>
-        <p class="text-muted mt-1" style="font-size:0.75rem;max-width:600px;">
-            Вес отягощения (в кг) для одноповторного максимума (1ПМ), необходимый для выполнения разряда при текущем весе тела.
-        </p>
-        <div class="standards-wrapper mt-2">
-            <table class="standards-table">
-                <thead>
-                    <tr>
-                        <th class="standards__header">Упражнение</th>
-                        <th class="standards__header">МСМК</th>
-                        <th class="standards__header">МС</th>
-                        <th class="standards__header">КМС</th>
-                        <th class="standards__header">1 разряд</th>
-                        <th class="standards__header">2 разряд</th>
-                        <th class="standards__header">3 разряд</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in standards_table %}
-                    <tr>
-                        <td class="standards__cell standards__cell--name">{{ row.name }}</td>
-                        <td class="standards__cell">{{ row.МСМК }}</td>
-                        <td class="standards__cell">{{ row.МС }}</td>
-                        <td class="standards__cell">{{ row.КМС }}</td>
-                        <td class="standards__cell">{{ row.get("1 разряд", "") }}</td>
-                        <td class="standards__cell">{{ row.get("2 разряд", "") }}</td>
-                        <td class="standards__cell">{{ row.get("3 разряд", "") }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </details>
-    {% endif %}
-    {% endif %}
-
-    {% if progress_chart_json and progress_chart_json != '{}' %}
-    <hr class="mt-2 mb-2" />
-    <details class="mt-1" style="cursor:pointer;">
-        <summary style="color:var(--text-secondary); font-weight:600; font-size:0.9rem;">Прогресс 1ПМ</summary>
-        <div class="mt-2">
-            <select id="exerciseSelect" class="form__select" style="width:auto;margin-bottom:8px;">
-                {% for name in progress_chart_names %}
-                <option value="{{ name }}" {% if loop.first %}selected{% endif %}>{{ name }}</option>
                 {% endfor %}
-            </select>
-            <canvas id="progressChart" height="90"></canvas>
+            </div>
+            {% endif %}
+            {% if available_slots %}
+            <form method="post" action="/profile/book" class="form--row mt-1">
+                {{ csrf_input(request) }}
+                <select name="slot_id" class="form__select" style="width:auto;min-width:300px;">
+                    <option value="">— выберите слот —</option>
+                    {% for s in available_slots %}
+                    <option value="{{ s.slot_id }}">{{ s.label }}</option>
+                    {% endfor %}
+                </select>
+                <button class="btn btn--primary btn--small" type="submit">Забронировать</button>
+            </form>
+            {% elif not client_bookings %}
+            <p class="text-muted mt-1" style="font-size:0.85rem;">Нет доступных слотов для бронирования.</p>
+            {% endif %}
         </div>
-    </details>
-    {% endif %}
 
-    <details class="mt-2" style="cursor:pointer;">
-        <summary style="color:var(--text-secondary); font-weight:600; font-size:0.9rem;">История тренировок</summary>
-    {% set has_history = bookings or journal_entries %}
-    {% if has_history %}
-    {% for b in bookings %}
-    <div class="card mt-2">
-        <div class="flex-row" style="justify-content:space-between;">
-            <span><strong>{{ b.slot_time.strftime('%d.%m.%Y %H:%M') if b.slot_time else '' }}</strong></span>
-            <span class="badge badge--success">Запланировано</span>
+        <!-- ====== СЧЁТЧИК СТРИКА + СКИДКА ====== -->
+        {% if streak is defined %}
+        <div style="flex:0 0 420px;display:flex;flex-direction:row;gap:12px;flex-wrap:wrap;">
+            <div class="streak-counter" style="flex:1;min-width:160px;text-align:center;background:linear-gradient(135deg,var(--bg-elevated),var(--bg-surface));border:2px solid {% if streak >= 30 %}var(--accent){% elif streak >= 15 %}var(--warning){% else %}var(--border){% endif %};border-radius:var(--radius-lg);padding:20px 12px;">
+                <div style="font-size:2.6rem;font-weight:800;color:var(--text-primary);">{% if streak > 0 %}{{ streak }}{% else %}0{% endif %}</div>
+                <div style="font-size:1.0rem;color:var(--text-secondary);font-weight:600;margin-top:2px;">
+                    {% if streak == 0 %}тренировок{% elif streak == 1 %}тренировка{% elif streak < 5 %}тренировки{% else %}тренировок{% endif %} подряд
+                </div>
+                <div style="font-size:0.8rem;color:var(--text-muted);margin-top:6px;">без перерыва &gt;7 дней</div>
+            </div>
+
+            {% if streak_discount is defined %}
+            <div class="discount-counter" style="flex:1;min-width:160px;text-align:center;background:linear-gradient(135deg,var(--bg-elevated),var(--bg-surface));border:2px solid {% if streak_discount >= 15 %}var(--accent){% elif streak_discount >= 5 %}var(--warning){% else %}var(--border){% endif %};border-radius:var(--radius-lg);padding:20px 12px;">
+                <div style="font-size:2.6rem;font-weight:800;color:{% if streak_discount >= 15 %}var(--accent){% elif streak_discount >= 5 %}var(--warning){% else %}var(--text-primary){% endif %};">{{ streak_discount }}%</div>
+                <div style="font-size:1.0rem;color:var(--text-secondary);font-weight:600;">скидка за дисциплину</div>
+                <div style="font-size:0.8rem;color:var(--text-muted);margin-top:6px;">
+                    {% if streak_discount < 20 %}
+                    +1% за каждые 3 тренировки · ещё {{ 60 - streak }} до 20%
+                    {% else %}
+                    🔥 Максимальная скидка!
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
         </div>
-    </div>
-    {% endfor %}
-    {% for je in journal_entries %}
-    <div class="card mt-2">
-        <div class="flex-row" style="justify-content:space-between;">
-            <span><strong>{{ je.entry.created_at.strftime('%d.%m.%Y %H:%M') if je.entry.created_at else '' }}</strong></span>
-            <span class="badge badge--success">Проведено</span>
-        </div>
-        {% if je.plan %}
-        <pre class="mt-1" style="color:var(--text-secondary); font-size:0.85rem; white-space:pre-wrap; font-family:monospace; margin-top:8px;">{{ je.plan }}</pre>
         {% endif %}
     </div>
-    {% endfor %}
-    {% else %}
-    <p class="text-muted mt-2">Пока нет записей. Запишитесь на тренировку через <a href="/schedule">расписание</a>.</p>
     {% endif %}
-    </details>
+
+    <!-- ====== МОДАЛКА ЗАМОРОЗКИ ====== -->
+    {% if frozen_active is defined and client %}
+    <div id="freeze-modal" class="modal-overlay" style="display:none;">
+        <div class="modal">
+            <div class="modal__header">
+                <h2>❄️ Заморозка абонемента</h2>
+                <button type="button" class="btn btn--ghost btn--small" onclick="document.getElementById('freeze-modal').style.display='none'">✕</button>
+            </div>
+            <div class="modal__body">
+                <p>Заморозка сохраняет ваш <strong>стрик</strong> (тренировки подряд), если вы временно не можете посещать зал.</p>
+                <ul style="margin-top:12px;padding-left:20px;color:var(--text-secondary);font-size:0.9rem;line-height:1.6;">
+                    <li>❄️ Дни заморозки засчитываются как непрерывность для стрика</li>
+                    <li>📅 Все будущие бронирования будут отменены</li>
+                    <li>🚫 Бронирование новых слотов недоступно до разморозки</li>
+                    <li>⏳ Разморозить можно сразу, но спишется 1 день и начнётся кулдаун 24ч до следующей заморозки</li>
+                    <li>💾 При разморозке спишется 1 день из {{ client.freeze_days_remaining }} доступных</li>
+                    <li>🎯 При покупке нового абонемента +30 дней заморозки</li>
+                </ul>
+                <p class="text-muted mt-2" style="font-size:0.85rem;">Доступно дней заморозки: <strong>{{ client.freeze_days_remaining }}</strong></p>
+            </div>
+            <div class="modal__footer">
+                <button class="btn btn--secondary" onclick="document.getElementById('freeze-modal').style.display='none'">Отмена</button>
+                <form method="post" action="/profile/freeze" class="form--inline">
+                    {{ csrf_input(request) }}
+                    <button class="btn btn--primary" type="submit">❄️ Заморозить</button>
+                </form>
+            </div>
+        </div>
+    </div>
     {% endif %}
+
+    <!-- ====== TABBED CONTENT (только для клиента) ====== -->
+    <hr class="mt-2 mb-2" />
+    <div class="tabs">
+        <div class="tabs__nav flex-row" style="gap:8px;margin-bottom:16px;">
+            <button class="btn btn--primary btn--small tab-btn" data-tab="anthro" onclick="switchTab('anthro')">📏 Антропометрия</button>
+            <button class="btn btn--secondary btn--small tab-btn" data-tab="strength" onclick="switchTab('strength')">💪 Силовые</button>
+            <button class="btn btn--secondary btn--small tab-btn" data-tab="achievements" onclick="switchTab('achievements')">🏆 Достижения</button>
+            <button class="btn btn--secondary btn--small tab-btn" data-tab="history" onclick="switchTab('history')">📋 История</button>
+        </div>
+
+        <!-- ====== ВКЛАДКА: АНТРОПОМЕТРИЯ ====== -->
+        <div id="tab-anthro" class="tab-content">
+            <div style="display:flex;flex-wrap:wrap;gap:24px;">
+                <div style="flex:1;min-width:200px;">
+                    <h3>Антропометрия</h3>
+                    <div class="stats mt-1" style="flex-wrap:wrap;">
+                        <div class="stats__card stats__card--highlight" style="border:2px solid var(--accent);">
+                            <div class="stats__value" style="color:var(--text-primary);">{{ client.body_fat if client.body_fat is not none else (navy_bf_pct|string + '%') if navy_bf_pct is not none else '—' }}</div>
+                            <div class="stats__label">% жира</div>
+                        </div>
+                        <div class="stats__card"><div class="stats__value" style="color:var(--text-primary);">{{ client.weight_kg if client.weight_kg else '—' }}</div><div class="stats__label">Вес (кг)</div></div>
+                    </div>
+                </div>
+                <div style="flex:2;min-width:280px;">
+                    <p class="text-muted" style="font-size:0.85rem;font-weight:600;margin-bottom:4px;">Обхваты (см)</p>
+                    <div class="stats mt-1" style="flex-wrap:wrap;gap:6px;">
+                        <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.hip_cm if client.hip_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Бедро</div></div>
+                        <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.waist_cm if client.waist_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Талия</div></div>
+                        <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.chest_cm if client.chest_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Грудь</div></div>
+                        <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.shoulders_cm if client.shoulders_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Плечи</div></div>
+                        <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.biceps_cm if client.biceps_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Бицепс</div></div>
+                        <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.neck_cm if client.neck_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Шея</div></div>
+                        <div class="stats__card" style="padding:10px 14px;min-width:70px;"><div class="stats__value" style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">{{ client.wrist_cm if client.wrist_cm else '—' }}</div><div class="stats__label" style="font-size:0.7rem;">Запястье</div></div>
+                    </div>
+                </div>
+            </div>
+            {% if body_type %}
+            <p class="mt-1" style="font-size:0.9rem;color:var(--text-secondary);">
+                Телосложение: <strong>{{ body_type }}</strong>
+            </p>
+            {% endif %}
+
+            {% if anthro_chart_json and anthro_chart_json != '{}' %}
+            <div class="mt-2" style="cursor:pointer;">
+                <summary style="color:var(--text-secondary); font-weight:600; font-size:0.9rem;">Прогресс антропометрии</summary>
+                <div class="mt-2">
+                    <select id="anthroSelect" class="form__select" style="width:auto;margin-bottom:8px;">
+                        <option value="weight_fat">Вес + % жира</option>
+                        <option value="girths">Обхваты</option>
+                        <option value="skinfold">Калипер (мм)</option>
+                    </select>
+                    <canvas id="anthroChart" height="90"></canvas>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ====== ВКЛАДКА: СИЛОВЫЕ ====== -->
+        <div id="tab-strength" class="tab-content" style="display:none;">
+            {% if strength_data %}
+            <h3>Силовые показатели</h3>
+            <div class="strength">
+                {% for s in strength_data %}
+                <div class="strength__card">
+                    <div class="strength__name">{{ s.name }}</div>
+                    <div class="strength__value">
+                        {% if s.one_rm %}
+                        {{ s.one_rm }} кг
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </div>
+                    {% if s.source %}
+                    <div class="strength__source">{{ s.source }}</div>
+                    {% endif %}
+                    {% if s.rank %}
+                    <div class="strength__rank">{{ s.rank }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+
+            {% if progress_chart_json and progress_chart_json != '{}' %}
+            <div class="mt-1" style="cursor:pointer;">
+                <summary style="color:var(--text-secondary); font-weight:600; font-size:0.9rem;">Прогресс 1ПМ</summary>
+                <div class="mt-2">
+                    <select id="exerciseSelect" class="form__select" style="width:auto;margin-bottom:8px;">
+                        {% for name in progress_chart_names %}
+                        <option value="{{ name }}" {% if loop.first %}selected{% endif %}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                    <canvas id="progressChart" height="90"></canvas>
+                </div>
+            </div>
+            {% endif %}
+
+
+            {% if client.weight_kg and standards_table %}
+            <details class="mt-3" style="cursor:pointer;">
+                <summary style="color:var(--text-secondary); font-weight:600; font-size:0.9rem;">Таблица нормативов для веса {{ client.weight_kg }} кг</summary>
+                <p class="text-muted mt-1" style="font-size:0.75rem;max-width:600px;">
+                    Вес отягощения (в кг) для одноповторного максимума (1ПМ), необходимый для выполнения разряда при текущем весе тела.
+                </p>
+                <div class="standards-wrapper mt-2">
+                    <table class="standards-table">
+                        <thead>
+                            <tr>
+                                <th class="standards__header">Упражнение</th>
+                                <th class="standards__header">МСМК</th>
+                                <th class="standards__header">МС</th>
+                                <th class="standards__header">КМС</th>
+                                <th class="standards__header">1 разряд</th>
+                                <th class="standards__header">2 разряд</th>
+                                <th class="standards__header">3 разряд</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in standards_table %}
+                            <tr>
+                                <td class="standards__cell standards__cell--name">{{ row.name }}</td>
+                                <td class="standards__cell">{{ row.МСМК }}</td>
+                                <td class="standards__cell">{{ row.МС }}</td>
+                                <td class="standards__cell">{{ row.КМС }}</td>
+                                <td class="standards__cell">{{ row.get("1 разряд", "") }}</td>
+                                <td class="standards__cell">{{ row.get("2 разряд", "") }}</td>
+                                <td class="standards__cell">{{ row.get("3 разряд", "") }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+            {% endif %}
+            {% endif %}
+
+        </div>
+
+        <!-- ====== ВКЛАДКА: ДОСТИЖЕНИЯ ====== -->
+        <div id="tab-achievements" class="tab-content" style="display:none;">
+            <h3>🏆 Достижения</h3>
+            {% if achievements %}
+            <div class="achievements-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:12px;">
+                {% for a in achievements %}
+                <div class="achievement-card" style="background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;display:flex;gap:14px;align-items:flex-start;transition:var(--transition);">
+                    <div style="font-size:2rem;flex-shrink:0;width:44px;text-align:center;">{{ a.icon }}</div>
+                    <div>
+                        <div style="font-weight:700;font-size:1rem;color:var(--text-primary);">{{ a.title }}</div>
+                        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px;">{{ a.description }}</div>
+                        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:6px;">{{ a.achieved_at.strftime('%d.%m.%Y') }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted mt-2">Пока нет достижений. Начните тренироваться, чтобы получить первые награды! 💪</p>
+            {% endif %}
+        </div>
+
+        <!-- ====== ВКЛАДКА: ИСТОРИЯ ====== -->
+        <div id="tab-history" class="tab-content" style="display:none;">
+            <h3>История тренировок</h3>
+            {% set has_history = bookings or journal_entries %}
+            {% if has_history %}
+            {% for b in bookings %}
+            <div class="card mt-2">
+                <div class="flex-row" style="justify-content:space-between;">
+                    <span><strong>{{ b.slot_time.strftime('%d.%m.%Y %H:%M') if b.slot_time else '' }}</strong></span>
+                    <span class="badge badge--success">Запланировано</span>
+                </div>
+            </div>
+            {% endfor %}
+            {% for je in journal_entries %}
+            <div class="card mt-2">
+                <div class="flex-row" style="justify-content:space-between;">
+                    <span><strong>{{ je.entry.created_at.strftime('%d.%m.%Y %H:%M') if je.entry.created_at else '' }}</strong></span>
+                    <span class="badge badge--success">Проведено</span>
+                </div>
+                {% if je.plan %}
+                <pre class="mt-1" style="color:var(--text-secondary); font-size:0.85rem; white-space:pre-wrap; font-family:monospace; margin-top:8px;">{{ je.plan }}</pre>
+                {% endif %}
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="text-muted mt-2">Пока нет записей. Запишитесь на тренировку через <a href="/schedule">расписание</a>.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+    function switchTab(name) {
+        document.querySelectorAll('.tab-content').forEach(function(el){
+            el.style.display = 'none';
+        });
+        document.querySelectorAll('.tab-btn').forEach(function(el){
+            el.className = el.className.replace('btn--primary', 'btn--secondary');
+        });
+        document.getElementById('tab-' + name).style.display = '';
+        document.querySelector('.tab-btn[data-tab="' + name + '"]').className =
+            'btn btn--primary btn--small tab-btn';
+
+        // Перерисовываем графики при переключении на вкладку
+        if (name === 'strength') {
+            var sel = document.getElementById('exerciseSelect');
+            if (sel && typeof buildChart === 'function') {
+                setTimeout(function(){ buildChart(sel.value); }, 100);
+            }
+        }
+        if (name === 'anthro') {
+            var anthroSel = document.getElementById('anthroSelect');
+            if (anthroSel && typeof buildAnthroChart === 'function') {
+                setTimeout(function(){ buildAnthroChart(anthroSel.value); }, 100);
+            }
+        }
+    }
+    </script>
 
     {% if trainer_slots is defined %}
     <hr class="mt-2 mb-2" />
@@ -307,10 +454,9 @@
 </div>
 
 {% block scripts %}
-{% if progress_chart_json and progress_chart_json != '{}' %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% if progress_chart_json and progress_chart_json != '{}' %}
 <script>
-(function(){
 var allData = {{ progress_chart_json|safe }};
 var chart = null;
 var colors = ['#e74c3c','#2ecc71','#3498db','#f39c12','#9b59b6','#1abc9c','#e67e22','#2c3e50','#c0392b','#16a085'];
@@ -319,11 +465,10 @@ function buildChart(exName) {
     var points = allData[exName] || [];
     var labels = points.map(function(p){ return p.x; });
     var values = points.map(function(p){ return p.y; });
-
-    if (chart) { chart.destroy(); chart = null; }
-
     var ctx = document.getElementById('progressChart');
     if (!ctx) return;
+
+    if (chart) { chart.destroy(); chart = null; }
 
     chart = new Chart(ctx, {
         type: 'line',
@@ -343,6 +488,7 @@ function buildChart(exName) {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: true,
             plugins: {
                 legend: { display: false }
             },
@@ -356,34 +502,31 @@ function buildChart(exName) {
 
 var sel = document.getElementById('exerciseSelect');
 if (sel) {
-    buildChart(sel.value);
     sel.addEventListener('change', function(){ buildChart(this.value); });
 }
-})();
 </script>
 {% endif %}
 {% if anthro_chart_json and anthro_chart_json != '{}' %}
 <script>
-(function(){
-var allData = {{ anthro_chart_json|safe }};
-var weightPoints = allData['Вес'] || [];
-var fatPoints = allData['Жир'] || [];
+var anthroAllData = {{ anthro_chart_json|safe }};
+var weightPoints = anthroAllData['Вес'] || [];
+var fatPoints = anthroAllData['Жир'] || [];
 var girthKeys = ['Бедро', 'Талия', 'Грудь', 'Плечи', 'Бицепс', 'Шея', 'Запястье'];
 var girthColors = ['#2ecc71','#e74c3c','#3498db','#f39c12','#9b59b6','#1abc9c','#95a5a6'];
 var skinfoldKeys = ['Складка грудь', 'Складка живот', 'Складка бедро', 'Складка трицепс', 'Складка под лопаткой'];
 var skinfoldColors = ['#e74c3c','#f39c12','#2ecc71','#3498db','#9b59b6'];
 
 // Собираем все даты
-var labelSet = new Set();
-weightPoints.forEach(function(p){ labelSet.add(p.x); });
-fatPoints.forEach(function(p){ labelSet.add(p.x); });
+var anthroLabelSet = new Set();
+weightPoints.forEach(function(p){ anthroLabelSet.add(p.x); });
+fatPoints.forEach(function(p){ anthroLabelSet.add(p.x); });
 girthKeys.forEach(function(k){
-    (allData[k] || []).forEach(function(p){ labelSet.add(p.x); });
+    (anthroAllData[k] || []).forEach(function(p){ anthroLabelSet.add(p.x); });
 });
 skinfoldKeys.forEach(function(k){
-    (allData[k] || []).forEach(function(p){ labelSet.add(p.x); });
+    (anthroAllData[k] || []).forEach(function(p){ anthroLabelSet.add(p.x); });
 });
-var labels = Array.from(labelSet).sort(function(a,b){
+var anthroLabels = Array.from(anthroLabelSet).sort(function(a,b){
     var da=a.split('.'), db=b.split('.');
     return parseInt(da[1])-parseInt(db[1])||parseInt(da[0])-parseInt(db[0]);
 });
@@ -408,7 +551,7 @@ function buildAnthroChart(mode) {
         datasets = [
             {
                 label: 'Вес (кг)',
-                data: labels.map(function(l){ return wd[l] !== undefined ? wd[l] : null; }),
+                data: anthroLabels.map(function(l){ return wd[l] !== undefined ? wd[l] : null; }),
                 borderColor: '#3498db',
                 backgroundColor: 'transparent',
                 yAxisID: 'y',
@@ -418,7 +561,7 @@ function buildAnthroChart(mode) {
             },
             {
                 label: 'Жир (%)',
-                data: labels.map(function(l){ return fd[l] !== undefined ? fd[l] : null; }),
+                data: anthroLabels.map(function(l){ return fd[l] !== undefined ? fd[l] : null; }),
                 borderColor: '#e74c3c',
                 backgroundColor: 'transparent',
                 yAxisID: 'y1',
@@ -440,13 +583,12 @@ function buildAnthroChart(mode) {
             title: { display: true, text: 'Жир (%)', color: '#e74c3c' }
         };
     } else if (mode === 'girths') {
-        // Обхваты
         girthKeys.forEach(function(k, i){
-            var pts = allData[k] || [];
+            var pts = anthroAllData[k] || [];
             var d = buildDict(pts);
             datasets.push({
                 label: k,
-                data: labels.map(function(l){ return d[l] !== undefined ? d[l] : null; }),
+                data: anthroLabels.map(function(l){ return d[l] !== undefined ? d[l] : null; }),
                 borderColor: girthColors[i],
                 backgroundColor: 'transparent',
                 tension: 0.3,
@@ -462,13 +604,12 @@ function buildAnthroChart(mode) {
             title: { display: true, text: 'Обхваты (см)', color: '#999' }
         };
     } else if (mode === 'skinfold') {
-        // Калипер
         skinfoldKeys.forEach(function(k, i){
-            var pts = allData[k] || [];
+            var pts = anthroAllData[k] || [];
             var d = buildDict(pts);
             datasets.push({
                 label: k,
-                data: labels.map(function(l){ return d[l] !== undefined ? d[l] : null; }),
+                data: anthroLabels.map(function(l){ return d[l] !== undefined ? d[l] : null; }),
                 borderColor: skinfoldColors[i],
                 backgroundColor: 'transparent',
                 tension: 0.3,
@@ -489,7 +630,7 @@ function buildAnthroChart(mode) {
 
     anthroChart = new Chart(document.getElementById('anthroChart'), {
         type: 'line',
-        data: { labels: labels, datasets: datasets },
+        data: { labels: anthroLabels, datasets: datasets },
         options: {
             responsive: true,
             plugins: {
@@ -505,7 +646,6 @@ if (anthroSel) {
     buildAnthroChart(anthroSel.value);
     anthroSel.addEventListener('change', function(){ buildAnthroChart(this.value); });
 }
-})();
 </script>
 {% endif %}
 {% endblock %}

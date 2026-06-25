@@ -26,7 +26,7 @@ from fastapi.staticfiles import StaticFiles
 
 import app.database  # noqa: F401 — регистрирует Jinja2-фильтры
 from app.logging_config import logger as _app_logger
-from app.models import Client, Slot, Booking, JournalEntry, TrainingNote  # re-export + seed
+from app.models import Client, Slot, Booking, JournalEntry, TrainingNote, Achievement  # noqa: F401 — re-export + seed + create_all
 from app.routes.clients import router as clients_router
 from app.routes.schedule import router as schedule_router
 from app.routes.slots import router as slots_router
@@ -41,6 +41,7 @@ from app.routes.dashboard import router as dashboard_router
 from app.routes.nutrition import router as nutrition_router
 from app.routes.nutrition2 import router as nutrition2_router
 from app.routes.employees import router as employees_router
+from app.routes.freeze import router as freeze_router
 # from app.routes.payment import router as payment_router
 # from app.routes.telegram import router as telegram_router
 from app.auth import router as auth_router
@@ -134,6 +135,7 @@ app.include_router(slots_router)         # /slots/*, /slot/{id}/add|remove|compl
 app.include_router(program_router)       # /slot/{id}/program
 app.include_router(smart_program_router) # /api/smart-program
 app.include_router(employees_router)     # /employees
+app.include_router(freeze_router)        # /profile/freeze, /profile/unfreeze
 # if _os.getenv("DISABLE_PAYMENTS") != "1":
 #     app.include_router(payment_router)       # /api/create-payment, /api/payment-callback
 # if _os.getenv("DISABLE_TELEGRAM") != "1":

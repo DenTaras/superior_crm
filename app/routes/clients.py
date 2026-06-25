@@ -145,6 +145,9 @@ def add_client_post(
     )
     db.add(client)
     db.flush()
+    # 30 дней заморозки по умолчанию
+    client.freeze_days_remaining = 30
+    db.add(client)
     # Стартовый абонемент на 1 занятие ("Пробный")
     purchase = SubscriptionPurchase(
         client_id=client.id,
@@ -292,8 +295,12 @@ def clients_add_subscription(
         package_size=form.package_size,
         price=price,
         remaining=form.package_size,  # все занятия пока доступны
+        freeze_days_remaining=30,
     )
     db.add(purchase)
+    # Добавляем 30 дней заморозки клиенту (макс 30)
+    client.freeze_days_remaining = min((client.freeze_days_remaining or 0) + 30, 30)
+    db.add(client)
     db.commit()
     audit_log("superior.audit.subscriptions", "ADD",
               client_id=form.client_id, package=form.package_size,

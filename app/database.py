@@ -259,6 +259,27 @@ def ensure_slot_completed_column():
                 print(f"[WARN] ALTER TABLE slots ADD completed: {ex}")
 
 
+def ensure_freeze_columns():
+    """Добавить колонки заморозки в clients и subscription_purchases."""
+    existing_clients = _get_table_columns("clients")
+    if existing_clients:
+        with engine.connect() as conn:
+            for col, dtype in [("frozen_until", "DATETIME"), ("freeze_days_remaining", "INTEGER DEFAULT 0"),
+                               ("last_freeze_cd", "DATETIME")]:
+                if col not in existing_clients:
+                    try:
+                        conn.execute(text(f"ALTER TABLE clients ADD COLUMN {col} {dtype}"))
+                    except Exception as ex:
+                        print(f"[WARN] ALTER TABLE clients ADD {col}: {ex}")
+    existing_purchases = _get_table_columns("subscription_purchases")
+    if existing_purchases and "freeze_days_remaining" not in existing_purchases:
+        with engine.connect() as conn:
+            try:
+                conn.execute(text("ALTER TABLE subscription_purchases ADD COLUMN freeze_days_remaining INTEGER DEFAULT 0"))
+            except Exception as ex:
+                print(f"[WARN] ALTER TABLE subscription_purchases ADD freeze_days_remaining: {ex}")
+
+
 def run_startup_migrations():
     """Создать таблицы и выполнить runtime-миграции (только для прямого запуска)."""
     Base.metadata.create_all(engine)
@@ -271,6 +292,7 @@ def run_startup_migrations():
     ensure_employee_columns()
     ensure_payment_columns()
     ensure_slot_completed_column()
+    ensure_freeze_columns()
 
     # Добавить недостающие упражнения из seed
     from app.seed_exercises import ensure_exercises

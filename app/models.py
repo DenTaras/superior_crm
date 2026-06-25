@@ -42,6 +42,9 @@ class Client(Base):
     activity_level = Column(String, nullable=True)   # sedentary | light | moderate | active | extreme
     pd_consent_given = Column(Boolean, default=False)
     pd_consent_at = Column(DateTime, nullable=True)
+    frozen_until = Column(DateTime, nullable=True)        # заморожен до (заморозка стрика)
+    freeze_days_remaining = Column(Integer, default=0)    # осталось дней заморозки
+    last_freeze_cd = Column(DateTime, nullable=True)       # кулдаун разморозки (24ч)
 
     def fio(self) -> str:
         """Краткое ФИО: «Фамилия Имя» или fallback на `name`."""
@@ -211,6 +214,7 @@ class SubscriptionPurchase(Base):
     refunded = Column(Boolean, default=False)        # полный возврат
     refunded_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.now)
+    freeze_days_remaining = Column(Integer, default=0)  # дней заморозки в этом пакете
 
 
 class SubscriptionConsumption(Base):
@@ -274,6 +278,26 @@ class SlotEmployee(Base):
     employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, index=True)
     assigned_at = Column(DateTime, default=datetime.now)
 
+class Achievement(Base):
+    """Достижение клиента (геймификация)."""
+    __tablename__ = "achievements"
+    id = Column(Integer, primary_key=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    category = Column(String, nullable=False)        # strength | body | discipline | rank
+    icon = Column(String, default="🏆")               # эмодзи
+    title = Column(String, nullable=False)            # заголовок
+    description = Column(String, default="")          # описание
+    achieved_at = Column(DateTime, default=datetime.now)
+
+
+class FreezeLog(Base):
+    """Лог дней заморозки (для сохранения стрика)."""
+    __tablename__ = "freeze_log"
+    id = Column(Integer, primary_key=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    date = Column(DateTime, nullable=False)            # день, который засчитывается как непрерывность
+    reason = Column(String, default="freeze")          # freeze | unfreeze
+    created_at = Column(DateTime, default=datetime.now)
 
 class Payment(Base):
     """Платёж через онлайн-эквайринг."""

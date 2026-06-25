@@ -489,6 +489,69 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
 
         total_remaining = sum(p["remaining"] for p in active_purchases) if c else 0
 
+        # Достижения
+        from app.achievements import compute_achievements, get_achievements
+        if c:
+            compute_achievements(c.id, db)
+            achievements_list = get_achievements(c.id, db)
+        else:
+            achievements_list = []
+
+        # Стрик (тренировки подряд, только проведённые)
+        streak = 0
+        streak_discount = 0
+        if c:
+            from datetime import timedelta
+            from app.models import FreezeLog
+            # Собираем даты проведённых тренировок
+            session_dates = []
+            for je_dict in journal_entries:
+                entry_obj = je_dict.get("entry") or je_dict.get("je")
+                if entry_obj and entry_obj.created_at:
+                    session_dates.append(entry_obj.created_at.date())
+            session_dates.sort(reverse=True)
+
+            # Дни заморозки (лог)
+            frozen_dates = set()
+            for fl in db.query(FreezeLog).filter(FreezeLog.client_id == c.id).all():
+                if fl.date:
+                    frozen_dates.add(fl.date.date())
+
+            today = tz_now().date()
+
+            def _effective_gap(d1, d2):
+                """Реальный разрыв минус замороженные дни между датами."""
+                if d1 <= d2:
+                    return 0
+                gap = (d1 - d2).days
+                frozen_in_gap = sum(1 for d in range((d2 - d1).days, (d1 - d2).days)
+                                    if (d1 - timedelta(days=d)) in frozen_dates) if d1 > d2 else 0
+                return gap - frozen_in_gap
+
+            if session_dates:
+                gap_to_today = (today - session_dates[0]).days
+                # Замороженные дни от последней тренировки до сегодня
+                frozen_since_last = sum(1 for d in range(1, gap_to_today + 1)
+                                        if (today - timedelta(days=d)) in frozen_dates)
+                effective_gap = gap_to_today - frozen_since_last
+                if effective_gap <= 7:
+                    streak = 1
+                    for i in range(1, len(session_dates)):
+                        gap = (session_dates[i - 1] - session_dates[i]).days
+                        frozen_in_gap = sum(1 for d in range(1, gap)
+                                            if (session_dates[i - 1] - timedelta(days=d)) in frozen_dates)
+                        if gap - frozen_in_gap <= 7:
+                            streak += 1
+                        else:
+                            break
+            # Скидка: 1% за каждые 3 тренировки, макс 20%
+            streak_discount = min((streak // 3), 20)
+
+        # Статус заморозки
+        now = tz_now()
+        frozen_active = c.frozen_until > now if c and c.frozen_until else False
+        freeze_cd_active = c.last_freeze_cd > now if c and c.last_freeze_cd else False
+
         return templates.TemplateResponse(
             request=request, name="user.html",
             context={
@@ -500,9 +563,14 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
                 "booked_by_time_slot": booked_by_ts,
                 "total_remaining": total_remaining,
                 "available_slots": available_slots,
+                "streak": streak,
+                "streak_discount": streak_discount,
+                "frozen_active": frozen_active,
+                "freeze_cd_active": freeze_cd_active,
                 "client_bookings": client_bookings_list,
                 "progress_chart_json": progress_chart_json,
                 "progress_chart_names": progress_chart_names,
+                "achievements": achievements_list,
                 "anthro_chart_json": anthro_chart_json,
                 "anthro_chart_names": anthro_chart_names,
                 "navy_bf_pct": navy_bf_pct,
@@ -545,6 +613,10 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
             "total_slots": total_slots,
             "total_journal": total_journal,
             "trainer_slots": trainer_slots,
+            "streak": 0,
+            "streak_discount": 0,
+            "frozen_active": False,
+            "freeze_cd_active": False,
         },
     )
 
@@ -562,8 +634,14 @@ def profile_book(request: Request, db: Session = Depends(get_db), slot_id: int =
         return RedirectResponse("/login", status_code=303)
 
     client_id = user.get("client_id")
+    c = db.get(Client, client_id)
     if not slot_id:
         return RedirectResponse("/profile", status_code=303)
+
+    # Проверка заморозки
+    from app.timezone import now as tz_now
+    if c and c.frozen_until and c.frozen_until > tz_now():
+        return RedirectResponse("/profile?flash=Абонемент заморожен. Бронирование недоступно.", status_code=303)
 
     slot = db.get(Slot, slot_id)
     if not slot:
