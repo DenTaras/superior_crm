@@ -41,10 +41,8 @@ def test_flash_modal_countdown_js_present(client):
     """JS-код автоскрытия присутствует на странице с flash."""
     r = client.get("/schedule?flash=slot_conflict")
     assert r.status_code == 200
-    # Проверяем что JS содержит таймер
-    assert "setInterval" in r.text
-    assert "seconds--" in r.text or "seconds-&gt;" in r.text
-    assert "clearInterval" in r.text
+    # Проверяем что подключён внешний JS-файл с таймером
+    assert "/static/js/lib/flash-modal.js" in r.text
     # Проверяем что initial значение 5
     assert ">5<" in r.text or '"5"' in r.text or "5 с" in r.text
 
@@ -71,14 +69,14 @@ def test_flash_on_slot_page(client, db_session):
     assert "flash-modal" in r.text
     assert "flash-countdown" in r.text
     assert "нет доступных занятий" in r.text
-    assert "replaceState" in r.text, "URL не очищается после закрытия"
+    assert "/static/js/lib/flash-modal.js" in r.text, "JS-файл flash-modal подключён"
 
 
 def test_flash_url_cleaned_on_close(client):
-    """JS-код содержит replaceState для очистки URL после закрытия flash."""
+    """JS-код очистки URL подключён через внешний файл flash-modal.js."""
     r = client.get("/schedule?flash=slot_conflict")
     assert r.status_code == 200
-    assert "replaceState" in r.text
+    assert "/static/js/lib/flash-modal.js" in r.text
 
 
 def test_flash_custom_seconds(client):

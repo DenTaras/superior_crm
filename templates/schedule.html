@@ -34,27 +34,7 @@
         </div>
     </div>
 
-    <script>
-    (function(){
-        var modal = document.getElementById('flash-modal');
-        if(!modal) return;
-        var close = document.getElementById('flash-close');
-        var countdown = document.getElementById('flash-countdown');
-        var seconds = parseInt(modal.getAttribute('data-seconds')) || 5;
-        function hide(){
-            modal.parentNode && modal.parentNode.removeChild(modal);
-            if(window.history && window.history.replaceState) window.history.replaceState({}, '', window.location.pathname);
-        }
-        close && close.addEventListener('click', hide);
-        document.addEventListener('keydown', function(e){ if(e.key === 'Escape') hide(); });
-        if(countdown) countdown.textContent = seconds;
-        var timer = setInterval(function(){
-            seconds--;
-            if(countdown) countdown.textContent = seconds;
-            if(seconds <= 0){ clearInterval(timer); hide(); }
-        }, 1000);
-    })();
-    </script>
+    <script src="/static/js/lib/flash-modal.js"></script>
 {% endif %}
 
 <div class="page__controls">
@@ -147,31 +127,8 @@
 
 {% block scripts %}
 {% if user and user.role in ('admin', 'trainer') %}
-<script>
-(function() {
-    var days = [];
-    {% for day in days %}
-    days.push('{{ day.strftime("%Y-%m-%d") }}');
-    {% endfor %}
-    document.querySelectorAll('.calendar__cell--empty').forEach(function(el) {
-        el.style.cursor = 'pointer';
-        el.title = 'Кликните, чтобы создать слот';
-        el.addEventListener('click', function() {
-            var d = parseInt(this.dataset.day);
-            var h = parseInt(this.dataset.hour);
-            var date = days[d];
-            var startInput = document.querySelector('input[name="start_time"]');
-            var endInput = document.querySelector('input[name="end_time"]');
-            if (startInput && endInput) {
-                startInput.value = date + 'T' + ('0' + h).slice(-2) + ':00';
-                endInput.value = date + 'T' + ('0' + (h + 1)).slice(-2) + ':00';
-                startInput.scrollIntoView({behavior:'smooth',block:'center'});
-                startInput.focus();
-            }
-        });
-    });
-})();
-</script>
+<script>window.__schedule_days=[{% for day in days %}"{{ day.strftime('%Y-%m-%d') }}"{% if not loop.last %},{% endif %}{% endfor %}];</script>
+<script src="/static/js/pages/schedule.js"></script>
 {% endif %}
 {% endblock %}
 

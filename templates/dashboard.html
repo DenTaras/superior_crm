@@ -81,76 +81,17 @@
     </div>
 </div>
 
+<!-- ====== ДАННЫЕ ДЛЯ ГРАФИКОВ ====== -->
+<div id="dashboard-chart-data"
+     data-labels='{{ labels | tojson }}'
+     data-revenues='{{ revenues | tojson }}'
+     data-slot-labels='{{ slot_labels | tojson }}'
+     data-slot-data='{{ slot_data | tojson }}'
+     data-fmt-labels='{{ fmt_labels | tojson }}'
+     data-fmt-data='{{ fmt_data | tojson }}'
+     style="display:none;"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-(function() {
-    var colors = ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ac'];
-
-    // Выручка
-    var ctx = document.getElementById('revenueChart');
-    if (ctx) {
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: {{ labels | tojson }},
-                datasets: [{
-                    label: 'Выручка, ₽',
-                    data: {{ revenues | tojson }},
-                    backgroundColor: colors[0],
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true }
-                }
-            }
-        });
-    }
-
-    // По временным слотам
-    var sCtx = document.getElementById('slotChart');
-    if (sCtx) {
-        new Chart(sCtx, {
-            type: 'pie',
-            data: {
-                labels: {{ slot_labels | tojson }},
-                datasets: [{
-                    data: {{ slot_data | tojson }},
-                    backgroundColor: colors.slice(0, {{ slot_labels | length }}),
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'bottom' }
-                }
-            }
-        });
-    }
-
-    // По форматам
-    var fCtx = document.getElementById('formatChart');
-    if (fCtx) {
-        new Chart(fCtx, {
-            type: 'pie',
-            data: {
-                labels: {{ fmt_labels | tojson }},
-                datasets: [{
-                    data: {{ fmt_data | tojson }},
-                    backgroundColor: colors.slice(0, {{ fmt_labels | length }}),
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'bottom' }
-                }
-            }
-        });
-    }
-})();
-</script>
+<script src="/static/js/pages/dashboard.js"></script>
 
 {% endblock %}

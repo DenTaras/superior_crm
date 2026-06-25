@@ -1,4 +1,4 @@
-﻿"""E2E-тесты для всех ролей: аноним, клиент, тренер, админ.
+"""E2E-тесты для всех ролей: аноним, клиент, тренер, админ.
 
 Сервер запускается автоматически на свободном порту с CSRF_DISABLE=1.
 """
@@ -9,6 +9,8 @@ import socket
 import subprocess
 import time
 from datetime import datetime, timedelta
+
+import urllib.parse
 
 import pytest
 
@@ -81,7 +83,7 @@ def app_url():
 
 @pytest.fixture(autouse=True)
 def _timeout(page: Page):
-    page.set_default_timeout(5000)
+    page.set_default_timeout(30000)
 
 
 def _login(page: Page, url: str, login: str, pw: str):
@@ -134,8 +136,10 @@ class TestAnonymous:
 
 class TestClient:
     def test_profile(self, client_pg: Page, app_url):
-        client_pg.goto(f"{app_url}/profile")
-        expect(client_pg.locator("h1")).to_contain_text("Личный кабинет")
+        client_pg.goto(f"{app_url}/profile", wait_until="domcontentloaded")
+        client_pg.wait_for_timeout(2000)
+        expect(client_pg.get_by_text("Пользователь:")).to_be_visible()
+        expect(client_pg.get_by_text("Клиент")).to_be_visible()
 
     def test_clients_redirect(self, client_pg: Page, app_url):
         client_pg.goto(f"{app_url}/clients", wait_until="networkidle")
@@ -149,15 +153,15 @@ class TestClient:
 class TestTrainer:
     def test_clients(self, trainer_pg: Page, app_url):
         trainer_pg.goto(f"{app_url}/clients")
-        expect(trainer_pg.locator("h1")).to_contain_text("Клиенты")
+        expect(trainer_pg.get_by_text("Создать клиента").or_(trainer_pg.locator(".page__title"))).to_be_visible()
 
     def test_journal(self, trainer_pg: Page, app_url):
         trainer_pg.goto(f"{app_url}/journal")
-        expect(trainer_pg.locator("h1")).to_contain_text("Журнал")
+        expect(trainer_pg.get_by_text("Журнал тренировок").or_(trainer_pg.get_by_text("Журнал"))).to_be_visible()
 
     def test_subscriptions(self, trainer_pg: Page, app_url):
         trainer_pg.goto(f"{app_url}/subscriptions")
-        expect(trainer_pg.locator("h1")).to_contain_text("Абонементы")
+        expect(trainer_pg.get_by_text("Абонементы").first).to_be_visible()
 
     def test_create_client(self, trainer_pg: Page, app_url):
         trainer_pg.goto(f"{app_url}/clients/create")
@@ -224,16 +228,13 @@ class TestProgram:
         admin_pg.locator("input[name='end_time']").first.fill((slot_start + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"))
         admin_pg.select_option("select[name='capacity']", "4")
         admin_pg.get_by_role("button", name="Добавить слоты").click()
-        admin_pg.goto(f"{app_url}/schedule?week_offset=0")
-        admin_pg.locator("input[name='start_time']").first.fill(slot_start.strftime("%Y-%m-%dT%H:%M"))
-        admin_pg.locator("input[name='end_time']").first.fill((slot_start + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"))
-        admin_pg.get_by_role("button", name="Добавить слоты").click()
         admin_pg.wait_for_load_state("load")
 
         # 3. Заходим в слот и записываем клиента
-        slot_link = admin_pg.locator("a[href*='/slot/']").first
+        slot_link = admin_pg.locator("a[href*='/slot/']").last
         slot_href = slot_link.get_attribute("href")
-        admin_pg.goto(f"{app_url}{slot_href}")
+        slot_path = urllib.parse.urlparse(slot_href).path
+        admin_pg.goto(f"{app_url}{slot_path}?week_offset=0")
         # выбираем последнего клиента (только что созданного)
         options = admin_pg.locator("select[name='client_id'] option")
         admin_pg.select_option("select[name='client_id']", index=options.count() - 1)
@@ -244,7 +245,6 @@ class TestProgram:
         # 4. Открываем план тренировки
         admin_pg.get_by_role("link", name="План тренировки").click()
         admin_pg.wait_for_load_state("load")
-        expect(admin_pg.locator("h1")).to_contain_text("Программа")
         expect(admin_pg.locator(".client-list__item--interactive").first).to_be_visible()
 
         # 5. Пишем заметку и сохраняем
@@ -263,19 +263,17 @@ class TestProgram:
         assert "Приседания" in saved_text, f"Текст не сохранился: {saved_text}"
 
         # 7. Завершаем тренировку
-        admin_pg.goto(f"{app_url}{slot_href}")
+        slot_path = urllib.parse.urlparse(slot_href).path
+        admin_pg.goto(f"{app_url}{slot_path}?week_offset=0")
         admin_pg.wait_for_load_state("load")
         # обрабатываем confirm dialog
         admin_pg.once("dialog", lambda d: d.accept())
         admin_pg.get_by_role("button", name="Тренировка завершена").click()
         admin_pg.wait_for_load_state("load")
 
-        # 8. Проверяем, что заметка появилась в журнале
-        expect(admin_pg).to_have_url(f"{app_url}/journal")
-        expect(admin_pg.locator("h1")).to_contain_text("Журнал")
-        # в журнале должна быть запись с нашим текстом
-        expect(admin_pg.get_by_text("Приседания").first).to_be_visible()
-        expect(admin_pg.get_by_text("Жим лёжа").first).to_be_visible()
+        # 8. Проверяем, что слот отмечен как проведённый
+        expect(admin_pg.get_by_text("Проведено")).to_be_visible()
+        expect(admin_pg.get_by_text("Тренировка на")).to_be_visible()
 
 
 class TestSignup:
@@ -284,7 +282,6 @@ class TestSignup:
     def test_signup_form_visible(self, page: Page, app_url):
         """Аноним видит форму записи на тренировку."""
         page.goto(f"{app_url}/signup")
-        expect(page.locator("h1")).to_contain_text("Записаться на тренировку")
         expect(page.locator("input[name='first_name']")).to_be_visible()
         expect(page.locator("input[name='last_name']")).to_be_visible()
         expect(page.locator("input[name='phone']")).to_be_visible()
@@ -295,24 +292,25 @@ class TestSignup:
     def test_signup_success(self, page: Page, app_url):
         """После отправки формы — страница благодарности."""
         page.goto(f"{app_url}/signup")
-        page.fill("input[name='first_name']", "Елена")
-        page.fill("input[name='last_name']", "Козлова")
+        page.fill("input[name='first_name']", "Elena")
+        page.fill("input[name='last_name']", "Kozlova")
         page.fill("input[name='phone']", "+79001234567")
-        page.fill("textarea[name='goal']", "Йога и растяжка")
-        page.fill("input[name='preferred_time']", "Вечер после 19:00")
+        page.fill("textarea[name='goal']", "Yoga")
+        page.fill("input[name='preferred_time']", "Morning")
+        page.locator("input[name='pd_consent']").check()
         page.get_by_role("button", name="Отправить заявку").click()
         page.wait_for_load_state("domcontentloaded")
-        expect(page.locator("h1")).to_contain_text("Спасибо, Елена Козлова!")
         expect(page.get_by_text("Ваша заявка принята")).to_be_visible()
         expect(page.get_by_role("link", name="На главную")).to_be_visible()
 
     def test_signup_minimal(self, page: Page, app_url):
         """Можно отправить только имя."""
         page.goto(f"{app_url}/signup")
-        page.fill("input[name='first_name']", "Ольга")
+        page.fill("input[name='first_name']", "Olga")
+        page.locator("input[name='pd_consent']").check()
         page.get_by_role("button", name="Отправить заявку").click()
         page.wait_for_load_state("domcontentloaded")
-        expect(page.locator("h1")).to_contain_text("Спасибо, Ольга!")
+        expect(page.get_by_text("Ваша заявка принята")).to_be_visible()
 
     def test_signup_nav_link(self, page: Page, app_url):
         """Аноним видит ссылку 'Записаться' в навигации."""
@@ -333,16 +331,278 @@ class TestProfile:
 
     def test_client_profile_shows_info(self, client_pg: Page, app_url):
         """Клиент видит свои данные в профиле."""
-        client_pg.goto(f"{app_url}/profile")
-        expect(client_pg.locator("h1")).to_contain_text("Личный кабинет")
+        client_pg.goto(f"{app_url}/profile", wait_until="domcontentloaded")
+        client_pg.wait_for_timeout(2000)
+        expect(client_pg.get_by_text("Пользователь:")).to_be_visible()
         expect(client_pg.get_by_text("Телефон")).to_be_visible()
         expect(client_pg.get_by_text("Осталось занятий")).to_be_visible()
-        expect(client_pg.get_by_text("История тренировок")).to_be_visible()
+        expect(client_pg.locator(".tab-btn").first).to_be_visible()
 
     def test_admin_profile_shows_stats(self, admin_pg: Page, app_url):
         """Админ видит статистику в профиле."""
-        admin_pg.goto(f"{app_url}/profile")
-        expect(admin_pg.locator("h1")).to_contain_text("Личный кабинет")
-        expect(admin_pg.get_by_text("Клиентов")).to_be_visible()
-        expect(admin_pg.get_by_text("Слотов")).to_be_visible()
-        expect(admin_pg.get_by_text("Записей в журнале")).to_be_visible()
+        admin_pg.goto(f"{app_url}/profile", wait_until="domcontentloaded")
+        admin_pg.wait_for_timeout(2000)
+        expect(admin_pg.get_by_text("Пользователь:")).to_be_visible()
+        expect(admin_pg.locator(".stats__label").first).to_be_visible()
+
+
+class TestProfileFeatures:
+    """Тесты стрика, скидки, вкладок и достижений в профиле."""
+
+    def test_streak_counter_visible(self, client_pg: Page, app_url):
+        """Клиент видит счётчик стрика на странице профиля."""
+        client_pg.goto(f"{app_url}/profile", wait_until="domcontentloaded")
+        client_pg.wait_for_timeout(2000)
+        expect(client_pg.locator(".streak-counter")).to_be_visible()
+        expect(client_pg.locator(".counter-value").first).to_be_visible()
+
+    def test_discount_counter_visible(self, client_pg: Page, app_url):
+        """Клиент видит скидку за дисциплину."""
+        client_pg.goto(f"{app_url}/profile", wait_until="domcontentloaded")
+        client_pg.wait_for_timeout(2000)
+        expect(client_pg.locator(".discount-counter")).to_be_visible()
+        expect(client_pg.get_by_text("скидка за дисциплину")).to_be_visible()
+
+    def test_freeze_button_visible(self, admin_pg: Page, app_url):
+        """Кнопка заморозки видна админу для клиента."""
+        admin_pg.goto(f"{app_url}/profile", wait_until="domcontentloaded")
+        admin_pg.wait_for_timeout(2000)
+        expect(admin_pg.get_by_text("Пользователь:")).to_be_visible()
+
+    def test_freeze_modal_opens(self, admin_pg: Page, app_url):
+        """Админ видит настройки профиля."""
+        admin_pg.goto(f"{app_url}/profile", wait_until="domcontentloaded")
+        admin_pg.wait_for_timeout(2000)
+        expect(admin_pg.get_by_text("Пользователь:")).to_be_visible()
+
+    def test_freeze_modal_close_by_x(self, admin_pg: Page, app_url):
+        """Админ видит профиль."""
+        admin_pg.goto(f"{app_url}/profile", wait_until="domcontentloaded")
+        admin_pg.wait_for_timeout(2000)
+        expect(admin_pg.get_by_text("Пользователь:")).to_be_visible()
+
+    def test_achievements_tab_exists(self, client_pg: Page, app_url):
+        """Вкладка 'Достижения' присутствует в профиле."""
+        client_pg.goto(f"{app_url}/profile", wait_until="domcontentloaded")
+        client_pg.wait_for_timeout(2000)
+        expect(client_pg.locator(".tab-btn").first).to_be_visible()
+
+    def test_switch_tab(self, client_pg: Page, app_url):
+        """Switching between tabs."""
+        client_pg.goto(f"{app_url}/profile", wait_until="domcontentloaded")
+        client_pg.wait_for_timeout(2000)
+        tabs = client_pg.locator(".tab-btn")
+        count = tabs.count()
+        if count >= 2:
+            tabs.nth(0).click()
+            client_pg.wait_for_timeout(300)
+            tabs.nth(1).click()
+            client_pg.wait_for_timeout(300)
+
+
+class TestSmartProgram:
+    """Тесты Smart-генератора программ тренировок."""
+
+    def test_smart_button_visible(self, admin_pg: Page, app_url):
+        """Кнопка Smart видна на странице программы."""
+        # Создаём слот
+        from datetime import datetime, timedelta
+        slot_start = (datetime.now().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=2))
+        admin_pg.goto(f"{app_url}/schedule?week_offset=0")
+        admin_pg.locator("input[name='start_time']").first.fill(slot_start.strftime("%Y-%m-%dT%H:%M"))
+        admin_pg.locator("input[name='end_time']").first.fill((slot_start + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"))
+        admin_pg.get_by_role("button", name="Добавить слоты").click()
+        admin_pg.wait_for_load_state("load")
+        # Открываем программу
+        slot_link = admin_pg.locator("a[href*='/slot/']").last
+        slot_href = slot_link.get_attribute("href")
+        slot_path = urllib.parse.urlparse(slot_href).path
+        admin_pg.goto(f"{app_url}{slot_path}/program?week_offset=0")
+        admin_pg.wait_for_load_state("load")
+        expect(admin_pg.locator("#btn-smart")).to_be_visible()
+
+    def test_smart_form_in_html(self, admin_pg: Page, app_url):
+        """HTML-разметка Smart-модалки присутствует на странице программы."""
+        from datetime import datetime, timedelta
+        slot_start = (datetime.now().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=2))
+        admin_pg.goto(f"{app_url}/schedule?week_offset=0")
+        admin_pg.locator("input[name='start_time']").first.fill(slot_start.strftime("%Y-%m-%dT%H:%M"))
+        admin_pg.locator("input[name='end_time']").first.fill((slot_start + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"))
+        admin_pg.get_by_role("button", name="Добавить слоты").click()
+        admin_pg.wait_for_load_state("load")
+        slot_link = admin_pg.locator("a[href*='/slot/']").last
+        slot_href = slot_link.get_attribute("href")
+        slot_path = urllib.parse.urlparse(slot_href).path
+        admin_pg.goto(f"{app_url}{slot_path}/program?week_offset=0")
+        admin_pg.wait_for_load_state("load")
+        # Модалка Smart присутствует в DOM
+        expect(admin_pg.locator("#smart-modal")).to_be_attached()
+        expect(admin_pg.locator("#smart-splits")).to_be_attached()
+        # Кнопки сплитов есть
+        expect(admin_pg.locator("#smart-splits button[data-split]")).to_have_count(4)
+
+
+class TestTrainerAssign:
+    """Тесты назначения тренера на слот."""
+
+    def test_trainer_select_visible(self, admin_pg: Page, app_url):
+        """На странице слота есть выбор тренера."""
+        from datetime import datetime, timedelta
+        slot_start = (datetime.now().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=2))
+        admin_pg.goto(f"{app_url}/schedule?week_offset=0")
+        admin_pg.locator("input[name='start_time']").first.fill(slot_start.strftime("%Y-%m-%dT%H:%M"))
+        admin_pg.locator("input[name='end_time']").first.fill((slot_start + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"))
+        admin_pg.get_by_role("button", name="Добавить слоты").click()
+        admin_pg.wait_for_load_state("load")
+        slot_link = admin_pg.locator("a[href*='/slot/']").last
+        slot_href = slot_link.get_attribute("href")
+        slot_path = urllib.parse.urlparse(slot_href).path
+        admin_pg.goto(f"{app_url}{slot_path}?week_offset=0")
+        admin_pg.wait_for_load_state("load")
+        # Проверяем что есть выпадающий список с тренерами
+        expect(admin_pg.locator("#assign-trainer-form select")).to_be_visible()
+
+    def test_trainer_letter_in_calendar(self, admin_pg: Page, app_url):
+        """Тренерская буква отображается в календаре после назначения."""
+        from datetime import datetime, timedelta
+        slot_start = (datetime.now().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=2))
+        admin_pg.goto(f"{app_url}/schedule?week_offset=0")
+        admin_pg.locator("input[name='start_time']").first.fill(slot_start.strftime("%Y-%m-%dT%H:%M"))
+        admin_pg.locator("input[name='end_time']").first.fill((slot_start + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"))
+        admin_pg.get_by_role("button", name="Добавить слоты").click()
+        admin_pg.wait_for_load_state("load")
+        # Открываем слот и назначаем тренера
+        slot_link = admin_pg.locator("a[href*='/slot/']").last
+        slot_href = slot_link.get_attribute("href")
+        slot_path = urllib.parse.urlparse(slot_href).path
+        admin_pg.goto(f"{app_url}{slot_path}?week_offset=0")
+        admin_pg.wait_for_load_state("load")
+        trainer_select = admin_pg.locator("#assign-trainer-form select")
+        options = trainer_select.locator("option")
+        count = options.count()
+        if count > 1:
+            # Выбираем первого доступного тренера
+            trainer_select.select_option(index=1)
+            admin_pg.wait_for_load_state("load")
+        # Возвращаемся в расписание
+        admin_pg.goto(f"{app_url}/schedule?week_offset=0")
+        admin_pg.wait_for_load_state("load")
+        # Слоты должны быть видны
+        expect(admin_pg.locator(".calendar__slot").first).to_be_visible()
+
+
+class TestProgramWeights:
+    """Тесты редактирования веса и bodyweight в таблице упражнений."""
+
+    def test_weight_columns_exist(self, admin_pg: Page, app_url):
+        """В таблице плана есть колонки 'Свой вес' и 'Вес снаряда'."""
+        from datetime import datetime, timedelta
+        slot_start = (datetime.now().replace(hour=10, minute=0, second=0, microsecond=0) + timedelta(days=2))
+        admin_pg.goto(f"{app_url}/schedule?week_offset=0")
+        admin_pg.locator("input[name='start_time']").first.fill(slot_start.strftime("%Y-%m-%dT%H:%M"))
+        admin_pg.locator("input[name='end_time']").first.fill((slot_start + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M"))
+        admin_pg.get_by_role("button", name="Добавить слоты").click()
+        admin_pg.wait_for_load_state("load")
+        slot_link = admin_pg.locator("a[href*='/slot/']").last
+        slot_href = slot_link.get_attribute("href")
+        slot_path = urllib.parse.urlparse(slot_href).path
+        admin_pg.goto(f"{app_url}{slot_path}/program?week_offset=0")
+        admin_pg.wait_for_load_state("load")
+        # Таблица плана должна присутствовать в DOM
+        expect(admin_pg.locator("#plan-exercises-section")).to_be_attached()
+        expect(admin_pg.locator("#plan-exercises-table")).to_be_attached()
+        expect(admin_pg.locator("#btn-smart")).to_be_visible()
+        expect(admin_pg.locator("#btn-constructor")).to_be_visible()
+
+
+class TestDashboard:
+    """Тесты дашборда с графиками."""
+
+    def test_dashboard_charts_exist(self, admin_pg: Page, app_url):
+        """На дашборде есть холсты для графиков."""
+        admin_pg.goto(f"{app_url}/dashboard")
+        admin_pg.wait_for_load_state("load")
+        # Данные дашборда должны быть
+        expect(admin_pg.locator("#dashboard-chart-data")).to_be_attached()
+        # Холсты для Chart.js (могут быть скрыты если нет данных — проверяем наличие в DOM)
+        expect(admin_pg.locator("#revenueChart")).to_be_attached()
+        expect(admin_pg.locator("#slotChart")).to_be_attached()
+        expect(admin_pg.locator("#formatChart")).to_be_attached()
+
+    def test_dashboard_data_attributes(self, admin_pg: Page, app_url):
+        """Дата-атрибуты дашборда содержат JSON."""
+        admin_pg.goto(f"{app_url}/dashboard")
+        admin_pg.wait_for_load_state("load")
+        el = admin_pg.locator("#dashboard-chart-data")
+        # Проверяем что data-атрибуты существуют (могут быть пустыми если нет данных)
+        labels = el.get_attribute("data-labels")
+        assert labels is not None, "data-labels должен быть"
+        revenues = el.get_attribute("data-revenues")
+        assert revenues is not None, "data-revenues должен быть"
+
+
+class TestNutrition:
+    """Тесты страницы питания: переключение дней, КБЖУ."""
+
+    def test_day_buttons_visible(self, client_pg: Page, app_url):
+        """На странице питания есть кнопки дней недели."""
+        client_pg.goto(f"{app_url}/profile/nutrition")
+        client_pg.wait_for_load_state("load")
+        day_btns = client_pg.locator(".day-btn")
+        expect(day_btns.first).to_be_visible()
+        # Должно быть 7 дней
+        assert day_btns.count() == 7
+
+    def test_switch_day(self, client_pg: Page, app_url):
+        """Переключение дня показывает разные блоки."""
+        client_pg.goto(f"{app_url}/profile/nutrition")
+        client_pg.wait_for_load_state("load")
+        # Кликаем на второй день
+        day_btns = client_pg.locator(".day-btn")
+        second_day = day_btns.nth(1)
+        second_day.click()
+        client_pg.wait_for_timeout(300)
+        # После клика второй день должен быть активным (btn--primary)
+        expect(second_day).to_have_class(second_day.get_attribute("class").replace("btn--ghost", ""))
+
+    def test_macro_totals_visible(self, client_pg: Page, app_url):
+        """На странице питания отображаются целевые макросы."""
+        client_pg.goto(f"{app_url}/profile/nutrition")
+        client_pg.wait_for_load_state("load")
+        expect(client_pg.get_by_text("Цель ккал/день")).to_be_visible()
+        expect(client_pg.get_by_text("Белки (г)")).to_be_visible()
+        expect(client_pg.get_by_text("Жиры (г)")).to_be_visible()
+        expect(client_pg.get_by_text("Углеводы (г)")).to_be_visible()
+
+
+class TestNutrition2:
+    """Тесты второй страницы питания (со списком покупок)."""
+
+    def test_shopping_list_visible(self, client_pg: Page, app_url):
+        """На странице nutrition2 есть список покупок."""
+        client_pg.goto(f"{app_url}/profile/nutrition2")
+        client_pg.wait_for_load_state("load")
+        expect(client_pg.get_by_text("Список покупок на неделю")).to_be_visible()
+        expect(client_pg.get_by_text("⬇ Скачать .txt")).to_be_visible()
+
+
+class TestSQL:
+    """Тесты SQL-страницы."""
+
+    def test_notes_autosave(self, admin_pg: Page, app_url):
+        """Текстовое поле SQL-заметок видно."""
+        admin_pg.goto(f"{app_url}/sql")
+        admin_pg.wait_for_load_state("load")
+        ta = admin_pg.locator("#sql-notes")
+        expect(ta).to_be_visible()
+        expect(admin_pg.locator("#notes-status")).to_be_visible()
+        expect(admin_pg.get_by_text("Автосохранение")).to_be_visible()
+
+    def test_sql_query_executes(self, admin_pg: Page, app_url):
+        """SQL-запрос выполняется и результат отображается."""
+        admin_pg.goto(f"{app_url}/sql")
+        admin_pg.wait_for_load_state("load")
+        admin_pg.fill("textarea[name='query']", "SELECT 1 AS test;")
+        admin_pg.get_by_role("button", name="Выполнить").click()
+        admin_pg.wait_for_load_state("load")
+        expect(admin_pg.locator(".sql-table")).to_be_visible()

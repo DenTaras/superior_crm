@@ -117,19 +117,19 @@
         <!-- ====== СЧЁТЧИК СТРИКА + СКИДКА ====== -->
         {% if streak is defined %}
         <div style="flex:0 0 420px;display:flex;flex-direction:row;gap:12px;flex-wrap:wrap;">
-            <div class="streak-counter" style="flex:1;min-width:160px;text-align:center;background:linear-gradient(135deg,var(--bg-elevated),var(--bg-surface));border:2px solid {% if streak >= 30 %}var(--accent){% elif streak >= 15 %}var(--warning){% else %}var(--border){% endif %};border-radius:var(--radius-lg);padding:20px 12px;">
-                <div style="font-size:2.6rem;font-weight:800;color:var(--text-primary);">{% if streak > 0 %}{{ streak }}{% else %}0{% endif %}</div>
-                <div style="font-size:1.0rem;color:var(--text-secondary);font-weight:600;margin-top:2px;">
+            <div class="streak-counter{% if streak >= 30 %} streak-counter--hot{% elif streak >= 15 %} streak-counter--warm{% endif %}">
+                <div class="counter-value">{{ streak }}</div>
+                <div class="counter-label">
                     {% if streak == 0 %}тренировок{% elif streak == 1 %}тренировка{% elif streak < 5 %}тренировки{% else %}тренировок{% endif %} подряд
                 </div>
-                <div style="font-size:0.8rem;color:var(--text-muted);margin-top:6px;">без перерыва &gt;7 дней</div>
+                <div class="counter-sub">без перерыва &gt;7 дней</div>
             </div>
 
             {% if streak_discount is defined %}
-            <div class="discount-counter" style="flex:1;min-width:160px;text-align:center;background:linear-gradient(135deg,var(--bg-elevated),var(--bg-surface));border:2px solid {% if streak_discount >= 15 %}var(--accent){% elif streak_discount >= 5 %}var(--warning){% else %}var(--border){% endif %};border-radius:var(--radius-lg);padding:20px 12px;">
-                <div style="font-size:2.6rem;font-weight:800;color:{% if streak_discount >= 15 %}var(--accent){% elif streak_discount >= 5 %}var(--warning){% else %}var(--text-primary){% endif %};">{{ streak_discount }}%</div>
-                <div style="font-size:1.0rem;color:var(--text-secondary);font-weight:600;">скидка за дисциплину</div>
-                <div style="font-size:0.8rem;color:var(--text-muted);margin-top:6px;">
+            <div class="discount-counter{% if streak_discount >= 15 %} discount-counter--hot{% elif streak_discount >= 5 %} discount-counter--warm{% endif %}">
+                <div class="counter-value{% if streak_discount >= 15 %} counter-value--hot{% elif streak_discount >= 5 %} counter-value--warm{% endif %}">{{ streak_discount }}%</div>
+                <div class="counter-label">скидка за дисциплину</div>
+                <div class="counter-sub">
                     {% if streak_discount < 20 %}
                     +1% за каждые 3 тренировки · ещё {{ 60 - streak }} до 20%
                     {% else %}
@@ -364,33 +364,7 @@
     </div>
     {% endif %}
 
-    <script>
-    function switchTab(name) {
-        document.querySelectorAll('.tab-content').forEach(function(el){
-            el.style.display = 'none';
-        });
-        document.querySelectorAll('.tab-btn').forEach(function(el){
-            el.className = el.className.replace('btn--primary', 'btn--secondary');
-        });
-        document.getElementById('tab-' + name).style.display = '';
-        document.querySelector('.tab-btn[data-tab="' + name + '"]').className =
-            'btn btn--primary btn--small tab-btn';
-
-        // Перерисовываем графики при переключении на вкладку
-        if (name === 'strength') {
-            var sel = document.getElementById('exerciseSelect');
-            if (sel && typeof buildChart === 'function') {
-                setTimeout(function(){ buildChart(sel.value); }, 100);
-            }
-        }
-        if (name === 'anthro') {
-            var anthroSel = document.getElementById('anthroSelect');
-            if (anthroSel && typeof buildAnthroChart === 'function') {
-                setTimeout(function(){ buildAnthroChart(anthroSel.value); }, 100);
-            }
-        }
-    }
-    </script>
+    <script src="/static/js/profile/profile-tabs.js"></script>
 
     {% if trainer_slots is defined %}
     <hr class="mt-2 mb-2" />
@@ -453,200 +427,18 @@
     {% endif %}
 </div>
 
+<!-- ====== ДАННЫЕ ДЛЯ ГРАФИКОВ ====== -->
+<div id="progress-chart-data" data-json='{{ progress_chart_json|safe }}' style="display:none;"></div>
+<div id="anthro-chart-data" data-json='{{ anthro_chart_json|safe }}' style="display:none;"></div>
+
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/static/js/profile/profile-tabs.js"></script>
 {% if progress_chart_json and progress_chart_json != '{}' %}
-<script>
-var allData = {{ progress_chart_json|safe }};
-var chart = null;
-var colors = ['#e74c3c','#2ecc71','#3498db','#f39c12','#9b59b6','#1abc9c','#e67e22','#2c3e50','#c0392b','#16a085'];
-
-function buildChart(exName) {
-    var points = allData[exName] || [];
-    var labels = points.map(function(p){ return p.x; });
-    var values = points.map(function(p){ return p.y; });
-    var ctx = document.getElementById('progressChart');
-    if (!ctx) return;
-
-    if (chart) { chart.destroy(); chart = null; }
-
-    chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: exName,
-                data: values,
-                borderColor: colors[Object.keys(allData).indexOf(exName) % colors.length],
-                backgroundColor: 'transparent',
-                fill: false,
-                tension: 0.3,
-                spanGaps: true,
-                pointRadius: 5,
-                pointBackgroundColor: colors[Object.keys(allData).indexOf(exName) % colors.length],
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                x: { ticks: { color: '#999' }, grid: { color: '#333' } },
-                y: { ticks: { color: '#999' }, grid: { color: '#333' }, beginAtZero: false }
-            }
-        }
-    });
-}
-
-var sel = document.getElementById('exerciseSelect');
-if (sel) {
-    sel.addEventListener('change', function(){ buildChart(this.value); });
-}
-</script>
+<script src="/static/js/profile/chart-progress.js"></script>
 {% endif %}
 {% if anthro_chart_json and anthro_chart_json != '{}' %}
-<script>
-var anthroAllData = {{ anthro_chart_json|safe }};
-var weightPoints = anthroAllData['Вес'] || [];
-var fatPoints = anthroAllData['Жир'] || [];
-var girthKeys = ['Бедро', 'Талия', 'Грудь', 'Плечи', 'Бицепс', 'Шея', 'Запястье'];
-var girthColors = ['#2ecc71','#e74c3c','#3498db','#f39c12','#9b59b6','#1abc9c','#95a5a6'];
-var skinfoldKeys = ['Складка грудь', 'Складка живот', 'Складка бедро', 'Складка трицепс', 'Складка под лопаткой'];
-var skinfoldColors = ['#e74c3c','#f39c12','#2ecc71','#3498db','#9b59b6'];
-
-// Собираем все даты
-var anthroLabelSet = new Set();
-weightPoints.forEach(function(p){ anthroLabelSet.add(p.x); });
-fatPoints.forEach(function(p){ anthroLabelSet.add(p.x); });
-girthKeys.forEach(function(k){
-    (anthroAllData[k] || []).forEach(function(p){ anthroLabelSet.add(p.x); });
-});
-skinfoldKeys.forEach(function(k){
-    (anthroAllData[k] || []).forEach(function(p){ anthroLabelSet.add(p.x); });
-});
-var anthroLabels = Array.from(anthroLabelSet).sort(function(a,b){
-    var da=a.split('.'), db=b.split('.');
-    return parseInt(da[1])-parseInt(db[1])||parseInt(da[0])-parseInt(db[0]);
-});
-
-function buildDict(points) {
-    var d = {};
-    points.forEach(function(p){ d[p.x] = p.y; });
-    return d;
-}
-
-var anthroChart = null;
-
-function buildAnthroChart(mode) {
-    var datasets = [];
-    var scales = {
-        x: { ticks: { color: '#999' }, grid: { color: '#333' } },
-    };
-
-    if (mode === 'weight_fat') {
-        var wd = buildDict(weightPoints);
-        var fd = buildDict(fatPoints);
-        datasets = [
-            {
-                label: 'Вес (кг)',
-                data: anthroLabels.map(function(l){ return wd[l] !== undefined ? wd[l] : null; }),
-                borderColor: '#3498db',
-                backgroundColor: 'transparent',
-                yAxisID: 'y',
-                tension: 0.3,
-                spanGaps: true,
-                pointRadius: 4,
-            },
-            {
-                label: 'Жир (%)',
-                data: anthroLabels.map(function(l){ return fd[l] !== undefined ? fd[l] : null; }),
-                borderColor: '#e74c3c',
-                backgroundColor: 'transparent',
-                yAxisID: 'y1',
-                tension: 0.3,
-                spanGaps: true,
-                pointRadius: 4,
-            }
-        ];
-        scales.y = {
-            type: 'linear', display: true, position: 'left',
-            ticks: { color: '#3498db' }, grid: { color: '#333' },
-            beginAtZero: false,
-            title: { display: true, text: 'Вес (кг)', color: '#3498db' }
-        };
-        scales.y1 = {
-            type: 'linear', display: true, position: 'right',
-            ticks: { color: '#e74c3c' }, grid: { drawOnChartArea: false },
-            beginAtZero: false,
-            title: { display: true, text: 'Жир (%)', color: '#e74c3c' }
-        };
-    } else if (mode === 'girths') {
-        girthKeys.forEach(function(k, i){
-            var pts = anthroAllData[k] || [];
-            var d = buildDict(pts);
-            datasets.push({
-                label: k,
-                data: anthroLabels.map(function(l){ return d[l] !== undefined ? d[l] : null; }),
-                borderColor: girthColors[i],
-                backgroundColor: 'transparent',
-                tension: 0.3,
-                spanGaps: true,
-                pointRadius: 3,
-                borderWidth: 2,
-            });
-        });
-        scales.y = {
-            type: 'linear', display: true, position: 'left',
-            ticks: { color: '#999' }, grid: { color: '#333' },
-            beginAtZero: false,
-            title: { display: true, text: 'Обхваты (см)', color: '#999' }
-        };
-    } else if (mode === 'skinfold') {
-        skinfoldKeys.forEach(function(k, i){
-            var pts = anthroAllData[k] || [];
-            var d = buildDict(pts);
-            datasets.push({
-                label: k,
-                data: anthroLabels.map(function(l){ return d[l] !== undefined ? d[l] : null; }),
-                borderColor: skinfoldColors[i],
-                backgroundColor: 'transparent',
-                tension: 0.3,
-                spanGaps: true,
-                pointRadius: 3,
-                borderWidth: 2,
-            });
-        });
-        scales.y = {
-            type: 'linear', display: true, position: 'left',
-            ticks: { color: '#999' }, grid: { color: '#333' },
-            beginAtZero: false,
-            title: { display: true, text: 'Калипер (мм)', color: '#999' }
-        };
-    }
-
-    if (anthroChart) anthroChart.destroy();
-
-    anthroChart = new Chart(document.getElementById('anthroChart'), {
-        type: 'line',
-        data: { labels: anthroLabels, datasets: datasets },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { labels: { color: '#ccc', boxWidth: 12, padding: 8 } }
-            },
-            scales: scales
-        }
-    });
-}
-
-var anthroSel = document.getElementById('anthroSelect');
-if (anthroSel) {
-    buildAnthroChart(anthroSel.value);
-    anthroSel.addEventListener('change', function(){ buildAnthroChart(this.value); });
-}
-</script>
+<script src="/static/js/profile/chart-anthro.js"></script>
 {% endif %}
 {% endblock %}
 
