@@ -16,7 +16,7 @@ from app.timezone import now as tz_now
 router = APIRouter()
 
 
-@router.get("/profile/nutrition2")
+@router.get("/profile/nutrition")
 def nutrition2_page(
     request: Request,
     db: Session = Depends(get_db),
@@ -114,7 +114,7 @@ def nutrition2_page(
         })
 
     return templates.TemplateResponse(
-        request=request, name="nutrition2.html",
+        request=request, name="nutrition.html",
         context={
             "user": user,
             "client": c,
@@ -131,7 +131,7 @@ def nutrition2_page(
     )
 
 
-@router.get("/profile/nutrition2/shopping-list")
+@router.get("/profile/nutrition/shopping-list")
 def shopping_list_export(
     request: Request,
     format: str = Query("txt"),
@@ -192,7 +192,7 @@ def shopping_list_export(
     return PlainTextResponse("\n".join(lines), media_type="text/plain; charset=utf-8")
 
 
-@router.get("/profile/nutrition2/debug")
+@router.get("/profile/nutrition/debug")
 def nutrition2_debug(
     request: Request,
     db: Session = Depends(get_db),
@@ -240,7 +240,7 @@ def nutrition2_debug(
     return PlainTextResponse("\n".join(lines), media_type="text/plain; charset=utf-8")
 
 
-@router.post("/profile/nutrition2/settings")
+@router.post("/profile/nutrition/settings")
 def nutrition2_settings(
     request: Request,
     db: Session = Depends(get_db),
@@ -271,4 +271,50 @@ def nutrition2_settings(
 
     db.commit()
 
-    return RedirectResponse("/profile/nutrition2", status_code=303)
+    return RedirectResponse("/profile/nutrition", status_code=303)
+
+
+@router.post("/api/nutrition/macros")
+def nutrition2_macros_api(
+    request: Request,
+    db: Session = Depends(get_db),
+    goal: str = Form("recompose"),
+    activity: str = Form("moderate"),
+):
+    """Обновить цель/активность и вернуть JSON с макросами (без перезагрузки)."""
+    from app.nutrition import calc_bmr, calc_tdee, calc_macros
+
+    user = get_current_user(request)
+    if not user or user["role"] != "client":
+        return {"error": "not authorized"}
+
+    client_id = user.get("client_id")
+    c = db.get(Client, client_id)
+    if not c:
+        return {"error": "client not found"}
+
+    c.goal = goal
+    c.activity_level = activity
+    db.add(c)
+    db.commit()
+
+    age = 30
+    if c.birth_year:
+        age = tz_now().year - c.birth_year
+
+    weight = c.weight_kg or 80
+    height = c.height_cm or 175
+    bmr = calc_bmr(weight, height, age, c.sex or "m")
+    tdee = calc_tdee(bmr, activity)
+
+    # Корректировка калорий по цели
+    goal_cal_map = {"lose": -300, "gain": 300, "recompose": 0}
+    target_kcal = tdee + goal_cal_map.get(goal, 0)
+    macros = calc_macros(target_kcal, weight)
+
+    return {
+        "calories": macros["calories"],
+        "protein": macros["protein"],
+        "fat": macros["fat"],
+        "carbs": macros["carbs"],
+    }

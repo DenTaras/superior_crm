@@ -206,4 +206,37 @@
         }
         recalcItem(item);
     });
+
+    // Модалка списка покупок
+    var shopBtn = document.getElementById('btn-shopping-list');
+    var shopModal = document.getElementById('shopping-modal');
+    var shopClose = document.getElementById('shopping-modal-close');
+    if(shopBtn && shopModal){
+        shopBtn.addEventListener('click', function(){ shopModal.style.display = ''; });
+        if(shopClose) shopClose.addEventListener('click', function(){ shopModal.style.display = 'none'; });
+        shopModal.addEventListener('click', function(e){ if(e.target === shopModal) shopModal.style.display = 'none'; });
+    }
+
+    // Автообновление КБЖУ при смене цели/активности
+    var nsSelects = document.querySelectorAll('.nutrition-select');
+    nsSelects.forEach(function(sel){
+        sel.addEventListener('change', function(){
+            var goal = document.querySelector('select[name="goal"]').value;
+            var activity = document.querySelector('select[name="activity"]').value;
+            fetch('/api/nutrition/macros', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({goal: goal, activity: activity}),
+            }).then(function(r){ return r.json(); }).then(function(data){
+                if(data.error) return;
+                var cards = document.querySelectorAll('.nutrition-panel .stats__card');
+                if(cards.length >= 4){
+                    cards[0].querySelector('.stats__value').textContent = data.calories;
+                    cards[1].querySelector('.stats__value').textContent = data.protein;
+                    cards[2].querySelector('.stats__value').textContent = data.fat;
+                    cards[3].querySelector('.stats__value').textContent = data.carbs;
+                }
+            }).catch(function(){});
+        });
+    });
 })();

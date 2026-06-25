@@ -1,56 +1,59 @@
 {% extends "base.html" %}
 
 {% block content %}
-
 <div class="panel nutrition-panel">
     <!-- Настройки -->
     <details class="mt-1" style="cursor:pointer;">
         <summary style="color:var(--text-secondary);font-weight:600;font-size:0.9rem;">Настройки рациона</summary>
-        <form method="post" action="/profile/nutrition/settings" class="form mt-2" style="max-width:500px;">
-            {{ csrf_input(request) }}
-            <div class="form__group">
-                <label class="form__label">Цель</label>
-                <select name="goal" class="form__select">
-                    <option value="lose" {% if goal == 'lose' %}selected{% endif %}>Похудение</option>
-                    <option value="recompose" {% if goal == 'recompose' %}selected{% endif %}>Рекомпозиция</option>
-                    <option value="gain" {% if goal == 'gain' %}selected{% endif %}>Набор массы</option>
-                </select>
+        <div class="flex-row mt-2" style="gap:24px;align-items:flex-start;flex-wrap:wrap;">
+            <div style="flex:1;min-width:280px;max-width:500px;">
+                <form method="post" action="/profile/nutrition/settings" class="form">
+                    {{ csrf_input(request) }}
+                    <div class="form__group">
+                        <label class="form__label">Цель</label>
+                        <select name="goal" class="form__select nutrition-select" data-key="goal">
+                            <option value="lose" {% if goal == 'lose' %}selected{% endif %}>Похудение</option>
+                            <option value="recompose" {% if goal == 'recompose' %}selected{% endif %}>Рекомпозиция</option>
+                            <option value="gain" {% if goal == 'gain' %}selected{% endif %}>Набор массы</option>
+                        </select>
+                    </div>
+                    <div class="form__group">
+                        <label class="form__label">Активность</label>
+                        <select name="activity" class="form__select nutrition-select" data-key="activity">
+                            <option value="sedentary" {% if activity == 'sedentary' %}selected{% endif %}>Сидячая работа</option>
+                            <option value="light" {% if activity == 'light' %}selected{% endif %}>1-2 тренировки/нед</option>
+                            <option value="moderate" {% if activity == 'moderate' %}selected{% endif %}>3-5 тренировок/нед</option>
+                            <option value="active" {% if activity == 'active' %}selected{% endif %}>6-7 тренировок/нед</option>
+                            <option value="extreme" {% if activity == 'extreme' %}selected{% endif %}>2 тренировки/день</option>
+                        </select>
+                    </div>
+                    <div class="form__group">
+                        <label class="form__label">Исключить продукты (через запятую)</label>
+                        <input class="form__input" type="text" name="excluded_tags" value="{{ excluded_tags|join(',') }}" placeholder="молоко, свинина, орехи" />
+                    </div>
+                </form>
             </div>
-            <div class="form__group">
-                <label class="form__label">Активность</label>
-                <select name="activity" class="form__select">
-                    <option value="sedentary" {% if activity == 'sedentary' %}selected{% endif %}>Сидячая работа</option>
-                    <option value="light" {% if activity == 'light' %}selected{% endif %}>1-2 тренировки/нед</option>
-                    <option value="moderate" {% if activity == 'moderate' %}selected{% endif %}>3-5 тренировок/нед</option>
-                    <option value="active" {% if activity == 'active' %}selected{% endif %}>6-7 тренировок/нед</option>
-                    <option value="extreme" {% if activity == 'extreme' %}selected{% endif %}>2 тренировки/день</option>
-                </select>
+            <div style="flex:0 0 auto;min-width:200px;">
+                <div class="stats" style="grid-template-columns:1fr 1fr;margin-bottom:0;">
+                    <div class="stats__card"><div class="stats__value">{{ macros.calories }}</div><div class="stats__label">Цель ккал/день</div></div>
+                    <div class="stats__card"><div class="stats__value" style="color:var(--text-primary);">{{ macros.protein }}</div><div class="stats__label">Белки (г)</div></div>
+                    <div class="stats__card"><div class="stats__value" style="color:var(--text-primary);">{{ macros.fat }}</div><div class="stats__label">Жиры (г)</div></div>
+                    <div class="stats__card"><div class="stats__value" style="color:var(--text-primary);">{{ macros.carbs }}</div><div class="stats__label">Углеводы (г)</div></div>
+                </div>
             </div>
-            <div class="form__group">
-                <label class="form__label">Исключить продукты (через запятую)</label>
-                <input class="form__input" type="text" name="excluded_tags" value="{{ excluded_tags|join(',') }}" placeholder="молоко, свинина, орехи" />
-            </div>
-            <button class="btn btn--primary btn--small" type="submit">Сохранить и обновить</button>
-        </form>
+        </div>
     </details>
 
-    <!-- Целевые макросы -->
-    <div class="stats mt-2" style="flex-wrap:wrap;">
-        <div class="stats__card"><div class="stats__value">{{ macros.calories }}</div><div class="stats__label">Цель ккал/день</div></div>
-        <div class="stats__card"><div class="stats__value" style="color:var(--text-primary);">{{ macros.protein }}</div><div class="stats__label">Белки (г)</div></div>
-        <div class="stats__card"><div class="stats__value" style="color:var(--text-primary);">{{ macros.fat }}</div><div class="stats__label">Жиры (г)</div></div>
-        <div class="stats__card"><div class="stats__value" style="color:var(--text-primary);">{{ macros.carbs }}</div><div class="stats__label">Углеводы (г)</div></div>
-    </div>
-
-    <!-- Навигация по дням -->
-    <div class="flex-row mt-2" style="gap:4px;flex-wrap:wrap;">
+    <!-- Навигация по дням + кнопка списка покупок -->
+    <div class="flex-row mt-2" style="gap:4px;flex-wrap:wrap;align-items:center;">
         {% for d in week %}
         <button class="btn btn--small day-btn {% if d.day == today_name %}btn--primary{% else %}btn--ghost{% endif %}"
                 data-day="{{ d.day }}" style="min-width:44px;">{{ d.day }}</button>
         {% endfor %}
+        <button type="button" id="btn-shopping-list" class="btn btn--small btn--primary" style="margin-left:auto;">📋 Список покупок</button>
     </div>
 
-    <!-- Дни -->
+    <!-- Дни (тот же план, что и в nutrition.html) -->
     {% set meal_labels = {'breakfast':'Завтрак','snack':'Перекус','lunch':'Обед','dinner':'Ужин'} %}
     {% set course_labels = {'main':'🍽 Второе','first':'🥣 Первое','drink':'🥤 Напиток'} %}
 
@@ -102,9 +105,9 @@
                     <button class="btn btn--small meal-remove" style="padding:2px 6px;color:var(--danger);" title="Убрать">−</button>
                     <span style="font-weight:600;font-size:0.85rem;min-width:60px;color:var(--text-muted);">{% if m.meal_type == 'snack' and m.course == 'main' %}🍿 Перекус{% else %}{{ course_labels.get(m.course, m.course) }}{% endif %}</span>
                     <span class="meal-name" style="flex:1;cursor:pointer;font-size:0.9rem;">{{ m.name }}</span>
-                    <span style="font-size:0.8rem;color:var(--text-muted);">{{ m.weight_g }}г</span>
+                    <span style="font-size:0.8rem;color:var(--text-muted);">г</span>
                     <input type="number" class="meal-weight" value="{{ m.weight_g }}" min="1"
-                           style="width:50px;padding:2px 4px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-primary);font-size:0.8rem;">
+                           style="width:50px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-primary);font-size:0.8rem;">
                     <span class="meal-protein" style="font-size:0.8rem;min-width:45px;"><span style="color:var(--text-muted);font-size:0.7rem;">Б </span><span class="meal-value">{{ m.protein }}</span></span>
                     <span class="meal-fat" style="font-size:0.8rem;min-width:45px;"><span style="color:var(--text-muted);font-size:0.7rem;">Ж </span><span class="meal-value">{{ m.fat }}</span></span>
                     <span class="meal-carbs" style="font-size:0.8rem;min-width:45px;"><span style="color:var(--text-muted);font-size:0.7rem;">У </span><span class="meal-value">{{ m.carbs }}</span></span>
@@ -119,20 +122,41 @@
             </div>
         {% endfor %}
         </div></div>
-
     </div>
     {% endfor %}
-</div>
 
+    <!-- Модалка списка покупок -->
+    <div id="shopping-modal" class="modal-overlay" style="display:none;">
+        <div class="modal">
+            <div class="modal__header">
+                <h2 class="mt-0">📋 Список покупок на неделю</h2>
+                <button type="button" id="shopping-modal-close" class="btn btn--ghost btn--small">✕</button>
+            </div>
+            <div class="modal__body">
+                {% for group in shopping_list %}
+                <div class="mt-2">
+                    <h4 class="mt-0" style="font-size:0.95rem;color:var(--text-secondary);">{{ group.label }}</h4>
+                    {% for item in group['items'] %}
+                    <div class="flex-row" style="gap:8px;font-size:0.85rem;padding:2px 0;">
+                        <span style="flex:1;">{{ item.name }}</span>
+                        <span style="color:var(--text-muted);min-width:80px;text-align:right;">{{ item.display }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="modal__footer">
+                <a href="/profile/nutrition/shopping-list?format=txt" class="btn btn--small" target="_blank">⬇ Скачать .txt</a>
+                <button type="button" class="btn btn--secondary btn--small" onclick="document.getElementById('shopping-modal').style.display='none'">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <style>
-.course-select option {
-    background: #1a1a1a;
-    color: #e0e0e0;
-}
-/* Компактные блоки питания */
+.course-select option { background:#1a1a1a; color:#e0e0e0; }
 .nutrition-panel { padding:12px 16px !important; }
 .nutrition-panel .panel { padding:12px 16px !important; }
 .nutrition-panel .day-table .panel { padding:12px 16px !important; }
@@ -140,7 +164,7 @@
 .nutrition-panel .meal-item { padding:6px 10px !important; margin-bottom:4px !important; }
 .nutrition-panel .meal-item .flex-row { gap:4px !important; }
 .nutrition-panel .meal-name { font-size:0.82rem !important; }
-.nutrition-panel .meal-weight { width:40px !important; padding:1px 3px !important; font-size:0.75rem !important; }
+.nutrition-panel .meal-weight { width:50px !important; padding:1px 3px !important; font-size:0.75rem !important; }
 .nutrition-panel .meal-protein,
 .nutrition-panel .meal-fat,
 .nutrition-panel .meal-carbs { font-size:0.75rem !important; min-width:35px !important; }

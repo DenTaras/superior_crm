@@ -47,8 +47,7 @@
             {% elif _user and _user.role == 'client' %}
             <a href="/schedule" class="header__nav-link{% if _path.startswith('/schedule') or _path.startswith('/slot/') %} header__nav-link--active{% endif %}">Расписание</a>
             <a href="/subscriptions" class="header__nav-link{% if _path == '/subscriptions' %} header__nav-link--active{% endif %}">Абонементы</a>
-            <a href="/profile/nutrition" class="header__nav-link{% if _path == '/profile/nutrition' %} header__nav-link--active{% endif %}">Питание</a>
-            <a href="/profile/nutrition2" class="header__nav-link{% if _path == '/profile/nutrition2' %} header__nav-link--active{% endif %}">Питание 2</a>
+            <a href="/profile/nutrition" class="header__nav-link{% if _path.startswith('/profile/nutrition') %} header__nav-link--active{% endif %}">Питание</a>
             {% else %}
             <a href="/signup" class="header__nav-link{% if _path == '/signup' %} header__nav-link--active{% endif %}">Записаться</a>
             <a href="/subscriptions" class="header__nav-link{% if _path == '/subscriptions' %} header__nav-link--active{% endif %}">Абонементы</a>

@@ -38,7 +38,6 @@ from app.routes.sql_console import router as sql_router
 from app.routes.exercises_api import router as exercises_api_router
 from app.routes.budget import router as budget_router
 from app.routes.dashboard import router as dashboard_router
-from app.routes.nutrition import router as nutrition_router
 from app.routes.nutrition2 import router as nutrition2_router
 from app.routes.employees import router as employees_router
 from app.routes.freeze import router as freeze_router
@@ -127,8 +126,7 @@ app.include_router(sql_router)           # /sql
 app.include_router(exercises_api_router) # /api/exercise-*
 app.include_router(budget_router)        # /budget
 app.include_router(dashboard_router)     # /dashboard
-app.include_router(nutrition_router)      # /profile/nutrition
-app.include_router(nutrition2_router)     # /profile/nutrition2
+app.include_router(nutrition2_router)     # /profile/nutrition
 app.include_router(clients_router)       # /clients, /clients/*
 app.include_router(schedule_router)      # /schedule, /slot/{id}
 app.include_router(slots_router)         # /slots/*, /slot/{id}/add|remove|complete

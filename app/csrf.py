@@ -57,9 +57,14 @@ def _extract_csrf_from_multipart(body: bytes, boundary: str) -> str:
     return ""
 
 
+SKIP_CSRF_PATHS = {"/api/nutrition/macros"}
+
+
 async def csrf_middleware(request: Request, call_next):
     """Проверить CSRF-токен на POST/PUT/DELETE запросах (stateless)."""
     if request.method in ("POST", "PUT", "DELETE", "PATCH"):
+        if request.url.path in SKIP_CSRF_PATHS:
+            return await call_next(request)
         ct = request.headers.get("content-type", "")
         if "application/json" not in ct and not _is_disabled():
             token = ""

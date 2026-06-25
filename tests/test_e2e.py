@@ -542,7 +542,7 @@ class TestDashboard:
 
 
 class TestNutrition:
-    """Тесты страницы питания: переключение дней, КБЖУ."""
+    """Тесты страницы питания: дни, КБЖУ, список покупок."""
 
     def test_day_buttons_visible(self, client_pg: Page, app_url):
         """На странице питания есть кнопки дней недели."""
@@ -550,40 +550,39 @@ class TestNutrition:
         client_pg.wait_for_load_state("load")
         day_btns = client_pg.locator(".day-btn")
         expect(day_btns.first).to_be_visible()
-        # Должно быть 7 дней
         assert day_btns.count() == 7
 
     def test_switch_day(self, client_pg: Page, app_url):
         """Переключение дня показывает разные блоки."""
         client_pg.goto(f"{app_url}/profile/nutrition")
         client_pg.wait_for_load_state("load")
-        # Кликаем на второй день
         day_btns = client_pg.locator(".day-btn")
         second_day = day_btns.nth(1)
         second_day.click()
         client_pg.wait_for_timeout(300)
-        # После клика второй день должен быть активным (btn--primary)
         expect(second_day).to_have_class(second_day.get_attribute("class").replace("btn--ghost", ""))
 
     def test_macro_totals_visible(self, client_pg: Page, app_url):
         """На странице питания отображаются целевые макросы."""
         client_pg.goto(f"{app_url}/profile/nutrition")
         client_pg.wait_for_load_state("load")
+        # Раскрываем настройки (там макросы)
+        client_pg.locator("details summary").click()
+        client_pg.wait_for_timeout(300)
         expect(client_pg.get_by_text("Цель ккал/день")).to_be_visible()
         expect(client_pg.get_by_text("Белки (г)")).to_be_visible()
         expect(client_pg.get_by_text("Жиры (г)")).to_be_visible()
         expect(client_pg.get_by_text("Углеводы (г)")).to_be_visible()
 
-
-class TestNutrition2:
-    """Тесты второй страницы питания (со списком покупок)."""
-
-    def test_shopping_list_visible(self, client_pg: Page, app_url):
-        """На странице nutrition2 есть список покупок."""
-        client_pg.goto(f"{app_url}/profile/nutrition2")
+    def test_shopping_list_modal(self, client_pg: Page, app_url):
+        """Кнопка списка покупок открывает модалку."""
+        client_pg.goto(f"{app_url}/profile/nutrition")
         client_pg.wait_for_load_state("load")
+        expect(client_pg.locator("#btn-shopping-list")).to_be_visible()
+        client_pg.locator("#btn-shopping-list").click()
+        expect(client_pg.locator("#shopping-modal")).to_be_visible()
         expect(client_pg.get_by_text("Список покупок на неделю")).to_be_visible()
-        expect(client_pg.get_by_text("⬇ Скачать .txt")).to_be_visible()
+        expect(client_pg.get_by_text("Скачать .txt")).to_be_visible()
 
 
 class TestSQL:
