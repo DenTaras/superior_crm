@@ -50,7 +50,8 @@
         <button class="btn btn--small day-btn {% if d.day == today_name %}btn--primary{% else %}btn--ghost{% endif %}"
                 data-day="{{ d.day }}" style="min-width:44px;">{{ d.day }}</button>
         {% endfor %}
-        <button type="button" id="btn-shopping-list" class="btn btn--small btn--primary" style="margin-left:auto;">📋 Список покупок</button>
+        <button type="button" id="btn-toggle-kbju" class="btn btn--small btn--ghost" style="margin-left:auto;" data-mode="portion">📊 КБЖУ на порцию</button>
+        <button type="button" id="btn-shopping-list" class="btn btn--small btn--primary">📋 Список покупок</button>
     </div>
 
     <!-- Дни (тот же план, что и в nutrition.html) -->
@@ -171,6 +172,6 @@
 .nutrition-panel .meal-calories { font-size:0.8rem !important; min-width:45px !important; }
 .nutrition-panel .btn--small { padding:3px 8px !important; font-size:0.78rem !important; }
 </style>
-<script>window.__nutrition_alternatives={{ alternatives_json|safe }};</script>
+<script id="nutrition-data" type="application/json">{{ alternatives_json|replace('</script>', '<\/script>')|safe }}</script>
 <script src="/static/js/pages/nutrition.js"></script>
 {% endblock %}

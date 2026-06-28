@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page__title">
+    <h1>📥 Входящие заявки</h1>
+    <a class="btn btn--ghost" href="/clients">← Назад к клиентам</a>
+</div>
+
+{% if requests %}
+<div class="table__wrapper">
+    <table class="table">
+        <thead>
+            <tr>
+                <th class="table__header">#</th>
+                <th class="table__header">Имя</th>
+                <th class="table__header">Фамилия</th>
+                <th class="table__header">Телефон</th>
+                <th class="table__header">Цель</th>
+                <th class="table__header">Время</th>
+                <th class="table__header">Дата</th>
+                <th class="table__header"></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for req in requests %}
+            <tr class="table__row">
+                <td class="table__cell table__cell--num">{{ req.id }}</td>
+                <td class="table__cell">{{ req.first_name }}</td>
+                <td class="table__cell">{{ req.last_name or '—' }}</td>
+                <td class="table__cell">{{ req.phone|format_phone }}</td>
+                <td class="table__cell" style="max-width:200px;white-space:normal;">{{ req.goal or '—' }}</td>
+                <td class="table__cell">{{ req.preferred_time or '—' }}</td>
+                <td class="table__cell">{{ req.created_at.strftime('%d.%m %H:%M') }}</td>
+                <td class="table__cell">
+                    <a class="btn btn--small btn--primary" href="/clients/create?from_request={{ req.id }}">Создать клиента</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="panel">
+    <p class="text-muted">Нет входящих заявок.</p>
+</div>
+{% endif %}
+
+{% endblock %}

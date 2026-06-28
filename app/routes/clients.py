@@ -3,7 +3,7 @@
 import os
 from datetime import datetime
 
-from fastapi import APIRouter, Request, Depends, UploadFile, File
+from fastapi import APIRouter, Request, Depends, UploadFile, File, Form
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
@@ -78,6 +78,7 @@ def clients_page(
             ts = slot_time_slot(sl.start_time)
             booked_by_ts[ts] = booked_by_ts.get(ts, 0) + 1
         total_booked = len(future_bookings)
+        booked_by_ts["total"] = total_booked
 
         active_purchases = (
             db.query(SubscriptionPurchase)
@@ -104,31 +105,55 @@ def clients_page(
             "total_booked": total_booked,
         })
 
+    from app.models import TrainingRequest
+    pending_count = db.query(TrainingRequest).count()
+
     return templates.TemplateResponse(
         request=request, name="clients.html",
         context={
             "client_rows": client_rows, "q_name": q_name,
             "q_phone": q_phone, "page": page,
             "total_pages": total_pages, "total": total,
+            "pending_requests": pending_count,
         },
     )
 
 
 @router.get("/clients/create")
-def clients_create(request: Request, _: dict = Depends(require_role("admin", "trainer"))):
+def clients_create(request: Request, from_request: int = None, db: Session = Depends(get_db), _: dict = Depends(require_role("admin", "trainer"))):
     """Форма создания клиента."""
-    return templates.TemplateResponse(request=request, name="clients_create.html", context={})
+    prefill = {}
+    if from_request:
+        from app.models import TrainingRequest
+        req = db.get(TrainingRequest, from_request)
+        if req:
+            prefill = {
+                "from_request": from_request,
+                "first_name": req.first_name,
+                "last_name": req.last_name or "",
+                "phone": req.phone or "",
+                "notes": f"Цель: {req.goal}" + (f"\nВремя: {req.preferred_time}" if req.preferred_time else ""),
+            }
+    return templates.TemplateResponse(request=request, name="clients_create.html", context=prefill)
 
 
 @router.post("/clients/create")
 def add_client_post(
     form: ClientCreateForm = Depends(parse_client_form),
+    from_request: int = Form(None),
     db: Session = Depends(get_db),
     _: dict = Depends(require_role("admin", "trainer")),
 ):
     """Создать нового клиента."""
     if not form.first_name:
         return RedirectResponse("/clients", status_code=303)
+
+    # Если создаём из заявки — удаляем её
+    if from_request:
+        from app.models import TrainingRequest as TR
+        req = db.get(TR, from_request)
+        if req:
+            db.delete(req)
 
     from app.models import SubscriptionPurchase
     from app.auth import hash_password
@@ -142,12 +167,20 @@ def add_client_post(
         login=form.login,
         password_hash=hash_password(form.password) if form.password else None,
         name=f"{form.last_name} {form.first_name}".strip(),
+        notes=form.notes,
     )
     db.add(client)
     db.flush()
     # 30 дней заморозки по умолчанию
     client.freeze_days_remaining = 30
     db.add(client)
+    # Удаляем все старые пробные абонементы для этого клиента (на случай бага)
+    old_trials = db.query(SubscriptionPurchase).filter(
+        SubscriptionPurchase.client_id == client.id,
+        SubscriptionPurchase.time_slot == "-",
+    ).all()
+    for t in old_trials:
+        db.delete(t)
     # Стартовый абонемент на 1 занятие ("Пробный")
     purchase = SubscriptionPurchase(
         client_id=client.id,
@@ -223,6 +256,7 @@ def clients_edit_post(
         client.skinfold_triceps = form.skinfold_triceps
         client.skinfold_subscapular = form.skinfold_subscapular
         client.name = f"{form.last_name} {form.first_name}".strip()
+        client.notes = form.notes
 
         new_vals = (client.height_cm, client.weight_kg, client.body_fat,
                     client.hip_cm, client.waist_cm, client.chest_cm,

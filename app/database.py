@@ -108,6 +108,7 @@ def ensure_client_columns():
         ("activity_level", "TEXT"),
         ("pd_consent_given", "BOOLEAN"),
         ("pd_consent_at", "TIMESTAMP"),
+        ("notes", "TEXT"),
     ]
     with engine.connect() as conn:
         for col, coltype in to_add:

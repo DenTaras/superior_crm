@@ -44,6 +44,7 @@
         </div>
         <div style="flex:1;min-width:200px;">
     <p><strong>Телефон:</strong> {{ client.phone|format_phone }}</p>
+    {% if client.notes %}<p><strong>Комментарий:</strong><br>{{ client.notes|e }}</p>{% endif %}
     <p><strong>Осталось занятий:</strong> {{ total_remaining }}</p>
     {% if frozen_active is defined and client %}
     <p class="mt-1"><strong>Заморозка:</strong>

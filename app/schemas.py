@@ -72,6 +72,7 @@ class ClientCreateForm(BaseModel):
     skinfold_thigh: Optional[int] = Field(None, ge=0, le=100, description="Кож.складка бедро (мм)")
     skinfold_triceps: Optional[int] = Field(None, ge=0, le=100, description="Кож.складка трицепс (мм)")
     skinfold_subscapular: Optional[int] = Field(None, ge=0, le=100, description="Кож.складка под лопаткой (мм)")
+    notes: Optional[str] = Field(None, description="Комментарий")
 
     @field_validator('first_name')
     @classmethod

@@ -1,6 +1,8 @@
 /* nutrition.js — переключение дней, КБЖУ, добавление/замена блюд */
 (function(){
-    var alternatives = window.__nutrition_alternatives || [];
+    var dataEl = document.getElementById('nutrition-data');
+    var alternatives = [];
+    try { if(dataEl) alternatives = JSON.parse(dataEl.textContent) || []; } catch(e) {}
 
     // Переключение дней
     document.querySelectorAll('.day-btn').forEach(function(btn){
@@ -15,15 +17,7 @@
     });
 
     function recalcItem(item) {
-        var baseW = parseFloat(item.dataset.baseWeight) || 1;
-        var input = item.querySelector('.meal-weight');
-        var newW = parseFloat(input.value) || baseW;
-        var ratio = newW / baseW;
-        item.querySelector('.meal-protein .meal-value').textContent = Math.round(parseFloat(item.dataset.baseProtein) * ratio);
-        item.querySelector('.meal-fat .meal-value').textContent = Math.round(parseFloat(item.dataset.baseFat) * ratio);
-        item.querySelector('.meal-carbs .meal-value').textContent = Math.round(parseFloat(item.dataset.baseCarbs) * ratio);
-        item.querySelector('.meal-calories .meal-value').textContent = Math.round(parseFloat(item.dataset.baseCalories) * ratio);
-        recalcTotalFrom(item.closest('.day-table'));
+        updateItemDisplay(item);
     }
 
     function recalcTotalFrom(dayTable) {
@@ -31,12 +25,14 @@
         var items = dayTable.querySelectorAll('.meal-item');
         var total = {weight:0, protein:0, fat:0, carbs:0, calories:0};
         items.forEach(function(it){
+            var baseW = parseFloat(it.dataset.baseWeight) || 1;
             var w = parseFloat(it.querySelector('.meal-weight').value) || 0;
+            var ratio = w / baseW;
             total.weight += w;
-            total.protein += parseInt(it.querySelector('.meal-protein .meal-value').textContent) || 0;
-            total.fat += parseInt(it.querySelector('.meal-fat .meal-value').textContent) || 0;
-            total.carbs += parseInt(it.querySelector('.meal-carbs .meal-value').textContent) || 0;
-            total.calories += parseInt(it.querySelector('.meal-calories .meal-value').textContent) || 0;
+            total.protein += Math.round(parseFloat(it.dataset.baseProtein) * ratio) || 0;
+            total.fat += Math.round(parseFloat(it.dataset.baseFat) * ratio) || 0;
+            total.carbs += Math.round(parseFloat(it.dataset.baseCarbs) * ratio) || 0;
+            total.calories += Math.round(parseFloat(it.dataset.baseCalories) * ratio) || 0;
         });
         dayTable.querySelector('.total-weight').textContent = total.weight;
         dayTable.querySelector('.total-protein').textContent = total.protein;
@@ -206,6 +202,49 @@
         }
         recalcItem(item);
     });
+
+    // Переключение КБЖУ на 100г / на порцию
+    var toggleBtn = document.getElementById('btn-toggle-kbju');
+    var kbjuMode = 'portion'; // 'portion' | 'per100'
+    if(toggleBtn){
+        toggleBtn.addEventListener('click', function(){
+            kbjuMode = kbjuMode === 'portion' ? 'per100' : 'portion';
+            toggleBtn.textContent = kbjuMode === 'portion' ? '📊 КБЖУ на порцию' : '📊 КБЖУ на 100 г';
+            toggleBtn.classList.toggle('btn--ghost');
+            toggleBtn.classList.toggle('btn--primary');
+            document.querySelectorAll('.meal-item').forEach(function(item){ updateItemDisplay(item); });
+        });
+    }
+    function updateItemDisplay(item){
+        var baseW = parseFloat(item.dataset.baseWeight) || 1;
+        var baseP = parseFloat(item.dataset.baseProtein) || 0;
+        var baseF = parseFloat(item.dataset.baseFat) || 0;
+        var baseC = parseFloat(item.dataset.baseCarbs) || 0;
+        var baseCal = parseFloat(item.dataset.baseCalories) || 0;
+        var valEls = {
+            protein: item.querySelector('.meal-protein .meal-value'),
+            fat: item.querySelector('.meal-fat .meal-value'),
+            carbs: item.querySelector('.meal-carbs .meal-value'),
+            calories: item.querySelector('.meal-calories .meal-value'),
+        };
+        var wInput = item.querySelector('.meal-weight');
+        var currentW = parseFloat(wInput ? wInput.value : baseW) || baseW;
+        var ratio = currentW / baseW;
+        if(kbjuMode === 'per100'){
+            var r100 = 100 / baseW;
+            if(valEls.protein) valEls.protein.textContent = Math.round(baseP * r100);
+            if(valEls.fat) valEls.fat.textContent = Math.round(baseF * r100);
+            if(valEls.carbs) valEls.carbs.textContent = Math.round(baseC * r100);
+            if(valEls.calories) valEls.calories.textContent = Math.round(baseCal * r100);
+        } else {
+            // на порцию
+            if(valEls.protein) valEls.protein.textContent = Math.round(baseP * ratio);
+            if(valEls.fat) valEls.fat.textContent = Math.round(baseF * ratio);
+            if(valEls.carbs) valEls.carbs.textContent = Math.round(baseC * ratio);
+            if(valEls.calories) valEls.calories.textContent = Math.round(baseCal * ratio);
+        }
+        recalcTotalFrom(item.closest('.day-table'));
+    }
 
     // Модалка списка покупок
     var shopBtn = document.getElementById('btn-shopping-list');

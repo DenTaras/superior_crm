@@ -2,51 +2,90 @@
 
 {% block content %}
 
-<h2 class="mt-0">Галерея</h2>
-<p class="text-secondary mb-3">Фото студии и тренировок SUPERIOR</p>
+<div class="gallery-scroll">
 
-<div class="gallery-grid">
-    <div class="gallery-card">
-        <div class="gallery-card__placeholder">
-            <span class="gallery-card__icon">📸</span>
-            <span class="gallery-card__label">Фото студии</span>
+    <!-- ====== HERO ====== -->
+    <section class="gallery-hero">
+        <div class="gallery-hero__bg"></div>
+        <div class="gallery-hero__overlay"></div>
+        <div class="gallery-hero__content">
+            <h1 class="gallery-hero__title">SUPERIOR</h1>
+            <p class="gallery-hero__subtitle">Private Gym</p>
+            <p class="gallery-hero__desc">Пространство для тех, кто стремится к лучшему</p>
+            <div class="gallery-hero__scroll">
+                <span>Листайте вниз</span>
+                <span class="gallery-hero__arrow">↓</span>
+            </div>
         </div>
-    </div>
+    </section>
 
-    <div class="gallery-card">
-        <div class="gallery-card__placeholder">
-            <span class="gallery-card__icon">🏋️</span>
-            <span class="gallery-card__label">Тренировочный зал</span>
+    <!-- ====== ФОТО СТУДИИ ====== -->
+    <section class="gallery-section">
+        <h2 class="gallery-section__title">Фото студии</h2>
+        <div class="gallery-section__grid">
+            <div class="gallery-photo gallery-photo--left" style="background-image: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);">
+                <div class="gallery-photo__label">Зона свободных весов</div>
+            </div>
+            <div class="gallery-photo gallery-photo--right" style="background-image: linear-gradient(135deg, #0f3460 0%, #16213e 50%, #1a1a2e 100%);">
+                <div class="gallery-photo__label">Кардио-зона</div>
+            </div>
         </div>
-    </div>
+    </section>
 
-    <div class="gallery-card">
-        <div class="gallery-card__placeholder">
-            <span class="gallery-card__icon">👨‍🏫</span>
-            <span class="gallery-card__label">Наши тренеры</span>
+    <!-- ====== ТРЕНИРОВОЧНЫЙ ЗАЛ ====== -->
+    <section class="gallery-section">
+        <h2 class="gallery-section__title">Тренировочный зал</h2>
+        <div class="gallery-section__grid">
+            <div class="gallery-photo gallery-photo--wide" style="background-image: linear-gradient(135deg, #2d1b69 0%, #1a1a2e 50%, #0f0f23 100%);">
+                <div class="gallery-photo__label">Основной зал — силовые тренировки</div>
+            </div>
+            <div class="gallery-photo gallery-photo--wide" style="background-image: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #2d1b69 100%);">
+                <div class="gallery-photo__label">Функциональная зона</div>
+            </div>
         </div>
-    </div>
+    </section>
 
-    <div class="gallery-card">
-        <div class="gallery-card__placeholder">
-            <span class="gallery-card__icon">🛋️</span>
-            <span class="gallery-card__label">Зона отдыха</span>
+    <!-- ====== ДУШЕВАЯ ====== -->
+    <section class="gallery-section gallery-section--compact">
+        <h2 class="gallery-section__title">Душевая</h2>
+        <div class="gallery-photo gallery-photo--full" style="background-image: linear-gradient(135deg, #1B1B2F 0%, #162447 50%, #1F4068 100%); max-width:600px; margin:0 auto;">
+            <div class="gallery-photo__label">Чистота и комфорт после тренировки</div>
         </div>
-    </div>
+    </section>
 
-    <div class="gallery-card">
-        <div class="gallery-card__placeholder">
-            <span class="gallery-card__icon">🏆</span>
-            <span class="gallery-card__label">Наши достижения</span>
+    <!-- ====== НАША КОМАНДА ====== -->
+    <section class="gallery-section">
+        <h2 class="gallery-section__title">Наша команда</h2>
+        <div class="gallery-section__grid gallery-section__grid--team">
+            <div class="gallery-photo gallery-photo--portrait" style="background-image: linear-gradient(135deg, #2c1810 0%, #4a2c1a 50%, #1a0f0a 100%);">
+                <div class="gallery-photo__label">
+                    <strong>Анна Директорова</strong>
+                    <span>Руководитель студии</span>
+                </div>
+            </div>
+            <div class="gallery-photo gallery-photo--portrait" style="background-image: linear-gradient(135deg, #1a1a2e 0%, #2d1b69 50%, #1a1a2e 100%);">
+                <div class="gallery-photo__label">
+                    <strong>Пётр Тренеров</strong>
+                    <span>Старший тренер</span>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
 
-    <div class="gallery-card">
-        <div class="gallery-card__placeholder">
-            <span class="gallery-card__icon">🤝</span>
-            <span class="gallery-card__label">Команда SUPERIOR</span>
+    <!-- ====== CTA ====== -->
+    <section class="gallery-cta">
+        <div class="gallery-cta__bg"></div>
+        <div class="gallery-cta__content">
+            <h2>Запишись на пробную тренировку</h2>
+            <p>Приходите знакомиться — первая тренировка бесплатно</p>
+            <a href="/signup" class="btn btn--primary btn--lg">Записаться</a>
         </div>
-    </div>
+    </section>
+
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/pages/gallery.js"></script>
 {% endblock %}

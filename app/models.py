@@ -45,6 +45,7 @@ class Client(Base):
     frozen_until = Column(DateTime, nullable=True)        # заморожен до (заморозка стрика)
     freeze_days_remaining = Column(Integer, default=0)    # осталось дней заморозки
     last_freeze_cd = Column(DateTime, nullable=True)       # кулдаун разморозки (24ч)
+    notes = Column(String, nullable=True)                  # произвольный комментарий
 
     def fio(self) -> str:
         """Краткое ФИО: «Фамилия Имя» или fallback на `name`."""

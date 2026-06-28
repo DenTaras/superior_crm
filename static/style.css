@@ -3,6 +3,7 @@
    ============================================================ */
 
 :root {
+    --font: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --bg-primary:   #0b0b0b;
     --bg-secondary: #121212;
     --bg-elevated:  #1a1a1a;
@@ -28,7 +29,7 @@
 
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 html { scroll-behavior:smooth; }
-body { background:var(--bg-primary); color:var(--text-primary); font-family:Inter,system-ui,sans-serif; min-height:100vh; }
+body { background:var(--bg-primary); color:var(--text-primary); font-family:var(--font); min-height:100vh; }
 
 .container { width:min(1400px,calc(100% - 48px)); margin-inline:auto; padding:24px 0; }
 
@@ -322,15 +323,17 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter:invert(
     text-align: center;
 }
 .content-with-image__image h2 {
-    font-size: 1.4rem;
-    line-height: 1.35;
-    color: var(--text-primary);
-    font-weight: 700;
-    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #fff;
+    -webkit-text-stroke: 1px var(--accent);
+    text-shadow: 0 0 10px var(--accent);
+    margin-bottom: 10px;
+    line-height: 1.2;
 }
 .content-with-image__image img {
     flex: 1;
-    width: 100%;
+    width: 95%;
     min-height: 0;
     object-fit: cover;
     border-radius: var(--radius-lg);
@@ -349,47 +352,133 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter:invert(
 }
 
 
-/* ---- Галерея ---- */
-.gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 24px;
-    margin-top: 20px;
-}
-.gallery-card {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    transition: var(--transition);
-}
-.gallery-card:hover {
-    border-color: var(--border-hover);
-    transform: translateY(-2px);
-}
-.gallery-card__placeholder {
-    aspect-ratio: 4 / 3;
+/* ---- ГАЛЕРЕЯ: полностраничный скролл ---- */
+
+html { scroll-behavior: smooth; }
+
+.gallery-scroll { width:100%; }
+
+/* Hero */
+.gallery-hero {
+    position: relative;
+    min-height: 100vh;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
-    color: var(--text-muted);
+    overflow: hidden;
 }
-.gallery-card__icon {
-    font-size: 2.5rem;
+.gallery-hero__bg {
+    position: absolute; inset:0;
+    background: linear-gradient(135deg, #0a0a0f 0%, #1a0a2e 30%, #16213e 60%, #0a0a0f 100%);
+    background-size: 400% 400%;
+    animation: heroShift 15s ease infinite;
 }
-.gallery-card__label {
-    font-size: 0.95rem;
-    font-weight: 500;
+@keyframes heroShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
-.gallery-card img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
+.gallery-hero__overlay {
+    position: absolute; inset:0;
+    background: radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,.6) 100%);
 }
+.gallery-hero__content {
+    position: relative; z-index:1;
+    text-align: center; color:#fff; padding:24px;
+}
+.gallery-hero__title {
+    font-size: 4rem; font-weight:900; letter-spacing:8px;
+    text-transform:uppercase; margin:0;
+    background: linear-gradient(135deg, var(--accent), #ff6b6b, var(--accent));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    background-clip:text;
+}
+.gallery-hero__subtitle {
+    font-size:1.5rem; font-weight:300; letter-spacing:12px;
+    color:var(--text-secondary); margin-top:8px; text-transform:uppercase;
+}
+.gallery-hero__desc {
+    font-size:1.1rem; color:var(--text-muted); margin-top:24px; max-width:500px;
+}
+.gallery-hero__scroll {
+    margin-top:60px; display:flex; flex-direction:column; align-items:center; gap:8px;
+    color:var(--text-muted); font-size:0.85rem; animation: bounceDown 2s infinite;
+}
+@keyframes bounceDown {
+    0%,100% { transform:translateY(0); }
+    50% { transform:translateY(8px); }
+}
+.gallery-hero__arrow { font-size:1.5rem; }
+
+/* Sections */
+.gallery-section {
+    min-height:100vh; padding:80px 24px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background: var(--bg-primary);
+    border-bottom:1px solid var(--border);
+}
+.gallery-section--compact { min-height:auto; padding:80px 24px; }
+.gallery-section__title {
+    font-size:2rem; font-weight:800; margin-bottom:48px;
+    text-transform:uppercase; letter-spacing:4px;
+    color:var(--text-primary); text-align:center;
+}
+.gallery-section__grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:24px;
+    max-width:1000px; width:100%;
+}
+.gallery-section__grid--team { max-width:700px; }
+
+/* Photo cards */
+.gallery-photo {
+    border-radius:var(--radius-md); overflow:hidden;
+    background-size:cover; background-position:center;
+    min-height:350px; display:flex; align-items:flex-end;
+    position:relative; cursor:pointer;
+    transition:transform 0.5s ease, box-shadow 0.5s ease;
+    border:1px solid var(--border);
+}
+.gallery-photo:hover {
+    transform:scale(1.03); box-shadow:0 20px 60px rgba(0,0,0,.5);
+    z-index:2;
+}
+.gallery-photo--wide { min-height:400px; }
+.gallery-photo--full { min-height:350px; }
+.gallery-photo--portrait { min-height:450px; }
+.gallery-photo__label {
+    width:100%; padding:20px 24px;
+    background: linear-gradient(transparent, rgba(0,0,0,.85));
+    color:#fff; font-size:1rem; font-weight:500;
+    display:flex; flex-direction:column; gap:4px;
+}
+.gallery-photo__label strong { font-size:1.1rem; }
+.gallery-photo__label span { font-size:0.85rem; color:var(--text-muted); }
+
+/* Анимация появления */
+.gallery-section {
+    opacity:0; transform:translateY(40px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.gallery-section--visible {
+    opacity:1; transform:translateY(0);
+}
+
+/* CTA */
+.gallery-cta {
+    min-height:60vh; display:flex; align-items:center; justify-content:center;
+    position:relative; overflow:hidden;
+}
+.gallery-cta__bg {
+    position:absolute; inset:0;
+    background: linear-gradient(135deg, #0a0a0f 0%, #1a0a2e 50%, #0a0a0f 100%);
+}
+.gallery-cta__content {
+    position:relative; z-index:1; text-align:center; padding:24px;
+    color:#fff;
+}
+.gallery-cta__content h2 { font-size:2rem; font-weight:800; margin-bottom:16px; }
+.gallery-cta__content p { color:var(--text-secondary); margin-bottom:32px; font-size:1.1rem; }
+.gallery-cta__content .btn--lg { padding:14px 40px; font-size:1.1rem; }
 
 
 /* ---- Прайс: таблица + блок выгоды ---- */
@@ -477,6 +566,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter:invert(
 .badge--vip{background:#d90429;color:#fff}
 .badge--double{background:#f5a623;color:#000}
 .badge--group{background:#17c964;color:#000}
+.btn .badge { margin-left:4px; }
 
 .calendar__slot--completed{background:var(--bg-surface);border-color:var(--border);opacity:0.6;pointer-events:auto}
 .calendar__slot--completed .calendar__slot-time{color:var(--text-muted)}

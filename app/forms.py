@@ -52,6 +52,7 @@ def parse_client_form(
     skinfold_thigh: Optional[int] = Form(None),
     skinfold_triceps: Optional[int] = Form(None),
     skinfold_subscapular: Optional[int] = Form(None),
+    notes: Optional[str] = Form(None),
 ) -> ClientCreateForm:
     """Form → ClientCreateForm с валидацией."""
     return _validate(ClientCreateForm,
@@ -78,6 +79,7 @@ def parse_client_form(
         skinfold_thigh=skinfold_thigh if skinfold_thigh not in (None, "") else None,
         skinfold_triceps=skinfold_triceps if skinfold_triceps not in (None, "") else None,
         skinfold_subscapular=skinfold_subscapular if skinfold_subscapular not in (None, "") else None,
+        notes=notes or None,
     )
 
 

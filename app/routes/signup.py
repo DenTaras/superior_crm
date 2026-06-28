@@ -4,6 +4,7 @@ from fastapi import APIRouter, Request, Form, Depends
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_user
 from app.database import get_db, templates
 from app.models import TrainingRequest
 
@@ -60,4 +61,23 @@ def signup_post(
     return templates.TemplateResponse(
         request=request, name="signup_success.html",
         context={"name": f"{first_name.strip()} {last_name.strip()}".strip()},
+    )
+
+
+@router.get("/training-requests")
+def training_requests_page(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Страница входящих заявок для админа/тренера."""
+    user = get_current_user(request)
+    if not user or user["role"] not in ("admin", "trainer"):
+        return RedirectResponse("/login", status_code=303)
+
+    from app.models import TrainingRequest
+
+    reqs = db.query(TrainingRequest).order_by(TrainingRequest.id.desc()).all()
+    return templates.TemplateResponse(
+        request=request, name="training_requests.html",
+        context={"user": user, "requests": reqs},
     )
