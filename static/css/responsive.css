@@ -1,6 +1,6 @@
 /* ---- RESPONSIVE ---- */
 @media (max-width:992px) { .profile { grid-template-columns:1fr; } .grid-4 { grid-template-columns:repeat(2,1fr); } .program__layout { flex-direction:column; } .program__sidebar { width:100%; } .sql-bottom { grid-template-columns:1fr; } .slot-columns { grid-template-columns:1fr; } }
-@media (max-width:768px) { .grid-4,.grid-3,.grid-2 { grid-template-columns:1fr; } .header__user-name { display:none; } .calendar__time { display:none; } }
+@media (max-width:768px) { .grid-4,.grid-3,.grid-2 { grid-template-columns:1fr; } .header__user-name { display:none; } }
 
 
 /* ---- Двухколоночный layout для главной ---- */
@@ -344,11 +344,13 @@ html { scroll-behavior: smooth; }
     .burger { display:flex; }
     .header__back { display:none; }
     .btn--back { display:none; }
-    .header__brand { font-size:1rem; }
-    .header__subtitle { font-size:0.55rem; }
+    .header__brand { font-size:1.25rem; }
+    .header__subtitle { font-size:0.65rem; }
     .header__accent-line { height:24px; }
     .header__logo { gap:6px; }
     .header__user .btn { font-size:0.75rem; padding:6px 10px; white-space:nowrap; }
+    .header__login-full { display:inline; }
+    .header__login-short { display:none; }
 
     /* Навигация полный экран */
     .header__nav {
@@ -408,13 +410,26 @@ html { scroll-behavior: smooth; }
     .calendar__cell { padding:2px; min-width:0; }
     .calendar__slot { padding:4px; font-size:0.6rem; }
     .calendar__slot-inner { gap:2px; }
+    .calendar__slot-info { min-width:0; }
+    .calendar__slot-time { font-size:0.55rem; }
+    .calendar__slot-capacity { font-size:0.5rem; }
+    .calendar__slot-clients { display:none; }
+    .calendar__cell--empty { min-height:30px; }
+    .calendar__now-marker { display:none; }
+    .calendar__time { font-size:0.65rem; white-space:nowrap; }
+
+    /* Недельная навигация — в строку */
+    .week-nav { display:flex; flex-direction:row; flex-wrap:wrap; gap:4px; width:100%; }
+    .week-nav .btn { flex:1; min-width:0; font-size:0.75rem; padding:8px 4px; text-align:center; white-space:nowrap; }
 }
 
 @media (max-width:480px){
     .header__user .btn { font-size:0.7rem; padding:5px 8px; }
-    .header__brand { font-size:0.9rem; }
+    .header__brand { font-size:1.1rem; }
     .stats { grid-template-columns:1fr; }
     .btn--lg { width:100%; justify-content:center; }
+    .header__login-full { display:none; }
+    .header__login-short { display:inline; }
 }
 
 /* ====== ГАЛЕРЕЯ: мобильная ====== */
@@ -511,3 +526,74 @@ html { scroll-behavior: smooth; }
 }
 
 /* ====== КОНТАКТЫ: мобильная ====== */
+
+/* ====== РАСПИСАНИЕ + ПИТАНИЕ + ПРОФИЛЬ: мобильная ====== */
+@media (max-width:768px){
+    /* === РАСПИСАНИЕ === */
+    .calendar { overflow-x:auto; -webkit-overflow-scrolling:touch; margin:0 -12px; padding:0 12px; }
+    /* Форма добавления/очистки слотов */
+    .page__controls form[action*="slots"] .form__input[type="datetime-local"] { font-size:0.75rem; padding:6px 4px; width:100% !important; }
+    .page__controls form[action*="slots"] .text-muted { display:none; }
+    .page__controls form[action*="slots"] select[name="capacity"] { width:100% !important; }
+
+    /* === СЛОТ (детальная страница) === */
+    .slot-columns { grid-template-columns:1fr; gap:16px; }
+    .slot-columns__left .flex-row { flex-direction:column; gap:8px; }
+    .slot-columns__left .flex-row select { width:100%; }
+    .slot-columns__left .flex-row .btn { width:100%; justify-content:center; }
+    .slot-columns__right .flex-row { flex-direction:column; gap:8px; }
+    .slot-columns__right .flex-row label { font-size:0.85rem; }
+    .slot-columns__right .flex-row input { width:100% !important; }
+    .slot-columns__right .flex-row select { width:100% !important; }
+    .slot-columns__right .flex-row .btn { width:100%; justify-content:center; }
+    .slot__header { flex-direction:column; gap:8px; align-items:flex-start; }
+    .slot__header-title { font-size:1.1rem; }
+    .slot__header-meta { font-size:0.8rem; }
+    .slot-columns__left .panel .flex-row.mt-2 { flex-direction:column; gap:8px; }
+    .slot-columns__left .panel .flex-row.mt-2 select { width:100%; }
+
+    /* === ЖУРНАЛ === */
+    .journal__comment { padding-left:12px !important; font-size:0.8rem; }
+    .table tbody td:nth-child(2) { display:none; }
+    .table thead th:nth-child(2) { display:none; }
+
+    /* === ПИТАНИЕ === */
+    .nutrition-panel .flex-row > .flex-row { gap:4px; }
+    .nutrition-panel .day-btn { flex:1; min-width:0 !important; font-size:0.75rem; padding:6px 2px; }
+    .nutrition-panel #btn-toggle-kbju,
+    .nutrition-panel #btn-shopping-list { font-size:0.75rem; padding:6px 8px; white-space:nowrap; }
+    .meal-item { flex-direction:column; gap:6px; padding:10px; }
+    .meal-item > * { width:100%; }
+    .meal-item .flex-row { flex-wrap:wrap; gap:4px; }
+    .meal-item input[type="number"] { width:100% !important; max-width:80px; }
+    .meal-item .meal-name { font-size:0.85rem; }
+    .meal-item .btn--small { font-size:0.7rem; padding:4px 6px; }
+
+    /* === ПРОФИЛЬ === */
+    .profile__sidebar { width:100%; }
+    .tabs__nav { flex-wrap:wrap; gap:4px !important; }
+    .tabs__nav .tab-btn { flex:1; min-width:0; font-size:0.75rem; padding:8px 4px; white-space:nowrap; text-align:center; }
+    /* streak counter: сбрасываем фиксированную ширину */
+    [style*="flex:0 0 420px"] { flex:1 1 100% !important; }
+    .streak-counter, .discount-counter { min-width:140px; padding:14px 8px; }
+    .counter-value { font-size:2rem; }
+    .counter-label { font-size:0.85rem; }
+    .counter-sub { font-size:0.7rem; }
+    /* booking select */
+    select[style*="min-width:300px"] { min-width:0 !important; width:100% !important; }
+    /* обхваты stats */
+    .profile .stats .stats__card { min-width:60px !important; padding:8px 10px !important; }
+    .profile .stats .stats__value { font-size:0.95rem !important; }
+    .profile .stats .stats__label { font-size:0.6rem !important; }
+    /* freeze modal */
+    .modal-overlay .modal { margin:12px; max-height:90vh; overflow-y:auto; }
+}
+
+@media (max-width:480px){
+    .nutrition-panel .day-btn { font-size:0.7rem; }
+    .tabs__nav .tab-btn { font-size:0.7rem; padding:6px 2px; }
+    .streak-counter, .discount-counter { min-width:120px; padding:10px 6px; }
+    .counter-value { font-size:1.6rem; }
+    .profile .stats { gap:4px; }
+    .profile .stats .stats__card { min-width:50px !important; padding:6px 6px !important; }
+}

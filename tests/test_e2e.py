@@ -608,6 +608,29 @@ class TestMobile:
         expect(mobile_page.locator("input[name='login']")).to_be_visible()
         expect(mobile_page.locator("input[name='password']")).to_be_visible()
 
+    def test_client_schedule_mobile(self, mobile_page: Page, app_url):
+        """Расписание на мобилке (авторизованный клиент)."""
+        _login(mobile_page, app_url, "client_1", "client_1")
+        mobile_page.goto(f"{app_url}/schedule")
+        mobile_page.wait_for_load_state("load")
+        expect(mobile_page.locator(".calendar__table")).to_be_visible()
+
+    def test_client_nutrition_mobile(self, mobile_page: Page, app_url):
+        """Питание на мобилке (авторизованный клиент)."""
+        _login(mobile_page, app_url, "client_1", "client_1")
+        mobile_page.goto(f"{app_url}/profile/nutrition")
+        mobile_page.wait_for_load_state("load")
+        expect(mobile_page.get_by_text("Настройки рациона")).to_be_visible()
+
+    def test_client_profile_mobile(self, mobile_page: Page, app_url):
+        """Профиль на мобилке (авторизованный клиент)."""
+        _login(mobile_page, app_url, "client_1", "client_1")
+        mobile_page.goto(f"{app_url}/profile")
+        mobile_page.wait_for_load_state("load")
+        mobile_page.wait_for_timeout(2000)
+        expect(mobile_page.get_by_text("Пользователь:")).to_be_visible()
+        expect(mobile_page.get_by_text("Клиент")).to_be_visible()
+
 
 class TestDashboard:
     """Тесты дашборда с графиками."""
