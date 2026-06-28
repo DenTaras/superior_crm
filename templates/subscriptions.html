@@ -54,6 +54,40 @@
                 {% endfor %}
             </tbody>
         </table>
+
+        <!-- Карточки для мобильной версии -->
+        <div class="pricing-cards">
+            {% for ts in time_slots %}
+            <details class="pricing-cards__slot"{% if loop.first %} open{% endif %}>
+                <summary class="pricing-cards__summary">
+                    <span class="pricing-cards__summary-title">{{ ts }}</span>
+                    <span class="pricing__sub">{{ ts_info[ts] }}</span>
+                </summary>
+                <div class="pricing-cards__grid">
+                    {% for fmt in formats %}
+                    {% for size in package_sizes %}
+                    {% set price = pricing[ts][fmt][size] %}
+                    {% set is_best = best_deal and ts == best_deal[0] and fmt == best_deal[1] and size == best_deal[2] %}
+                    <div class="pricing-card{% if is_best %} pricing-card--best{% endif %}">
+                        <div class="pricing-card__header pricing-card__header--{{ fmt|lower }}">
+                            {{ fmt_labels[fmt] }}
+                            <span class="pricing__sub">{{ fmt_titles[fmt] }}</span>
+                        </div>
+                        <div class="pricing-card__body">
+                            <div class="pricing-card__size">{{ size }} занятия</div>
+                            <div class="pricing-card__price">{{ "{:,}".format(price).replace(",", " ") }} ₽</div>
+                            <div class="pricing-card__unit">{{ "{:,}".format(price // size).replace(",", " ") }} ₽/занятие</div>
+                        </div>
+                        {% if is_best %}
+                        <div class="pricing-card__badge">Лучшая цена</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% endfor %}
+                </div>
+            </details>
+            {% endfor %}
+        </div>
     </div>
 
     <div class="pricing-info">

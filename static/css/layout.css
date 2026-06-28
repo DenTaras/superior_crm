@@ -1,0 +1,16 @@
+/* ---- HEADER ---- */
+.header { position:sticky; top:0; z-index:1000; backdrop-filter:blur(16px); background:rgba(11,11,11,.85); border-bottom:2px solid var(--border-hover); }
+.header__inner { display:flex; justify-content:space-between; align-items:center; height:72px; }
+.header__logo { display:flex; align-items:center; gap:14px; text-decoration:none; }
+.header__accent-line { width:4px; height:42px; background:var(--accent); display:block; }
+.header__back { display:flex; align-items:center; }
+.header__brand { font-size:24px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--text-primary); }
+.header__subtitle { font-size:11px; letter-spacing:4px; color:var(--text-secondary); }
+.header__nav { display:flex; gap:24px; }
+.header__nav-link { color:var(--text-primary); text-decoration:none; transition:var(--transition); font-size:1.15rem; }
+.header__nav-link:hover { color:var(--accent); }
+.header__nav-link--active { color:var(--accent); font-weight:600; }
+.header__user { display:flex; align-items:center; gap:12px; font-size:16px; }
+.header__user-name { color:var(--text-secondary); text-decoration:none; transition:var(--transition); }
+.header__user-name:hover { color:var(--text-primary); }
+

@@ -515,6 +515,100 @@ class TestProgramWeights:
         expect(admin_pg.locator("#btn-constructor")).to_be_visible()
 
 
+class TestMobile:
+    """Тесты мобильной версии (анонимные страницы)."""
+
+    MOBILE_WIDTH = 375
+    MOBILE_HEIGHT = 667
+
+    @pytest.fixture()
+    def mobile_page(self, page: Page, app_url: str):
+        page.set_viewport_size({"width": self.MOBILE_WIDTH, "height": self.MOBILE_HEIGHT})
+        return page
+
+    def test_burger_visible(self, mobile_page: Page, app_url):
+        """Бургер-кнопка видна на мобильном viewport."""
+        mobile_page.goto(app_url)
+        mobile_page.wait_for_load_state("load")
+        expect(mobile_page.locator("#burger-btn")).to_be_visible()
+
+    def test_burger_opens_menu(self, mobile_page: Page, app_url):
+        """Клик по бургеру добавляет класс --open навигации."""
+        mobile_page.goto(app_url)
+        mobile_page.wait_for_load_state("load")
+        nav = mobile_page.locator("#mobile-nav")
+        initial = nav.get_attribute("class") or ""
+        assert "header__nav--open" not in initial, "Меню уже открыто"
+        mobile_page.locator("#burger-btn").click()
+        mobile_page.wait_for_timeout(300)
+        after = nav.get_attribute("class") or ""
+        assert "header__nav--open" in after, "Класс --open не добавился"
+
+    def test_burger_closes_on_link_click(self, mobile_page: Page, app_url):
+        """Клик по ссылке в меню убирает класс --open."""
+        mobile_page.goto(app_url)
+        mobile_page.wait_for_load_state("load")
+        mobile_page.locator("#burger-btn").click()
+        mobile_page.wait_for_timeout(200)
+        mobile_page.locator("#mobile-nav a").first.click()
+        mobile_page.wait_for_timeout(500)
+        nav = mobile_page.locator("#mobile-nav")
+        cls = nav.get_attribute("class") or ""
+        assert "header__nav--open" not in cls, "Меню не закрылось"
+
+    def test_burger_closes_on_escape(self, mobile_page: Page, app_url):
+        """Escape убирает класс --open."""
+        mobile_page.goto(app_url)
+        mobile_page.wait_for_load_state("load")
+        mobile_page.locator("#burger-btn").click()
+        mobile_page.wait_for_timeout(200)
+        mobile_page.keyboard.press("Escape")
+        mobile_page.wait_for_timeout(300)
+        nav = mobile_page.locator("#mobile-nav")
+        cls = nav.get_attribute("class") or ""
+        assert "header__nav--open" not in cls, "Escape не закрыл меню"
+
+    def test_home_mobile(self, mobile_page: Page, app_url):
+        """Главная страница на мобилке."""
+        mobile_page.goto(app_url)
+        mobile_page.wait_for_load_state("load")
+        expect(mobile_page.get_by_text("SUPERIOR", exact=True)).to_be_visible()
+
+    def test_signup_mobile(self, mobile_page: Page, app_url):
+        """Страница записи на мобилке."""
+        mobile_page.goto(f"{app_url}/signup")
+        mobile_page.wait_for_load_state("load")
+        expect(mobile_page.locator("input[name='first_name']")).to_be_visible()
+        expect(mobile_page.get_by_role("button", name="Отправить заявку")).to_be_visible()
+
+    def test_subscriptions_mobile(self, mobile_page: Page, app_url):
+        """Страница абонементов на мобилке."""
+        mobile_page.goto(f"{app_url}/subscriptions")
+        mobile_page.wait_for_load_state("load")
+        expect(mobile_page.get_by_text("Абонементы").first).to_be_visible()
+
+    def test_gallery_mobile(self, mobile_page: Page, app_url):
+        """Галерея на мобилке."""
+        mobile_page.goto(f"{app_url}/gallery")
+        mobile_page.wait_for_load_state("load")
+        expect(mobile_page.locator(".gallery-hero__title")).to_be_visible()
+        expect(mobile_page.locator(".gallery-section").first).to_be_visible()
+
+    def test_contacts_mobile(self, mobile_page: Page, app_url):
+        """Контакты на мобилке."""
+        mobile_page.goto(f"{app_url}/contacts")
+        mobile_page.wait_for_load_state("load")
+        expect(mobile_page.get_by_text("Контакты")).to_be_visible()
+
+    def test_login_mobile(self, mobile_page: Page, app_url):
+        """Страница входа на мобилке."""
+        mobile_page.goto(f"{app_url}/login")
+        mobile_page.wait_for_load_state("load")
+        expect(mobile_page.locator("form[action='/login']")).to_be_visible()
+        expect(mobile_page.locator("input[name='login']")).to_be_visible()
+        expect(mobile_page.locator("input[name='password']")).to_be_visible()
+
+
 class TestDashboard:
     """Тесты дашборда с графиками."""
 
