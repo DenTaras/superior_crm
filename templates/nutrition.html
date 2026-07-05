@@ -44,13 +44,15 @@
         </div>
     </details>
 
-    <!-- Навигация по дням + кнопка списка покупок -->
+    <!-- Навигация по дням -->
     <div class="flex-row mt-2" style="gap:4px;flex-wrap:wrap;align-items:center;">
         {% for d in week %}
         <button class="btn btn--small day-btn {% if d.day == today_name %}btn--primary{% else %}btn--ghost{% endif %}"
                 data-day="{{ d.day }}" style="min-width:44px;">{{ d.day }}</button>
         {% endfor %}
-        <button type="button" id="btn-toggle-kbju" class="btn btn--small btn--ghost" style="margin-left:auto;" data-mode="portion">📊 КБЖУ на порцию</button>
+    </div>
+    <div class="flex-row" style="gap:8px;align-items:center;margin-top:8px;">
+        <button type="button" id="btn-toggle-kbju" class="btn btn--small btn--ghost" data-mode="portion">📊 КБЖУ на порцию</button>
         <button type="button" id="btn-shopping-list" class="btn btn--small btn--primary">📋 Список покупок</button>
     </div>
 
@@ -102,10 +104,14 @@
                  data-base-carbs="{{ m.carbs }}" data-base-calories="{{ m.calories }}"
                  data-ingredients="{{ m.ingredients|e }}" data-recipe="{{ m.recipe|e }}"
                  data-day="{{ d.day }}">
-                <div class="flex-row" style="gap:8px;align-items:center;flex-wrap:wrap;">
+                <div class="flex-row meal-row-top" style="gap:8px;align-items:center;">
                     <button class="btn btn--small meal-remove" style="padding:2px 6px;color:var(--danger);" title="Убрать">−</button>
                     <span style="font-weight:600;font-size:0.85rem;min-width:60px;color:var(--text-muted);">{% if m.meal_type == 'snack' and m.course == 'main' %}🍿 Перекус{% else %}{{ course_labels.get(m.course, m.course) }}{% endif %}</span>
                     <span class="meal-name" style="flex:1;cursor:pointer;font-size:0.9rem;">{{ m.name }}</span>
+                    <button class="btn btn--small meal-prev" style="padding:2px 6px;">◀</button>
+                    <button class="btn btn--small meal-next" style="padding:2px 6px;">▶</button>
+                </div>
+                <div class="flex-row meal-row-bottom" style="gap:6px;align-items:center;">
                     <span style="font-size:0.8rem;color:var(--text-muted);">г</span>
                     <input type="number" class="meal-weight" value="{{ m.weight_g }}" min="1"
                            style="width:50px;padding:4px 4px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-primary);font-size:0.8rem;">
@@ -113,8 +119,6 @@
                     <span class="meal-fat" style="font-size:0.8rem;min-width:45px;"><span style="color:var(--text-muted);font-size:0.7rem;">Ж </span><span class="meal-value">{{ m.fat }}</span></span>
                     <span class="meal-carbs" style="font-size:0.8rem;min-width:45px;"><span style="color:var(--text-muted);font-size:0.7rem;">У </span><span class="meal-value">{{ m.carbs }}</span></span>
                     <span class="meal-calories" style="font-size:0.85rem;font-weight:600;min-width:55px;"><span style="color:var(--text-muted);font-size:0.7rem;">ккал </span><span class="meal-value">{{ m.calories }}</span></span>
-                    <button class="btn btn--small meal-prev" style="padding:2px 6px;">◀</button>
-                    <button class="btn btn--small meal-next" style="padding:2px 6px;">▶</button>
                 </div>
                 <div class="meal-detail" style="display:none;margin-top:6px;font-size:0.8rem;color:var(--text-secondary);padding-left:70px;">
                     <strong>Состав:</strong> {{ m.ingredients }}<br>

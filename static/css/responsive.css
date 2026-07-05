@@ -39,7 +39,7 @@
     flex: 1;
     text-align: center;
 }
-.content-with-image__image h2 {
+/* .content-with-image__image h2 {
     font-size: 1.5rem;
     font-weight: 800;
     color: #fff;
@@ -47,7 +47,7 @@
     text-shadow: 0 0 10px var(--accent);
     margin-bottom: 10px;
     line-height: 1.2;
-}
+} */
 .content-with-image__image img {
     flex: 1;
     width: 95%;
@@ -597,16 +597,29 @@ html { scroll-behavior: smooth; }
     .table thead th:nth-child(2) { display:none; }
 
     /* === ПИТАНИЕ === */
-    .nutrition-panel .flex-row > .flex-row { gap:4px; }
     .nutrition-panel .day-btn { flex:1; min-width:0 !important; font-size:0.75rem; padding:6px 2px; }
     .nutrition-panel #btn-toggle-kbju,
     .nutrition-panel #btn-shopping-list { font-size:0.75rem; padding:6px 8px; white-space:nowrap; }
-    .meal-item { flex-direction:column; gap:6px; padding:10px; }
-    .meal-item > * { width:100%; }
-    .meal-item .flex-row { flex-wrap:wrap; gap:4px; }
-    .meal-item input[type="number"] { width:100% !important; max-width:80px; }
-    .meal-item .meal-name { font-size:0.85rem; }
-    .meal-item .btn--small { font-size:0.7rem; padding:4px 6px; }
+    .nutrition-panel [data-meal-type] { flex-direction:column !important; }
+    .nutrition-panel [data-meal-type] > div:first-child { width:100% !important; min-width:0 !important; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .nutrition-panel [data-meal-type] > div:first-child h4 { margin-bottom:0 !important; font-size:1rem; min-width:80px; }
+    .nutrition-panel [data-meal-type] > div:first-child select { width:auto !important; flex:1; min-width:0; font-size:0.85rem; margin-bottom:0 !important; }
+    .nutrition-panel [data-meal-type] > div:first-child .btn { width:auto !important; padding:4px 10px; }
+    .meal-item { padding:8px 10px; }
+    .meal-row-top { display:flex; gap:6px; align-items:center; }
+    .meal-row-top .meal-name { flex:1; min-width:40px; font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .meal-row-top .meal-prev,
+    .meal-row-top .meal-next { flex-shrink:0; padding:2px 4px !important; }
+    .meal-row-bottom { display:flex; gap:4px; align-items:center; flex-wrap:wrap; margin-top:4px; }
+    .meal-row-bottom input[type="number"] { width:38px !important; max-width:38px !important; padding:2px 2px !important; font-size:0.7rem; }
+    .meal-row-bottom .meal-protein,
+    .meal-row-bottom .meal-fat,
+    .meal-row-bottom .meal-carbs,
+    .meal-row-bottom .meal-calories { font-size:0.7rem !important; white-space:nowrap; }
+    .meal-row-bottom .meal-calories { font-weight:600; }
+    .meal-item .btn--small { font-size:0.65rem; padding:2px 4px; }
+    .meal-row-top > span:first-of-type { font-size:1rem !important; min-width:24px !important; width:24px !important; text-align:center; overflow:hidden; }
+    .meal-row-top > span:first-of-type span { display:none; }
 
     /* === ПРОФИЛЬ === */
     .profile__sidebar { width:100%; }
