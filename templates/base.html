@@ -41,6 +41,7 @@
             {% set _user = request.session.get('user') %}
             {% set _path = request.url.path %}
             {% if _user and _user.role in ('admin', 'trainer') %}
+            <a href="/profile" class="header__nav-link{% if _path == '/profile' %} header__nav-link--active{% endif %}">Личный кабинет</a>
             <a href="/schedule" class="header__nav-link{% if _path.startswith('/schedule') or _path.startswith('/slot/') %} header__nav-link--active{% endif %}">Расписание</a>
             <a href="/clients" class="header__nav-link{% if _path.startswith('/clients') %} header__nav-link--active{% endif %}">Клиенты</a>
             <a href="/subscriptions" class="header__nav-link{% if _path == '/subscriptions' %} header__nav-link--active{% endif %}">Абонементы</a>

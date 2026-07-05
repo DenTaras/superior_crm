@@ -11,7 +11,7 @@
         <div class="gallery-hero__content">
             <h1 class="gallery-hero__title">SUPERIOR</h1>
             <p class="gallery-hero__subtitle">Private Gym</p>
-            <p class="gallery-hero__desc">Пространство для тех, кто стремится к лучшему</p>
+            <p class="gallery-hero__desc">Пространство комфорта и силы</p>
             <div class="gallery-hero__scroll">
                 <span>Листайте вниз</span>
                 <span class="gallery-hero__arrow">↓</span>
@@ -23,11 +23,12 @@
     <section class="gallery-section">
         <h2 class="gallery-section__title">Фото студии</h2>
         <div class="gallery-section__grid">
-            <div class="gallery-photo gallery-photo--left" style="background-image: linear-gradient(135deg, #1a1a1a 0%, #0b0b0b 50%, #2a0a0a 100%);">
-                <div class="gallery-photo__label">Зона свободных весов</div>
+            <div class="gallery-photo gallery-photo--left" 
+                style="background-image: url('/static/images/reseption-1.png'); background-size: cover; background-position: center;">
+                <div class="gallery-photo__label">Ресепшен</div>
             </div>
             <div class="gallery-photo gallery-photo--right" style="background-image: linear-gradient(135deg, #2a0a0a 0%, #0b0b0b 50%, #1a1a1a 100%);">
-                <div class="gallery-photo__label">Кардио-зона</div>
+                <div class="gallery-photo__label">Зона ожидания</div>
             </div>
         </div>
     </section>
@@ -36,7 +37,8 @@
     <section class="gallery-section">
         <h2 class="gallery-section__title">Тренировочный зал</h2>
         <div class="gallery-section__grid">
-            <div class="gallery-photo gallery-photo--wide" style="background-image: linear-gradient(135deg, #1a0a0a 0%, #121212 50%, #0b0b0b 100%);">
+            <div class="gallery-photo gallery-photo--wide" 
+                style="background-image: url('/static/images/studio-1.jpg'); background-size: cover; background-position: center;">
                 <div class="gallery-photo__label">Основной зал — силовые тренировки</div>
             </div>
             <div class="gallery-photo gallery-photo--wide" style="background-image: linear-gradient(135deg, #0b0b0b 0%, #121212 50%, #1a0a0a 100%);">
@@ -46,9 +48,10 @@
     </section>
 
     <!-- ====== ДУШЕВАЯ ====== -->
-    <section class="gallery-section gallery-section--compact">
+    <section class="gallery-section">
         <h2 class="gallery-section__title">Душевая</h2>
-        <div class="gallery-photo gallery-photo--full" style="background-image: linear-gradient(135deg, #121212 0%, #1a0a0a 50%, #0b0b0b 100%); max-width:600px; margin:0 auto;">
+        <div class="gallery-photo gallery-photo--full" 
+            style="background-image: url('/static/images/dressing_room.png'); background-size: cover; background-position: center;">
             <div class="gallery-photo__label">Чистота и комфорт после тренировки</div>
         </div>
     </section>
@@ -59,14 +62,14 @@
         <div class="gallery-section__grid gallery-section__grid--team">
             <div class="gallery-photo gallery-photo--portrait" style="background-image: linear-gradient(135deg, #1a0a0a 0%, #2a0a0a 50%, #0b0b0b 100%);">
                 <div class="gallery-photo__label">
-                    <strong>Анна Директорова</strong>
+                    <strong>Денис Тарасов</strong>
                     <span>Руководитель студии</span>
                 </div>
             </div>
             <div class="gallery-photo gallery-photo--portrait" style="background-image: linear-gradient(135deg, #0b0b0b 0%, #1a0a0a 50%, #121212 100%);">
                 <div class="gallery-photo__label">
-                    <strong>Пётр Тренеров</strong>
-                    <span>Старший тренер</span>
+                    <strong>София Юшкевич</strong>
+                    <span>Ведущий тренер</span>
                 </div>
             </div>
         </div>
@@ -82,6 +85,12 @@
         </div>
     </section>
 
+</div>
+
+<!-- ====== МОДАЛКА ПРОСМОТРА ФОТО ====== -->
+<div id="photo-modal" class="photo-modal">
+    <button id="photo-modal-close" class="photo-modal__close" aria-label="Закрыть">×</button>
+    <div id="photo-modal-img" class="photo-modal__image"></div>
 </div>
 
 {% endblock %}

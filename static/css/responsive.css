@@ -1,4 +1,7 @@
 /* ---- RESPONSIVE ---- */
+.header__login-full { display:inline; }
+.header__login-short { display:none; }
+
 @media (max-width:992px) { .profile { grid-template-columns:1fr; } .grid-4 { grid-template-columns:repeat(2,1fr); } .program__layout { flex-direction:column; } .program__sidebar { width:100%; } .sql-bottom { grid-template-columns:1fr; } .slot-columns { grid-template-columns:1fr; } }
 @media (max-width:768px) { .grid-4,.grid-3,.grid-2 { grid-template-columns:1fr; } .header__user-name { display:none; } }
 
@@ -87,7 +90,7 @@ html { scroll-behavior: smooth; }
 }
 .gallery-hero__bg {
     position: absolute; inset:0;
-    background: linear-gradient(135deg, #0b0b0b 0%, #1a0a0a 30%, #121212 60%, #0b0b0b 100%);
+    background: linear-gradient(135deg, #0b0b0b 0%, #301212 30%, #353434 60%, #0b0b0b 100%);
     background-size: 400% 400%;
     animation: heroShift 15s ease infinite;
 }
@@ -151,7 +154,7 @@ html { scroll-behavior: smooth; }
 .gallery-photo {
     border-radius:var(--radius-md); overflow:hidden;
     background-size:cover; background-position:center;
-    min-height:350px; display:flex; align-items:flex-end;
+    min-height:450px; display:flex; align-items:flex-end;
     position:relative; cursor:pointer;
     transition:transform 0.5s ease, box-shadow 0.5s ease;
     border:1px solid var(--border);
@@ -160,9 +163,9 @@ html { scroll-behavior: smooth; }
     transform:scale(1.03); box-shadow:0 20px 60px rgba(0,0,0,.5);
     z-index:2;
 }
-.gallery-photo--wide { min-height:400px; }
-.gallery-photo--full { min-height:350px; }
-.gallery-photo--portrait { min-height:450px; }
+.gallery-photo--wide { min-height:500px; }
+.gallery-photo--full { min-height:450px; }
+.gallery-photo--portrait { min-height:550px; }
 .gallery-photo__label {
     width:100%; padding:20px 24px;
     background: linear-gradient(transparent, rgba(0,0,0,.85));
@@ -197,6 +200,31 @@ html { scroll-behavior: smooth; }
 .gallery-cta__content h2 { font-size:2rem; font-weight:800; margin-bottom:16px; }
 .gallery-cta__content p { color:var(--text-secondary); margin-bottom:32px; font-size:1.1rem; }
 .gallery-cta__content .btn--lg { padding:14px 40px; font-size:1.1rem; }
+
+/* ====== МОДАЛКА ПРОСМОТРА ФОТО ====== */
+.photo-modal {
+    display:none; position:fixed; inset:0; z-index:9999;
+    background:rgba(0,0,0,.92);
+    align-items:center; justify-content:center;
+    cursor:zoom-out;
+}
+.photo-modal--open { display:flex; }
+.photo-modal__close {
+    position:absolute; top:16px; right:20px;
+    background:none; border:none;
+    color:#fff; font-size:2.5rem; cursor:pointer;
+    z-index:10; line-height:1; opacity:0.8;
+    transition:opacity 0.2s;
+}
+.photo-modal__close:hover { opacity:1; }
+.photo-modal__image {
+    width:90vw; max-width:1200px;
+    height:85vh;
+    background-size:contain;
+    background-repeat:no-repeat;
+    background-position:center;
+    border-radius:var(--radius-lg);
+}
 
 
 /* ---- Прайс: таблица + блок выгоды ---- */
@@ -339,7 +367,7 @@ html { scroll-behavior: smooth; }
 
 @media (max-width:768px){
     /* Header */
-    .header { position:sticky; top:0; z-index:3000; background:var(--bg-primary); }
+    .header { position:sticky; top:0; z-index:3000; background:var(--bg-primary); backdrop-filter:none; }
     .header__inner { gap:4px; padding:8px 12px; }
     .burger { display:flex; }
     .header__back { display:none; }
@@ -349,8 +377,6 @@ html { scroll-behavior: smooth; }
     .header__accent-line { height:24px; }
     .header__logo { gap:6px; }
     .header__user .btn { font-size:0.75rem; padding:6px 10px; white-space:nowrap; }
-    .header__login-full { display:inline; }
-    .header__login-short { display:none; }
 
     /* Навигация полный экран */
     .header__nav {
@@ -439,10 +465,10 @@ html { scroll-behavior: smooth; }
     .gallery-section { min-height:auto; padding:40px 16px; }
     .gallery-section__title { font-size:1.4rem; margin-bottom:24px; }
     .gallery-section__grid { grid-template-columns:1fr; gap:16px; }
-    .gallery-photo { min-height:250px; }
-    .gallery-photo--wide { min-height:280px; }
-    .gallery-photo--portrait { min-height:320px; }
-    .gallery-photo--full { min-height:250px; }
+    .gallery-photo { min-height:350px; }
+    .gallery-photo--wide { min-height:380px; }
+    .gallery-photo--portrait { min-height:420px; }
+    .gallery-photo--full { min-height:350px; }
 }
 
 /* ====== ПРАЙС: мобильная ====== */
@@ -551,9 +577,22 @@ html { scroll-behavior: smooth; }
     .slot__header-meta { font-size:0.8rem; }
     .slot-columns__left .panel .flex-row.mt-2 { flex-direction:column; gap:8px; }
     .slot-columns__left .panel .flex-row.mt-2 select { width:100%; }
+    /* client-list: кнопка прижата к правому краю (position:absolute) */
+    .slot-columns__left .client-list__item { position:relative !important; padding-right:48px !important; white-space:nowrap; overflow:hidden; }
+    .slot-columns__left .client-list__item .btn--small { position:absolute !important; right:2px; top:50%; transform:translateY(-50%); }
+    /* Панель с кнопками План тренировки / Тренировка завершена */
+    .panel.mb-3 > .flex-row { flex-wrap:wrap; gap:8px; }
+    .panel.mb-3 > .flex-row > .flex-row { flex-direction:column; gap:6px; width:100%; }
+    .panel.mb-3 > .flex-row > .flex-row > form { width:100%; }
+    .panel.mb-3 > .flex-row .btn { width:100%; text-align:center; justify-content:center; white-space:nowrap; }
 
     /* === ЖУРНАЛ === */
     .journal__comment { padding-left:12px !important; font-size:0.8rem; }
+    main.container:has(.panel--journal) { position:relative; height:calc(100vh - 56px); padding:0; overflow:hidden; }
+    .panel--journal { position:absolute; inset:0; padding:0 !important; margin:0; border-radius:0; }
+    .panel--journal .table__wrapper { height:100%; overflow:auto; max-height:none; }
+    .panel--journal .table__wrapper table { width:100%; }
+    .panel--journal thead { position:sticky; top:0; z-index:1; }
     .table tbody td:nth-child(2) { display:none; }
     .table thead th:nth-child(2) { display:none; }
 
@@ -587,6 +626,34 @@ html { scroll-behavior: smooth; }
     .profile .stats .stats__label { font-size:0.6rem !important; }
     /* freeze modal */
     .modal-overlay .modal { margin:12px; max-height:90vh; overflow-y:auto; }
+
+    /* === ПЛАН ТРЕНИРОВКИ === */
+    #slot-program.program__layout { align-items:stretch; }
+    .program__editor { width:100%; }
+    .program__editor .flex-row:last-child { flex-direction:column; gap:6px; }
+    .program__editor .flex-row:last-child > .flex-row { flex-direction:column; gap:6px; width:100%; }
+    .program__editor .flex-row:last-child .btn { width:100%; font-size:0.8rem; padding:10px 4px; text-align:center; }
+    .program__editor #save-status { font-size:0.75rem; }
+    .plan-exercises-wrapper { overflow-x:auto; -webkit-overflow-scrolling:touch; width:100%; max-width:100%; }
+    .plan-table { font-size:0.72rem; min-width:450px; width:450px; table-layout:auto; }
+    .plan-table th,
+    .plan-table td { padding:4px 3px; }
+    /* упражнение — разрешаем перенос */
+    .plan-table th:nth-child(2),
+    .plan-table td:nth-child(2) { word-break:break-word; max-width:100px; text-align:left; }
+    .plan-table th:nth-child(3),
+    .plan-table td:nth-child(3),
+    .plan-table th:nth-child(4),
+    .plan-table td:nth-child(4) { max-width:55px; }
+    .plan-table th:nth-child(5),
+    .plan-table td:nth-child(5),
+    .plan-table th:nth-child(6),
+    .plan-table td:nth-child(6) { max-width:45px; }
+    .plan-table input[type="number"] { width:100% !important; max-width:45px; padding:2px !important; font-size:0.7rem; }
+    .plan-table .plan-table__num { font-size:0.65rem; }
+    #note-text { height:150px !important; font-size:0.85rem; }
+    #slot-program .program__sidebar .btn--ghost { width:100%; text-align:center; }
+    .client-list__item--interactive { padding:10px 12px; font-size:0.85rem; }
 }
 
 @media (max-width:480px){
@@ -596,4 +663,8 @@ html { scroll-behavior: smooth; }
     .counter-value { font-size:1.6rem; }
     .profile .stats { gap:4px; }
     .profile .stats .stats__card { min-width:50px !important; padding:6px 6px !important; }
+    /* === ПЛАН ТРЕНИРОВКИ (очень мелкие) === */
+    .plan-table th, .plan-table td { padding:3px 2px; }
+    .plan-table input[type="number"] { max-width:45px !important; font-size:0.65rem; }
+    .program__editor .flex-row:last-child .btn { font-size:0.75rem; padding:10px 4px; }
 }
