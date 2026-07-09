@@ -27,7 +27,7 @@ def _login_as_client(anon_client, db_session, login_suffix: str):
 def test_shopping_list_has_items(anon_client, db_session):
     """Страница nutrition2 содержит список покупок."""
     _login_as_client(anon_client, db_session, "items")
-    r = anon_client.get("/profile/nutrition2")
+    r = anon_client.get("/profile/nutrition")
     assert r.status_code == 200
     assert "Список покупок" in r.text
 
@@ -35,7 +35,7 @@ def test_shopping_list_has_items(anon_client, db_session):
 def test_shopping_list_txt_export(anon_client, db_session):
     """Экспорт списка покупок в txt."""
     _login_as_client(anon_client, db_session, "txt")
-    r = anon_client.get("/profile/nutrition2/shopping-list?format=txt")
+    r = anon_client.get("/profile/nutrition/shopping-list?format=txt")
     assert r.status_code == 200
     assert "СПИСОК ПОКУПОК" in r.text
     assert r.headers.get("content-type", "").startswith("text/plain")

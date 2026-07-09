@@ -164,14 +164,15 @@ def test_gallery_page_available(anon_client):
     r = anon_client.get("/gallery")
     assert r.status_code == 200
     assert "Галерея" in r.text
-    assert "gallery-card" in r.text
+    assert "gallery-photo" in r.text
 
 
-def test_gallery_has_emoji_placeholders(anon_client):
-    """Gallery has emoji placeholders."""
+def test_gallery_has_trainer_names(anon_client):
+    """Gallery shows trainer names."""
     r = anon_client.get("/gallery")
-    assert "📸" in r.text
-    assert "🏋️" in r.text
+    assert r.status_code == 200
+    assert "Фото студии" in r.text
+    assert "Тренировочный зал" in r.text
 
 
 def test_gallery_nav_link_exists(anon_client):

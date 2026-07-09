@@ -10,6 +10,12 @@ from sqlalchemy.orm import sessionmaker
 
 # Отключаем CSRF для тестов (токен проверяется отдельными тестами)
 os.environ["CSRF_DISABLE"] = "1"
+# Фиксируем учётку админа для тестов (не зависит от .env или системы)
+os.environ["ADMIN_LOGIN"] = "admin"
+os.environ["ADMIN_PASSWORD"] = "admin"
+# Убираем BOT_TOKEN, чтобы telegram тесты были детерминированными
+os.environ.pop("BOT_TOKEN", None)
+os.environ.pop("BOT_CHANNEL_ID", None)
 
 # Ensure project root is on sys.path so `import app` works when pytest runs
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))

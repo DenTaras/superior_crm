@@ -154,7 +154,12 @@ def _calc_expenses(db, monthly_revenue: int, month_str: str | None = None) -> di
         coeff = (emp.regional_coefficient or 100) / 100.0
         salary = round(emp.salary_amount * coeff)
         ndfl = round(salary * 0.13)        # НДФЛ 13%
-        social = round(salary * 0.302)     # Взносы ФОТ 30.2%
+        # МСП: 30.2% на часть ≤ МРОТ × районный коэффициент, 15% на превышение
+        mrot_base = 22440  # МРОТ 2026
+        mrot_region = round(mrot_base * coeff)
+        social_base = round(min(salary, mrot_region) * 0.302)
+        social_excess = max(0, round((salary - mrot_region) * 0.15))
+        social = social_base + social_excess
         total_cost = salary + social
         salary_total += salary
         ndfl_total += ndfl
@@ -174,6 +179,8 @@ def _calc_expenses(db, monthly_revenue: int, month_str: str | None = None) -> di
             "salary": salary,
             "ndfl": ndfl,
             "social": social,
+            "social_base": social_base,
+            "social_excess": social_excess,
             "total_cost": total_cost,
             "take_home": salary - ndfl,
             "bonus": bonus,

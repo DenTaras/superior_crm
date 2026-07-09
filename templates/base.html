@@ -11,7 +11,7 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0">
     <title>
-        SUPERIOR CRM
+        SUPERIOR — Private Gym
     </title>
 
     <link rel="stylesheet" href="/static/css/fonts.css">
@@ -41,19 +41,17 @@
             {% set _user = request.session.get('user') %}
             {% set _path = request.url.path %}
             {% if _user and _user.role in ('admin', 'trainer') %}
-            <a href="/profile" class="header__nav-link{% if _path == '/profile' %} header__nav-link--active{% endif %}">Личный кабинет</a>
+            <span class="nav-profile-link"><a href="/profile" class="header__nav-link{% if _path == '/profile' %} header__nav-link--active{% endif %}">Личный кабинет</a></span>
             <a href="/schedule" class="header__nav-link{% if _path.startswith('/schedule') or _path.startswith('/slot/') %} header__nav-link--active{% endif %}">Расписание</a>
             <a href="/clients" class="header__nav-link{% if _path.startswith('/clients') %} header__nav-link--active{% endif %}">Клиенты</a>
             <a href="/subscriptions" class="header__nav-link{% if _path == '/subscriptions' %} header__nav-link--active{% endif %}">Абонементы</a>
             <a href="/journal" class="header__nav-link{% if _path == '/journal' %} header__nav-link--active{% endif %}">Журнал</a>
             {% if _user.role == 'admin' %}
-            <a href="/dashboard" class="header__nav-link{% if _path == '/dashboard' %} header__nav-link--active{% endif %}">Дашборд</a>
-            <a href="/budget" class="header__nav-link{% if _path == '/budget' %} header__nav-link--active{% endif %}">Бюджет</a>
             <a href="/employees" class="header__nav-link{% if _path == '/employees' %} header__nav-link--active{% endif %}">Сотрудники</a>
             <a href="/sql" class="header__nav-link{% if _path == '/sql' %} header__nav-link--active{% endif %}">SQL</a>
             {% endif %}
             {% elif _user and _user.role == 'client' %}
-            <a href="/profile" class="header__nav-link{% if _path == '/profile' %} header__nav-link--active{% endif %}">Личный кабинет</a>
+            <span class="nav-profile-link"><a href="/profile" class="header__nav-link{% if _path == '/profile' %} header__nav-link--active{% endif %}">Личный кабинет</a></span>
             <a href="/schedule" class="header__nav-link{% if _path.startswith('/schedule') or _path.startswith('/slot/') %} header__nav-link--active{% endif %}">Расписание</a>
             <a href="/subscriptions" class="header__nav-link{% if _path == '/subscriptions' %} header__nav-link--active{% endif %}">Абонементы</a>
             <a href="/profile/nutrition" class="header__nav-link{% if _path.startswith('/profile/nutrition') %} header__nav-link--active{% endif %}">Питание</a>

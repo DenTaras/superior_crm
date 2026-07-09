@@ -230,7 +230,7 @@ def logout(request: Request):
 
 
 @router.get("/profile")
-def profile_page(request: Request, db: Session = Depends(get_db)):
+def profile_page(request: Request, db: Session = Depends(get_db), agg: str = "month"):
     """Личный кабинет."""
     user = get_current_user(request)
     if not user:
@@ -605,6 +605,265 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
                     "client_count": bk_count,
                 })
 
+    # dashboard/budget data for admin tab
+    dashboard_data = None
+    budget_data = None
+    if user["role"] == "admin":
+        from app.models import SubscriptionPurchase, Client as ClModel
+        from app.models import SubscriptionConsumption, JournalEntry as JEntry
+        from app.routes.budget import _calc_expenses
+        from datetime import timedelta
+        from app.timezone import now as tz_now2
+        from sqlalchemy import func, extract
+
+        now_dt = tz_now2()
+        month_ago = now_dt - timedelta(days=30)
+
+        # --- Dashboard stats ---
+        ac = (
+            db.query(SubscriptionPurchase.client_id)
+            .filter(SubscriptionPurchase.created_at >= month_ago)
+            .distinct()
+            .count()
+        )
+        rev = (
+            db.query(func.coalesce(func.sum(SubscriptionPurchase.price), 0))
+            .filter(SubscriptionPurchase.created_at >= month_ago)
+            .scalar()
+        ) or 0
+        rp = (
+            db.query(SubscriptionPurchase)
+            .order_by(SubscriptionPurchase.created_at.desc())
+            .limit(5).all()
+        )
+        rl = []
+        for p in rp:
+            cl = db.get(ClModel, p.client_id)
+            rl.append({
+                "date": p.created_at,
+                "client_name": cl.fio() if cl else f"#{p.client_id}",
+                "label": f"{p.format_name} {p.time_slot} {p.package_size}",
+                "price": p.price,
+            })
+
+        total_clients_count = db.query(ClModel).count()
+        active_with_sub = (
+            db.query(SubscriptionPurchase.client_id)
+            .filter(SubscriptionPurchase.remaining > 0)
+            .distinct()
+            .count()
+        )
+        month_trainings = (
+            db.query(JEntry)
+            .filter(JEntry.created_at >= month_ago)
+            .count()
+        )
+
+        # --- Chart data with aggregation ---
+        if agg == "hour":
+            since_db = now_dt - timedelta(days=7)
+            date_parts = [
+                extract("year", SubscriptionPurchase.created_at).label("year"),
+                extract("month", SubscriptionPurchase.created_at).label("month"),
+                extract("day", SubscriptionPurchase.created_at).label("day"),
+                extract("hour", SubscriptionPurchase.created_at).label("hour"),
+            ]
+            group_cols = ["year", "month", "day", "hour"]
+            order_cols = ["year", "month", "day", "hour"]
+            db_fmt = lambda r: f"{int(r.day):02d}.{int(r.month):02d} {int(r.hour):02d}:00"
+            # все 48 часов назад
+            all_labels = []
+            for i in range(48):
+                dt = now_dt - timedelta(hours=47-i)
+                all_labels.append(f"{dt.day:02d}.{dt.month:02d} {dt.hour:02d}:00")
+            axis_label = "Час"
+        elif agg == "day":
+            since_db = now_dt - timedelta(days=90)
+            date_parts = [
+                extract("year", SubscriptionPurchase.created_at).label("year"),
+                extract("month", SubscriptionPurchase.created_at).label("month"),
+                extract("day", SubscriptionPurchase.created_at).label("day"),
+            ]
+            group_cols = ["year", "month", "day"]
+            order_cols = ["year", "month", "day"]
+            db_fmt = lambda r: f"{int(r.day):02d}.{int(r.month):02d}"
+            # все 30 дней назад
+            all_labels = []
+            for i in range(30):
+                dt = now_dt - timedelta(days=29-i)
+                all_labels.append(f"{dt.day:02d}.{dt.month:02d}")
+            axis_label = "День"
+        else:
+            since_db = now_dt - timedelta(days=365)
+            date_parts = [
+                extract("year", SubscriptionPurchase.created_at).label("year"),
+                extract("month", SubscriptionPurchase.created_at).label("month"),
+            ]
+            group_cols = ["year", "month"]
+            order_cols = ["year", "month"]
+            db_fmt = lambda r: f"{int(r.year)}-{int(r.month):02d}"
+            # последние 12 месяцев
+            all_labels = []
+            for i in range(12):
+                m = now_dt.month - i
+                y = now_dt.year
+                while m < 1:
+                    m += 12
+                    y -= 1
+                all_labels.insert(0, f"{y}-{m:02d}")
+            axis_label = "Месяц"
+
+        # запрос данных из БД
+        rows = (
+            db.query(*date_parts, func.sum(SubscriptionPurchase.price).label("total"))
+            .filter(SubscriptionPurchase.created_at >= since_db)
+            .group_by(*group_cols)
+            .order_by(*order_cols)
+            .all()
+        )
+        # строим словарь существующих данных
+        rev_map = {db_fmt(r): int(r.total) for r in rows}
+        # заполняем все слоты (с нулями где нет данных)
+        chart_labels = all_labels
+        chart_revenues = [rev_map.get(l, 0) for l in all_labels]
+
+        # slot revenue (по тому же периоду)
+        slot_rows = (
+            db.query(SubscriptionPurchase.time_slot, func.sum(SubscriptionPurchase.price).label("total"))
+            .filter(SubscriptionPurchase.created_at >= since_db)
+            .group_by(SubscriptionPurchase.time_slot)
+            .all()
+        )
+        slot_labels = [r.time_slot for r in slot_rows]
+        slot_data = [int(r.total) for r in slot_rows]
+
+        # format revenue
+        fmt_rows = (
+            db.query(SubscriptionPurchase.format_name, func.sum(SubscriptionPurchase.price).label("total"))
+            .filter(SubscriptionPurchase.created_at >= since_db)
+            .group_by(SubscriptionPurchase.format_name)
+            .all()
+        )
+        fmt_labels = [r.format_name for r in fmt_rows]
+        fmt_data = [int(r.total) for r in fmt_rows]
+
+        dashboard_data = {
+            "active_clients": ac,
+            "month_revenue": rev,
+            "recent_purchases": rl,
+            "chart_labels": chart_labels,
+            "chart_revenues": chart_revenues,
+            "slot_labels": slot_labels,
+            "slot_data": slot_data,
+            "fmt_labels": fmt_labels,
+            "fmt_data": fmt_data,
+            "total_clients": total_clients_count,
+            "active_with_sub": active_with_sub,
+            "month_trainings": month_trainings,
+            "current_agg": agg,
+            "axis_label": axis_label,
+        }
+
+        # --- Budget data ---
+        budget_data = _calc_expenses(db, rev, now_dt.strftime("%Y-%m"))
+
+        # Additional budget revenue stats
+        year = now_dt.year
+        month_num = now_dt.month
+        month_start = now_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if month_num == 12:
+            month_end = month_start.replace(year=year+1, month=1)
+        else:
+            month_end = month_start.replace(month=month_num+1)
+
+        purchases_all = (
+            db.query(SubscriptionPurchase)
+            .filter(
+                SubscriptionPurchase.refunded == False,
+                SubscriptionPurchase.created_at >= month_start,
+                SubscriptionPurchase.created_at < month_end,
+            )
+            .order_by(SubscriptionPurchase.created_at.desc())
+            .all()
+        )
+        total_earned = 0
+        total_unearned = 0
+        for p in purchases_all:
+            if p.package_size > 0:
+                used = p.package_size - p.remaining
+                price_per = p.price / p.package_size
+                total_earned += used * price_per
+                total_unearned += p.remaining * price_per
+
+        total_revenue = total_earned + total_unearned
+        purchases_count = len(purchases_all)
+
+        month_purchases_filtered = [p for p in purchases_all if p.created_at and p.created_at >= month_ago]
+        month_revenue_val = sum(p.price for p in month_purchases_filtered) if month_purchases_filtered else 0
+
+        refunded_purchases = (
+            db.query(SubscriptionPurchase)
+            .filter(SubscriptionPurchase.refunded == True)
+            .all()
+        )
+        total_refunded = sum(p.price for p in refunded_purchases) if refunded_purchases else 0
+
+        # purchase list with client names
+        purchase_list = []
+        for p in purchases_all:
+            cl = db.get(ClModel, p.client_id)
+            name = cl.fio() if cl else f"#{p.client_id}"
+            used = p.package_size - p.remaining
+            purchase_list.append({
+                "created_at": p.created_at,
+                "client_name": name,
+                "time_slot": p.time_slot,
+                "format_name": p.format_name,
+                "package_size": p.package_size,
+                "price": p.price,
+                "remaining": p.remaining,
+                "used": used,
+                "earned": round(used * (p.price / p.package_size)) if p.package_size > 0 else 0,
+                "unearned": round(p.remaining * (p.price / p.package_size)) if p.package_size > 0 else 0,
+            })
+
+        # consumption list
+        consumptions = (
+            db.query(SubscriptionConsumption)
+            .filter(
+                SubscriptionConsumption.created_at >= month_start,
+                SubscriptionConsumption.created_at < month_end,
+            )
+            .order_by(SubscriptionConsumption.created_at.desc())
+            .limit(50)
+            .all()
+        )
+        consumption_list = []
+        for cns in consumptions:
+            cl = db.get(ClModel, cns.client_id)
+            name = cl.fio() if cl else f"#{cns.client_id}"
+            purchase = db.get(SubscriptionPurchase, cns.purchase_id)
+            consumption_list.append({
+                "created_at": cns.created_at,
+                "slot_time": cns.slot_time,
+                "client_name": name,
+                "format_name": purchase.format_name if purchase else "?",
+                "time_slot": purchase.time_slot if purchase else "?",
+            })
+
+        budget_data["revenue_stats"] = {
+            "total_revenue": round(total_revenue),
+            "total_earned": round(total_earned),
+            "total_unearned": round(total_unearned),
+            "total_refunded": total_refunded,
+            "purchases_count": purchases_count,
+            "month_revenue": month_revenue_val,
+            "sel_year": year,
+            "sel_month": month_num,
+        }
+        budget_data["purchases"] = purchase_list
+        budget_data["consumptions"] = consumption_list
+
     return templates.TemplateResponse(
         request=request, name="user.html",
         context={
@@ -617,6 +876,8 @@ def profile_page(request: Request, db: Session = Depends(get_db)):
             "streak_discount": 0,
             "frozen_active": False,
             "freeze_cd_active": False,
+            "dashboard_data": dashboard_data,
+            "budget_data": budget_data,
         },
     )
 

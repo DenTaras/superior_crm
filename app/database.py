@@ -30,6 +30,18 @@ def format_phone(value: str) -> str:
 
 templates.env.filters['format_phone'] = format_phone
 
+def format_currency(value) -> str:
+    """1234567 → '1 234 567' (пробел — разделитель разрядов)"""
+    if value is None:
+        return "0"
+    try:
+        n = int(round(float(value)))
+        return f"{n:,}".replace(",", " ")
+    except (ValueError, TypeError):
+        return str(value)
+
+templates.env.filters['format_currency'] = format_currency
+
 from app.timezone import localtime  # noqa: E402
 templates.env.filters['localtime'] = localtime
 

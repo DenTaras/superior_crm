@@ -32,7 +32,7 @@
             {% endif %}
         </td>
         <td class="table__cell">{{ emp.login }}</td>
-        <td class="table__cell">{{ "{:,}".format(emp.salary_amount) }} ₽</td>
+        <td class="table__cell">{{ emp.salary_amount|format_currency }} ₽</td>
         <td class="table__cell">{{ emp.regional_coefficient or 100 }}%</td>
         <td class="table__cell">
             {% if emp.bonus_percent %}премия {{ emp.bonus_percent }}%

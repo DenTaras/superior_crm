@@ -51,10 +51,11 @@ def test_streak_three_sessions(anon_client, db_session):
     """3 тренировки через день → стрик 3."""
     from datetime import date
     today = date.today()
+    from datetime import timedelta
     dates = [
         datetime(today.year, today.month, today.day, 10, 0),
-        datetime(today.year, today.month, today.day - 2, 10, 0),
-        datetime(today.year, today.month, today.day - 4, 10, 0),
+        datetime.combine(today - timedelta(days=2), datetime.min.time()).replace(hour=10),
+        datetime.combine(today - timedelta(days=4), datetime.min.time()).replace(hour=10),
     ]
     c = _create_client_with_sessions(db_session, "streak3", "Streak3", dates)
     anon_client.post("/login", data={"login": "streak3", "password": "123"}, follow_redirects=False)
@@ -68,9 +69,10 @@ def test_streak_gap_over_7_days_resets(anon_client, db_session):
     """Перерыв >7 дней → стрик 0."""
     from datetime import date
     today = date.today()
+    from datetime import timedelta
     dates = [
         datetime(today.year, today.month, today.day, 10, 0),
-        datetime(today.year, today.month, today.day - 10, 10, 0),  # 10 дней назад
+        datetime.combine(today - timedelta(days=10), datetime.min.time()).replace(hour=10),
     ]
     c = _create_client_with_sessions(db_session, "streak_reset", "Reset", dates)
     anon_client.post("/login", data={"login": "streak_reset", "password": "123"}, follow_redirects=False)
@@ -89,7 +91,8 @@ def test_discount_6_sessions(anon_client, db_session):
     """6 тренировок → скидка 2%."""
     from datetime import date
     today = date.today()
-    dates = [datetime(today.year, today.month, today.day - i, 10, 0) for i in range(0, 12, 2)]  # 6 шт через день
+    from datetime import timedelta
+    dates = [datetime.combine(today - timedelta(days=i), datetime.min.time()).replace(hour=10) for i in range(0, 12, 2)]
     c = _create_client_with_sessions(db_session, "disc6", "Disc6", dates)
     anon_client.post("/login", data={"login": "disc6", "password": "123"}, follow_redirects=False)
     r = anon_client.get("/profile")
@@ -232,12 +235,13 @@ def test_streak_preserved_during_freeze(anon_client, db_session):
 
     today = date.today()
     # Последняя тренировка 14 дней назад
-    session_date = datetime(today.year, today.month, today.day - 14, 10, 0)
+    from datetime import timedelta
+    session_date = datetime.combine(today - timedelta(days=14), datetime.min.time()).replace(hour=10)
     c = _create_client_with_sessions(db_session, "streak_freeze", "StreakF", [session_date])
 
     # Добавляем FreezeLog на дни между последней тренировкой и сегодня
     for d in range(1, 14):
-        fl = FreezeLog(client_id=c.id, date=datetime(today.year, today.month, today.day - d, 0, 0))
+        fl = FreezeLog(client_id=c.id, date=datetime.combine(today - timedelta(days=d), datetime.min.time()))
         db_session.add(fl)
     db_session.commit()
 

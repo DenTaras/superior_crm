@@ -73,7 +73,7 @@
             <td class="table__cell">{{ p.date.strftime('%d.%m.%Y') if p.date else '—' }}</td>
             <td class="table__cell">{{ p.client_name }}</td>
             <td class="table__cell">{{ p.label }}</td>
-            <td class="table__cell">{{ p.price }} ₽</td>
+            <td class="table__cell">{{ p.price|format_currency }} ₽</td>
         </tr>
         {% endfor %}
         </tbody>

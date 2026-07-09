@@ -4,6 +4,7 @@
 
 @media (max-width:992px) { .profile { grid-template-columns:1fr; } .grid-4 { grid-template-columns:repeat(2,1fr); } .program__layout { flex-direction:column; } .program__sidebar { width:100%; } .sql-bottom { grid-template-columns:1fr; } .slot-columns { grid-template-columns:1fr; } }
 @media (max-width:768px) { .grid-4,.grid-3,.grid-2 { grid-template-columns:1fr; } .header__user-name { display:none; } }
+@media (min-width:769px) { .nav-profile-link { display:none; } }
 
 
 /* ---- Двухколоночный layout для главной ---- */
@@ -597,8 +598,10 @@ html { scroll-behavior: smooth; }
     .table thead th:nth-child(2) { display:none; }
 
     /* === ПИТАНИЕ === */
+    .calorie-info__grid { grid-template-columns: repeat(2, 1fr); }
+    .calorie-info__value { font-size:1.2rem; }
     .nutrition-panel .day-btn { flex:1; min-width:0 !important; font-size:0.75rem; padding:6px 2px; }
-    .nutrition-panel #btn-toggle-kbju,
+    .nutrition-panel #btn-toggle-kbju { min-width:150px; text-align:center; }
     .nutrition-panel #btn-shopping-list { font-size:0.75rem; padding:6px 8px; white-space:nowrap; }
     .nutrition-panel [data-meal-type] { flex-direction:column !important; }
     .nutrition-panel [data-meal-type] > div:first-child { width:100% !important; min-width:0 !important; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }

@@ -29,7 +29,58 @@ python -m alembic upgrade head
 uvicorn main:app --reload
 ```
 
-Открыть: http://127.0.0.1:8000/
+## Управление на сервере (SSH)
+
+Подключение:
+```bash
+ssh root@138.16.172.22
+```
+
+### Docker
+```bash
+# Остановить сайт (временное выключение)
+docker stop superior-crm
+
+# Запустить снова
+docker start superior-crm
+
+# Перезапустить
+docker restart superior-crm
+
+# Посмотреть логи
+docker logs superior-crm -f
+
+# Пересобрать и запустить (после обновления кода)
+docker build -t superior-crm . && docker stop superior-crm && docker run -d --rm -p 8000:8000 --name superior-crm superior-crm
+```
+
+### Nginx
+```bash
+# Проверить конфиг
+nginx -t
+
+# Применить изменения
+systemctl reload nginx
+```
+
+### SSL (Certbot)
+```bash
+# Обновить сертификат
+certbot renew
+```
+
+### Логи
+```bash
+# Docker
+docker logs superior-crm -f --tail 50
+
+# Nginx
+tail -f /var/log/nginx/error.log
+tail -f /var/log/nginx/access.log
+```
+
+Открыть локально: http://127.0.0.1:8000/
+Открыть на хосте: https://superior-gym.ru/
 
 ### Учётные записи по умолчанию
 

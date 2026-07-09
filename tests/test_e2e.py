@@ -684,7 +684,7 @@ class TestNutrition:
         client_pg.goto(f"{app_url}/profile/nutrition")
         client_pg.wait_for_load_state("load")
         # Раскрываем настройки (там макросы)
-        client_pg.locator("details summary").click()
+        client_pg.locator("details summary").first.click()
         client_pg.wait_for_timeout(300)
         expect(client_pg.get_by_text("Цель ккал/день")).to_be_visible()
         expect(client_pg.get_by_text("Белки (г)")).to_be_visible()

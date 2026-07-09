@@ -46,8 +46,8 @@
                     {% for fmt in formats %}
                     {% set price = pricing[ts][fmt][size] %}
                 {% set is_best = best_deal and ts == best_deal[0] and fmt == best_deal[1] and size == best_deal[2] %}
-                <td class="pricing__price{% if is_best %} pricing__price--best{% endif %}">{{ "{:,}".format(price).replace(",", " ") }}</td>
-                <td class="pricing__unit{% if is_best %} pricing__price--best{% endif %}">{{ "{:,}".format(price // size).replace(",", " ") }}</td>
+                <td class="pricing__price{% if is_best %} pricing__price--best{% endif %}">{{ price|format_currency }}</td>
+                <td class="pricing__unit{% if is_best %} pricing__price--best{% endif %}">{{ (price // size)|format_currency }}</td>
                     {% endfor %}
                 </tr>
                     {% endfor %}
@@ -75,8 +75,8 @@
                         </div>
                         <div class="pricing-card__body">
                             <div class="pricing-card__size">{{ size }} занятия</div>
-                            <div class="pricing-card__price">{{ "{:,}".format(price).replace(",", " ") }} ₽</div>
-                            <div class="pricing-card__unit">{{ "{:,}".format(price // size).replace(",", " ") }} ₽/занятие</div>
+                            <div class="pricing-card__price">{{ price|format_currency }} ₽</div>
+                            <div class="pricing-card__unit">{{ (price // size)|format_currency }} ₽/занятие</div>
                         </div>
                         {% if is_best %}
                         <div class="pricing-card__badge">Лучшая цена</div>

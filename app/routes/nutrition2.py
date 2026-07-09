@@ -113,6 +113,17 @@ def nutrition2_page(
             "items": items,
         })
 
+    from app.nutrition import calc_bmr, calc_tdee
+    # Расход калорий
+    weight = c.weight_kg or 80
+    height = c.height_cm or 175
+    bmr = calc_bmr(weight, height, age, c.sex or "m")
+    tdee = calc_tdee(bmr, c.activity_level or "moderate")
+    run_30min = round(7.5 * weight * 0.5)  # MET 7.5 (бег 8км/ч) × 30мин
+    strength_1h = round(6.0 * weight * 1.0)  # MET 6.0 (силовая) × 60мин
+    ci = {"bmr": bmr, "tdee": tdee, "run_30min": run_30min, "strength_1h": strength_1h, "weight": weight}
+    print(f"[nutrition2] calorie_info={ci}", flush=True)
+
     return templates.TemplateResponse(
         request=request, name="nutrition.html",
         context={
@@ -127,6 +138,7 @@ def nutrition2_page(
             "goal": c.goal or "recompose",
             "activity": c.activity_level or "moderate",
             "shopping_list": grouped,
+            "calorie_info": ci,
         },
     )
 

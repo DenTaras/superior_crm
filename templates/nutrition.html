@@ -44,6 +44,33 @@
         </div>
     </details>
 
+    <!-- Расход калорий (Миффлин-Сан-Жеор) -->
+    <details class="mt-1" style="cursor:pointer;">
+        <summary style="color:var(--text-secondary);font-weight:600;font-size:0.9rem;">Расход калорий</summary>
+        <div class="calorie-info mt-2">
+            <div class="calorie-info__card">
+                <div class="calorie-info__grid">
+                    <div class="calorie-info__item">
+                        <div class="calorie-info__value">{{ calorie_info.bmr if calorie_info else '—' }}</div>
+                        <div class="calorie-info__label">BMR (покой)</div>
+                    </div>
+                    <div class="calorie-info__item">
+                        <div class="calorie-info__value">{{ calorie_info.tdee if calorie_info else '—' }}</div>
+                        <div class="calorie-info__label">TDEE (обычный день)</div>
+                    </div>
+                    <div class="calorie-info__item">
+                        <div class="calorie-info__value">{{ calorie_info.strength_1h if calorie_info else '—' }}</div>
+                        <div class="calorie-info__label">🔥 Силовая 1ч</div>
+                    </div>
+                    <div class="calorie-info__item">
+                        <div class="calorie-info__value">{{ calorie_info.run_30min if calorie_info else '—' }}</div>
+                        <div class="calorie-info__label">🏃 Бег 30мин</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </details>
+
     <!-- Навигация по дням -->
     <div class="flex-row mt-2" style="gap:4px;flex-wrap:wrap;align-items:center;">
         {% for d in week %}
@@ -52,8 +79,8 @@
         {% endfor %}
     </div>
     <div class="flex-row" style="gap:8px;align-items:center;margin-top:8px;">
-        <button type="button" id="btn-toggle-kbju" class="btn btn--small btn--ghost" data-mode="portion">📊 КБЖУ на порцию</button>
         <button type="button" id="btn-shopping-list" class="btn btn--small btn--primary">📋 Список покупок</button>
+        <button type="button" id="btn-toggle-kbju" class="btn btn--small btn--ghost" data-mode="portion">📊 КБЖУ на порцию</button>
     </div>
 
     <!-- Дни (тот же план, что и в nutrition.html) -->

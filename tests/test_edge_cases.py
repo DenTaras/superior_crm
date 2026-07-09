@@ -508,7 +508,7 @@ def test_dashboard_page_accessible(client):
     """Дашборд доступен для admin/trainer."""
     r = client.get("/dashboard")
     assert r.status_code == 200
-    assert "Дашборд" in r.text
+    assert "Выручка" in r.text or "Последние продажи" in r.text
 
 
 def test_very_long_comment_in_program_note(client, db_session):

@@ -22,28 +22,28 @@
 
 <div class="stats mb-3">
     <div class="stats__card">
-        <div class="stats__value">{{ total_revenue }}</div>
+        <div class="stats__value">{{ total_revenue|format_currency }}</div>
         <div class="stats__label">Всего продано (руб)</div>
     </div>
     <div class="stats__card">
-        <div class="stats__value">{{ total_earned }}</div>
+        <div class="stats__value">{{ total_earned|format_currency }}</div>
         <div class="stats__label">Фиксированная выручка (руб)</div>
     </div>
     <div class="stats__card">
-        <div class="stats__value">{{ total_unearned }}</div>
+        <div class="stats__value">{{ total_unearned|format_currency }}</div>
         <div class="stats__label">Незафиксированная (руб)</div>
     </div>
     <div class="stats__card">
-        <div class="stats__value">{{ purchases_count }}</div>
+        <div class="stats__value">{{ purchases_count|format_currency }}</div>
         <div class="stats__label">Продано абонементов</div>
     </div>
     <div class="stats__card">
-        <div class="stats__value">{{ month_revenue }}</div>
+        <div class="stats__value">{{ month_revenue|format_currency }}</div>
         <div class="stats__label">За {{ '0' + sel_month|string if sel_month < 10 else sel_month }}.{{ sel_year }} (руб)</div>
     </div>
     {% if total_refunded > 0 %}
     <div class="stats__card" style="color:var(--danger);">
-        <div class="stats__value">{{ total_refunded }}</div>
+        <div class="stats__value">{{ total_refunded|format_currency }}</div>
         <div class="stats__label">Возвращено (руб)</div>
     </div>
     {% endif %}
@@ -125,12 +125,12 @@
 <hr class="mt-1 mb-2" />
 
 <div class="stats mb-2" style="flex-wrap:wrap;">
-    <div class="stats__card"><div class="stats__value">{{ expenses.fot_total }}</div><div class="stats__label">ФОТ (оклад + взносы)</div></div>
-    <div class="stats__card"><div class="stats__value">{{ expenses.usn_tax }}</div><div class="stats__label">УСН 6%</div></div>
-    <div class="stats__card"><div class="stats__value">{{ expenses.rent_total }}</div><div class="stats__label">Аренда</div></div>
-    <div class="stats__card"><div class="stats__value">{{ expenses.total_expenses }}</div><div class="stats__label">Всего расходов</div></div>
+    <div class="stats__card"><div class="stats__value">{{ expenses.fot_total|format_currency }}</div><div class="stats__label">ФОТ (оклад + взносы)</div></div>
+    <div class="stats__card"><div class="stats__value">{{ expenses.usn_tax|format_currency }}</div><div class="stats__label">УСН 6%</div></div>
+    <div class="stats__card"><div class="stats__value">{{ expenses.rent_total|format_currency }}</div><div class="stats__label">Аренда</div></div>
+    <div class="stats__card"><div class="stats__value">{{ expenses.total_expenses|format_currency }}</div><div class="stats__label">Всего расходов</div></div>
     <div class="stats__card" style="border:2px solid var(--accent);">
-        <div class="stats__value" style="color:var(--accent);">{{ expenses.net_profit }}</div>
+        <div class="stats__value" style="color:var(--accent);">{{ expenses.net_profit|format_currency }}</div>
         <div class="stats__label">Чистая прибыль</div>
     </div>
 </div>
@@ -145,7 +145,8 @@
             <th class="table__header">Должность</th>
             <th class="table__header">Оклад</th>
             <th class="table__header">НДФЛ 13%</th>
-            <th class="table__header">Взносы 30.2%</th>
+            <th class="table__header">Взносы 30.2% (с МРОТ)</th>
+            <th class="table__header">Взносы 15% (свыше)</th>
             <th class="table__header">Итого расход</th>
             <th class="table__header">На руки</th>
             {% if expenses.dividend_total %}<th class="table__header">Дивиденды</th>{% endif %}
@@ -161,12 +162,13 @@
             {% else %}Администратор
             {% endif %}
         </td>
-        <td class="table__cell">{{ "{:,}".format(emp.salary) }} ₽</td>
-        <td class="table__cell">{{ "{:,}".format(emp.ndfl) }} ₽</td>
-        <td class="table__cell">{{ "{:,}".format(emp.social) }} ₽</td>
-        <td class="table__cell"><strong>{{ "{:,}".format(emp.total_cost) }} ₽</strong></td>
-        <td class="table__cell">{{ "{:,}".format(emp.take_home) }} ₽</td>
-        {% if expenses.dividend_total %}<td class="table__cell">{{ "{:,}".format(emp.bonus) }} ₽</td>{% endif %}
+        <td class="table__cell">{{ emp.salary|format_currency }} ₽</td>
+        <td class="table__cell">{{ emp.ndfl|format_currency }} ₽</td>
+        <td class="table__cell">{{ emp.social_base|format_currency }} ₽</td>
+        <td class="table__cell">{{ emp.social_excess|format_currency }} ₽</td>
+        <td class="table__cell"><strong>{{ emp.total_cost|format_currency }} ₽</strong></td>
+        <td class="table__cell">{{ emp.take_home|format_currency }} ₽</td>
+        {% if expenses.dividend_total %}<td class="table__cell">{{ emp.bonus|format_currency }} ₽</td>{% endif %}
     </tr>
     {% endfor %}
     </tbody>

@@ -170,6 +170,9 @@ def test_budget_page_shows_expenses(client):
     assert "ФОТ" in r.text
     assert "УСН" in r.text
     assert "Чистая прибыль" in r.text
+    # Колонки взносов (МСП: 30.2% с МРОТ + 15% свыше)
+    assert "Взносы 30.2%" in r.text
+    assert "Взносы 15%" in r.text
 
 
 def test_expense_calculation(client, db_session):
@@ -188,7 +191,11 @@ def test_expense_calculation(client, db_session):
     r = client.get("/budget")
     assert r.status_code == 200
     # Оклад с коэффициентом: 40000 * 1.15 = 46000
-    assert "46,000" in r.text or "46000" in r.text
+    assert "46 000" in r.text or "46000" in r.text
+    # МСП: МРОТ 22440 × 1.15 = 25806; взносы 30.2% = 7793; превышение (46000-25806)=20194, 15% = 3029
+    # Итого взносы = 7793 + 3029 = 10822
+    assert "7 793" in r.text or "7793" in r.text
+    assert "3 029" in r.text or "3029" in r.text
 
 
 def test_trainer_profile_shows_slots(anon_client, db_session):
