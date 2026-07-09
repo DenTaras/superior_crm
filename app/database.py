@@ -55,6 +55,14 @@ templates.env.globals['csrf_input'] = lambda request: Markup(
     f'<input type="hidden" name="_csrf_token" value="{_get_csrf(request)}" />'
 )
 
+# Версия приложения для шаблонов
+_templates_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
+_ver_file = os.path.join(os.path.dirname(__file__), "..", "VERSION")
+templates.env.globals['APP_VERSION'] = "dev"
+if os.path.exists(_ver_file):
+    with open(_ver_file) as _vf:
+        templates.env.globals['APP_VERSION'] = _vf.read().strip()
+
 
 # ---- Engine & Session ----
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///superior.db")

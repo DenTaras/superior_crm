@@ -25,6 +25,15 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
 from app.logging_config import logger as _app_logger
+
+# Версия приложения
+_VERSION_FILE = _os.path.join(_os.path.dirname(__file__), "VERSION")
+APP_VERSION = "dev"
+if _os.path.exists(_VERSION_FILE):
+    with open(_VERSION_FILE) as _vf:
+        APP_VERSION = _vf.read().strip()
+_app_logger.info("SUPERIOR CRM v%s starting", APP_VERSION)
+
 import app.database  # noqa: F401 — регистрирует Jinja2-фильтры
 from app.models import Client, Slot, Booking, JournalEntry, TrainingNote, Achievement  # noqa: F401 — re-export + seed + create_all
 from app.routes.clients import router as clients_router
