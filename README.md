@@ -35,9 +35,11 @@ uvicorn main:app --reload
 ```bash
 ssh root@138.16.172.22
 ```
+ssh -L 8081:localhost:8081 root@superior-gym.ru
 
 ### Docker
 ```bash
+
 # Остановить сайт (временное выключение)
 docker stop superior-crm
 
@@ -52,6 +54,9 @@ docker logs superior-crm -f
 
 # Пересобрать и запустить (после обновления кода)
 docker build -t superior-crm . && docker stop superior-crm && docker run -d --rm -p 8000:8000 --name superior-crm superior-crm
+
+# БД pgweb
+docker run -d --name pgweb-local -p 8082:8081 -e PGWEB_DATABASE_URL=postgresql://user:pass@host.docker.internal:5432/superior_crm?sslmode=disable sosedoff/pgweb
 ```
 
 ### Nginx

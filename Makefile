@@ -10,9 +10,9 @@ build:
 	docker build -t superior-crm .
 
 run:
-	docker run -d -p 8000:8000 --env-file .env \
-		-v "$(CURDIR)/superior.db:/app/superior.db" \
-		--name superior-crm superior-crm
+	docker run -d --name superior-crm --network host \
+		--env-file .env \
+		superior-crm sh -c 'uvicorn main:app --host 0.0.0.0 --port 8000'
 
 stop:
 	docker stop superior-crm 2>/dev/null; docker rm superior-crm 2>/dev/null || true

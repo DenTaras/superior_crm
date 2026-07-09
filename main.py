@@ -24,8 +24,8 @@ if _os.getenv("CSRF_DISABLE") != "1":
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
-import app.database  # noqa: F401 — регистрирует Jinja2-фильтры
 from app.logging_config import logger as _app_logger
+import app.database  # noqa: F401 — регистрирует Jinja2-фильтры
 from app.models import Client, Slot, Booking, JournalEntry, TrainingNote, Achievement  # noqa: F401 — re-export + seed + create_all
 from app.routes.clients import router as clients_router
 from app.routes.schedule import router as schedule_router

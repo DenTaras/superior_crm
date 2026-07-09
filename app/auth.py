@@ -2,8 +2,9 @@
 
 Встроенные учётные записи:
   admin / admin       — администратор (из ADMIN_LOGIN/ADMIN_PASSWORD)
-  trainer / trainer   — тренер (из TRAINER_LOGIN/TRAINER_PASSWORD)
   client_1 / client_1 — клиент (логин/пароль из БД)
+
+Тренеры входят через учётную запись сотрудника (БД), а не через .env.
 """
 
 import os
@@ -26,8 +27,6 @@ router = APIRouter()
 
 ADMIN_LOGIN = os.getenv("ADMIN_LOGIN", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin")
-TRAINER_LOGIN = os.getenv("TRAINER_LOGIN", "trainer")
-TRAINER_PASSWORD = os.getenv("TRAINER_PASSWORD", "trainer")
 
 # Параметры PBKDF2
 _PBKDF2_ITERATIONS = 600_000
@@ -118,17 +117,11 @@ def login_post(
         }
         return RedirectResponse("/", status_code=303)
 
-    # fallback: hardcoded admin/trainer (legacy)
+    # fallback: hardcoded admin (legacy)
     if login == ADMIN_LOGIN and password == ADMIN_PASSWORD:
         clear_rate_limit(f"login:{login}")
         request.session.regenerate_id()
         request.session["user"] = {"role": "admin", "name": "Администратор"}
-        return RedirectResponse("/", status_code=303)
-
-    if login == TRAINER_LOGIN and password == TRAINER_PASSWORD:
-        clear_rate_limit(f"login:{login}")
-        request.session.regenerate_id()
-        request.session["user"] = {"role": "trainer", "name": "Тренер"}
         return RedirectResponse("/", status_code=303)
 
     # client — проверка по БД

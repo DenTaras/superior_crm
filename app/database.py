@@ -70,11 +70,26 @@ try:
     engine = create_engine(DATABASE_URL, connect_args=connect_args)
 except ModuleNotFoundError:
     fallback_url = "sqlite:///superior.db"
-    print(f"[WARN] Driver for {DATABASE_URL} not installed, falling back to {fallback_url}")
+    import logging
+    logging.getLogger("superior.request").warning("Driver for %s not installed, falling back to %s", DATABASE_URL, fallback_url)
     DATABASE_URL = fallback_url
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
+# create_engine ленивый — не импортирует драйвер до первого connect.
+# Проверяем доступность драйвера сразу для PostgreSQL.
+if DATABASE_URL.startswith("postgresql"):
+    try:
+        from sqlalchemy.dialects.postgresql import psycopg2 as _test  # noqa: F401
+    except (ModuleNotFoundError, ImportError):
+        fallback_url = "sqlite:///superior.db"
+        import logging
+        logging.getLogger("superior.request").warning("Driver for %s not installed, falling back to %s", DATABASE_URL, fallback_url)
+        DATABASE_URL = fallback_url
+        engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+
 SessionLocal = sessionmaker(bind=engine)
+import logging
+logging.getLogger("superior.request").info("Database engine: %s", DATABASE_URL)
 
 
 def get_db() -> Generator[Session, None, None]:
